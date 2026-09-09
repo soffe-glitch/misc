@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projekt Vægttab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F4F6F3; --surface:#FFFFFF; --surface-2:#EEF1ED; --surface-3:#E5EAE5;
+  --ink:#182420; --muted:#5c6b64; --faint:#8a978f; --border:#dee4de;
+  --accent:#0E8C6E; --accent-soft:#d3ece2; --accent-ink:#0a6b54;
+  --amber:#C07615; --amber-soft:#f3e2c9;
+  --blue:#2E6FB8; --blue-soft:#d7e4f3;
+  --good:#12805c; --warn:#C07615; --bad:#C4483B;
+  --grid:#e9ede9; --shadow:0 1px 2px rgba(20,40,32,.04),0 4px 16px rgba(20,40,32,.05);
+}
+:root:not([data-theme="light"]){
+@media (prefers-color-scheme:dark){
+  --bg:#0f1512; --surface:#171d1a; --surface-2:#1d2521; --surface-3:#242e28;
+  --ink:#e9efea; --muted:#93a49c; --faint:#6f8078; --border:#2a332e;
+  --accent:#35c99e; --accent-soft:#123128; --accent-ink:#7ee0c2;
+  --amber:#e0a04a; --amber-soft:#33280f;
+  --blue:#6aa2e0; --blue-soft:#12233a;
+  --good:#35c99e; --warn:#e0a04a; --bad:#e0705f;
+  --grid:#232c27; --shadow:0 1px 2px rgba(0,0,0,.2),0 4px 20px rgba(0,0,0,.28);
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1512; --surface:#171d1a; --surface-2:#1d2521; --surface-3:#242e28;
+  --ink:#e9efea; --muted:#93a49c; --faint:#6f8078; --border:#2a332e;
+  --accent:#35c99e; --accent-soft:#123128; --accent-ink:#7ee0c2;
+  --amber:#e0a04a; --amber-soft:#33280f;
+  --blue:#6aa2e0; --blue-soft:#12233a;
+  --good:#35c99e; --warn:#e0a04a; --bad:#e0705f;
+  --grid:#232c27; --shadow:0 1px 2px rgba(0,0,0,.2),0 4px 20px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:28px 20px 80px}
+.tnum{font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0; font-family:"Fraunces",Georgia,serif; font-weight:500; letter-spacing:-.01em}
+a{color:var(--accent-ink)}
+
+header.top{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px}
+.brand .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:2px}
+.brand h1{font-size:30px; line-height:1.05}
+.top-actions{display:flex; gap:8px; align-items:center}
+.theme-btn{background:var(--surface); border:1px solid var(--border); color:var(--muted); width:38px; height:38px; border-radius:10px; cursor:pointer; font-size:16px; display:grid; place-items:center; box-shadow:var(--shadow)}
+.theme-btn:hover{color:var(--ink)}
+.status-line{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13.5px; color:var(--muted); margin-top:6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* hero */
+.hero{background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:24px; box-shadow:var(--shadow); margin-bottom:16px;
+  display:grid; grid-template-columns:1fr 1.15fr; gap:0; align-items:stretch}
+.hero-now{padding-right:26px; display:flex; flex-direction:column; justify-content:center}
+.hero-action{padding-left:26px; border-left:1px solid var(--border); display:flex; flex-direction:column; justify-content:center}
+.lbl{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.hero-now .big{font-family:"Fraunces",serif; font-size:58px; line-height:.95; font-weight:500; margin:8px 0 2px; letter-spacing:-.02em}
+.hero-now .big span{font-size:24px; color:var(--muted); font-family:"Hanken Grotesk",sans-serif; font-weight:500}
+.hero-now .delta{font-size:14px; font-weight:600}
+.progress-wrap{margin-top:16px}
+.progress-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--muted); margin-bottom:6px}
+.bar{height:12px; border-radius:99px; background:var(--surface-3); overflow:hidden; position:relative}
+.bar > i{display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--accent),var(--accent-ink)); transition:width .6s cubic-bezier(.2,.7,.2,1)}
+.bar .goalmark{position:absolute; top:-3px; height:18px; width:2px; background:var(--ink); opacity:.38}
+
+.action-big{font-family:"Fraunces",serif; font-size:52px; line-height:1; font-weight:600; letter-spacing:-.02em; margin:6px 0 4px}
+.action-big span{font-size:22px; font-weight:500; font-family:"Hanken Grotesk",sans-serif; color:var(--muted)}
+.action-sub{font-size:13.5px; color:var(--muted); margin-top:2px}
+.action-meta{display:flex; gap:18px; margin-top:16px; flex-wrap:wrap}
+.action-meta .m .k{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600}
+.action-meta .m .v{font-size:17px; font-weight:600; margin-top:1px}
+.pill{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:3px 10px; border-radius:99px; background:var(--surface-2)}
+
+/* stat tiles */
+.stats{display:grid; gap:12px; margin-bottom:16px}
+.stats3{grid-template-columns:repeat(3,1fr)}
+.stats4{grid-template-columns:repeat(4,1fr)}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 15px; box-shadow:var(--shadow)}
+.tile .k{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; display:flex; align-items:center; gap:5px}
+.tile .v{font-size:24px; font-weight:600; font-family:"Fraunces",serif; margin-top:4px; letter-spacing:-.01em; line-height:1}
+.tile .v small{font-size:12.5px; color:var(--muted); font-family:"Hanken Grotesk",sans-serif; font-weight:500}
+.tile .sub{font-size:11.5px; color:var(--muted); margin-top:3px}
+.tile.on-good{border-color:color-mix(in srgb,var(--good) 40%,var(--border))}
+.tile .meter{height:6px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:8px}
+.tile .meter > i{display:block; height:100%; border-radius:99px}
+
+/* cards */
+.cards{display:grid; gap:16px; margin-bottom:16px}
+.cards.c2a{grid-template-columns:1.5fr 1fr}
+.cards.c2b{grid-template-columns:1.5fr 1fr}
+.card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:var(--shadow)}
+.card > .ch{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; gap:10px}
+.card h2{font-size:18px}
+.card .hint{font-size:12.5px; color:var(--muted)}
+.legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:10px}
+.legend i{display:inline-block; width:18px; height:3px; border-radius:2px; vertical-align:middle; margin-right:5px}
+.legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 5px,transparent 5px 9px); height:2px}
+
+.dual{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+.dual h3{font-size:14px; margin-bottom:4px}
+.dual .cap{font-size:12px; color:var(--muted); margin-bottom:6px}
+
+.mini-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.mini{background:var(--surface-2); border-radius:12px; padding:14px 15px}
+.mini .k{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600}
+.mini .v{font-size:26px; font-weight:600; font-family:"Fraunces",serif; margin-top:3px}
+.mini .v small{font-size:12.5px; color:var(--muted); font-family:"Hanken Grotesk",sans-serif; font-weight:500}
+.sync-btn{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font:inherit; font-size:12px; font-weight:600; padding:5px 11px; border-radius:8px; cursor:pointer}
+.sync-btn:hover{color:var(--ink)}
+.sync-btn:disabled{opacity:.6; cursor:default}
+
+/* forms */
+.tabs{display:flex; gap:6px; background:var(--surface-2); padding:4px; border-radius:11px; margin-bottom:16px}
+.tabs button{flex:1; border:0; background:transparent; padding:8px 10px; border-radius:8px; cursor:pointer; font:inherit; font-weight:600; font-size:13.5px; color:var(--muted)}
+.tabs button.on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.field{margin-bottom:12px}
+.field label{display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:5px}
+.field input, .field select, .field textarea{
+  width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--ink); font:inherit; font-size:14.5px}
+.field input:focus, .field select:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.btn{width:100%; padding:11px; border-radius:11px; border:0; background:var(--accent); color:#fff; font:inherit; font-weight:700; font-size:14.5px; cursor:pointer; margin-top:4px}
+.btn:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.55; cursor:default}
+:root[data-theme="dark"] .btn{color:#07130e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn{color:#07130e}}
+.form-note{font-size:12.5px; color:var(--muted); margin-top:10px; min-height:18px}
+.form-note.ok{color:var(--good); font-weight:600}
+.form-note.err{color:var(--bad); font-weight:600}
+.budget-live{background:var(--accent-soft); color:var(--accent-ink); border-radius:10px; padding:10px 12px; font-size:13px; font-weight:600; margin-bottom:12px}
+
+.log-list{display:flex; flex-direction:column; gap:2px; max-height:360px; overflow-y:auto; margin:-4px -6px; padding:4px 6px}
+.log-row{display:grid; grid-template-columns:72px 1fr; gap:10px; align-items:center; padding:8px}
+.log-row:hover{background:var(--surface-2); border-radius:9px}
+.log-row .d{font-size:12.5px; color:var(--muted); font-weight:600}
+.log-row .m{font-size:14px}
+.log-row .m b{font-weight:600}
+.chip{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; letter-spacing:.02em}
+.chip.w{background:var(--accent-soft); color:var(--accent-ink)}
+.chip.c{background:var(--amber-soft); color:var(--amber)}
+.chip.t{background:var(--blue-soft); color:var(--blue)}
+
+.tt{position:fixed; pointer-events:none; z-index:20; background:var(--ink); color:var(--bg); padding:7px 10px; border-radius:8px; font-size:12.5px; line-height:1.35; box-shadow:0 6px 20px rgba(0,0,0,.25); opacity:0; transition:opacity .1s; white-space:nowrap}
+svg{display:block; width:100%; height:auto; overflow:visible}
+.axis-t{font-size:10.5px; fill:var(--faint); font-family:"Hanken Grotesk",sans-serif}
+
+.loading{text-align:center; color:var(--muted); padding:60px 0}
+.err-banner{background:var(--amber-soft); color:var(--amber); border:1px solid var(--amber); border-radius:12px; padding:14px 16px; font-size:13.5px; margin-bottom:16px; display:none}
+footer{margin-top:30px; text-align:center; color:var(--faint); font-size:12px}
+
+@media (max-width:900px){
+  .stats4{grid-template-columns:repeat(2,1fr)}
+  .cards.c2a,.cards.c2b{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .hero{grid-template-columns:1fr}
+  .hero-now{padding-right:0; padding-bottom:20px; border-bottom:1px solid var(--border)}
+  .hero-action{padding-left:0; padding-top:20px; border-left:0}
+  .stats3,.stats4{grid-template-columns:repeat(2,1fr)}
+  .dual{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow">Projekt Vægttab · Matematikkuren</div>
+      <h1>Sofies dashboard</h1>
+      <div class="status-line" id="statusLine"><span class="dot" style="background:var(--faint)"></span> Forbinder…</div>
+    </div>
+    <div class="top-actions"><button class="theme-btn" id="themeBtn" title="Skift tema" aria-label="Skift tema">◐</button></div>
+  </header>
+
+  <div class="err-banner" id="errBanner"></div>
+  <div id="app"><div class="loading">Henter dine data…</div></div>
+  <footer>Data gemmes i din egen Supabase-database · Matematikkuren efter Jens Bøgh + kalorie- og fedtsporing</footer>
+</div>
+<div class="tt" id="tooltip"></div>
+
+<script>
+const SUPABASE_URL="https://kphfvznawqcslkubdsyy.supabase.co";
+const SUPABASE_KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
+const REST=SUPABASE_URL+"/rest/v1/";
+const FN_URL=SUPABASE_URL+"/functions/v1/sync-intervals";
+const FN_WEIGH=SUPABASE_URL+"/functions/v1/sync-withings";
+const HEAD={apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"Content-Type":"application/json"};
+let syncStatus="man–søn"; let bgSynced=false;
+
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,"0");
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
+const parseD=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+const daysBetween=(a,b)=>Math.round((parseD(b)-parseD(a))/86400000);
+const addDays=(iso,n)=>{const d=parseD(iso);d.setDate(d.getDate()+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
+const MONTHS=["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+const fmtD=s=>{const d=parseD(s);return d.getDate()+". "+MONTHS[d.getMonth()];};
+const num=(n,dec=1)=>Number(n).toLocaleString("da-DK",{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const kg=n=>num(n,1)+" kg";
+const gram=n=>Math.round(n).toLocaleString("da-DK")+" g";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function apiGet(t,qs=""){const r=await fetch(REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function apiUpsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="+oc):""),{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function apiInsert(t,body){const r=await fetch(REST+t,{method:"POST",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+
+let S={settings:null,weighins:[],nutrition:[],workouts:[]};
+
+async function loadAll(){
+  const [settings,weighins,nutrition,workouts]=await Promise.all([
+    apiGet("settings","?select=*&limit=1"),
+    apiGet("weighins","?select=*&order=log_date.asc"),
+    apiGet("nutrition","?select=*&order=log_date.asc"),
+    apiGet("workouts","?select=*&order=log_date.desc")
+  ]);
+  S.settings=settings[0];
+  S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
+  S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,fat_g:n.fat_g==null?null:+n.fat_g,grams:n.grams==null?null:+n.grams}));
+  S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
+}
+
+// ---- Matematikkur math ----
+// målvægt-linje fra (startdato, startvægt) til (slutdato, slutvægt)
+function malvaegt(iso,endW){
+  const s=S.settings;
+  const total=daysBetween(s.kur_start_date,s.kur_end_date);
+  let el=daysBetween(s.kur_start_date,iso); el=Math.max(0,Math.min(total,el));
+  return s.start_weight-(s.start_weight-endW)*(el/total);
+}
+const MOMENTS={morgen:"Morgen",foraften:"Før aftensmad",sengetid:"Sengetid"};
+function morningSeries(){return S.weighins.filter(w=>w.moment==="morgen").sort((a,b)=>a.log_date<b.log_date?-1:1);}
+function weighToday(moment){const t=todayISO();return S.weighins.find(w=>w.log_date===t&&w.moment===moment);}
+function sumDay(arr,iso,key){return arr.filter(x=>x.log_date===iso).reduce((a,x)=>a+(x[key]||0),0);}
+
+function stats(){
+  const s=S.settings, M=morningSeries();
+  const latest=M.length?M[M.length-1]:{log_date:s.kur_start_date,weight_kg:s.start_weight};
+  const cur=latest.weight_kg;
+  const lost=s.start_weight-cur;
+  const target=malvaegt(latest.log_date,s.kur_basis_weight);
+  const vsPlan=target-cur; // + = foran (under linjen)
+  const daysLeft=Math.max(0,daysBetween(todayISO(),s.kur_end_date));
+  const span=s.start_weight-s.kur_basis_weight;
+  const pct=Math.max(0,Math.min(100,(lost/span)*100));
+  let rate=null;
+  if(M.length>=2){const d=daysBetween(M[0].log_date,latest.log_date); if(d>0) rate=(M[0].weight_kg-cur)/d*7;}
+  let projReal=null,projGoal=null;
+  if(rate&&rate>0.02){
+    projReal=addDays(latest.log_date,Math.round((cur-s.kur_basis_weight)/rate*7));
+    projGoal=addDays(latest.log_date,Math.round((cur-s.goal_weight)/rate*7));
+  }
+  return {cur,lost,target,vsPlan,daysLeft,pct,rate,latest,projReal,projGoal};
+}
+
+const tt=$("#tooltip");
+function showTT(html,x,y){tt.innerHTML=html;tt.style.opacity=1;tt.style.left=(x+14)+"px";tt.style.top=(y+14)+"px";}
+function hideTT(){tt.style.opacity=0;}
+
+// ---- weight chart ----
+function weightChart(){
+  const s=S.settings, M=morningSeries();
+  const w=680,h=310,mL=38,mR=14,mT=16,mB=26;
+  const x0=parseD(s.kur_start_date).getTime(), x1=parseD(s.kur_end_date).getTime();
+  const X=t=>mL+(t-x0)/(x1-x0)*(w-mL-mR);
+  const all=[s.start_weight,s.kur_basis_weight,s.goal_weight,...M.map(d=>d.weight_kg)];
+  const yMax=Math.ceil(Math.max(...all)+0.4), yMin=Math.floor(Math.min(...all)-0.4);
+  const Y=v=>mT+(yMax-v)/(yMax-yMin)*(h-mT-mB);
+  let grid="";
+  for(let v=yMin;v<=yMax;v++){const y=Y(v);grid+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-7}" y="${y+3.5}" text-anchor="end" class="axis-t">${v}</text>`;}
+  let xticks=""; const start=parseD(s.kur_start_date);
+  for(let m=0;m<6;m++){const d=new Date(start.getFullYear(),start.getMonth()+m,1); if(d.getTime()<x0||d.getTime()>x1)continue; const x=X(d.getTime());
+    xticks+=`<text x="${x}" y="${h-8}" text-anchor="middle" class="axis-t">${MONTHS[d.getMonth()]}</text><line x1="${x}" x2="${x}" y1="${mT}" y2="${h-mB}" stroke="var(--grid)" opacity=".6"/>`;}
+  // to målvægt-linjer
+  const lineReal=`M ${X(x0)} ${Y(s.start_weight)} L ${X(x1)} ${Y(s.kur_basis_weight)}`;
+  const lineGoal=`M ${X(x0)} ${Y(s.start_weight)} L ${X(x1)} ${Y(s.goal_weight)}`;
+  // faktisk (morgen)
+  let dPath="",area="",dots="";
+  if(M.length){
+    M.forEach((d,i)=>{const x=X(parseD(d.log_date).getTime()),y=Y(d.weight_kg);dPath+=(i?"L":"M")+x+" "+y+" ";});
+    const lx=X(parseD(M[M.length-1].log_date).getTime()), fx=X(parseD(M[0].log_date).getTime());
+    area=`${dPath} L ${lx} ${Y(yMin)} L ${fx} ${Y(yMin)} Z`;
+    M.forEach((d,i)=>{const x=X(parseD(d.log_date).getTime()),y=Y(d.weight_kg),big=i===M.length-1;
+      dots+=`<circle cx="${x}" cy="${y}" r="${big?5:3.5}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" data-i="${i}" class="wdot" style="cursor:pointer"/>`;});
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Vægtudvikling">
+    <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${grid}${xticks}
+    <path d="${lineGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity=".55"/>
+    <path d="${lineReal}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="6 4" fill="none" opacity=".8"/>
+    <text x="${X(x1)}" y="${Y(s.kur_basis_weight)+13}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">63,5</text>
+    <text x="${X(x1)}" y="${Y(s.goal_weight)+13}" text-anchor="end" class="axis-t">62</text>
+    ${M.length?`<path d="${area}" fill="url(#wg)"/><path d="${dPath}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`:""}
+    ${dots}
+  </svg>`;
+}
+function bindWeightHover(c){
+  const M=morningSeries();
+  c.querySelectorAll(".wdot").forEach(el=>{
+    el.addEventListener("mousemove",e=>{const d=M[+el.dataset.i];const t=malvaegt(d.log_date,S.settings.kur_basis_weight);const diff=t-d.weight_kg;
+      const tag=diff>=0?`<b style="color:#7ee0c2">${gram(diff*1000)} foran</b>`:`<b style="color:#e0a06a">${gram(-diff*1000)} bagud</b>`;
+      showTT(`<b>${fmtD(d.log_date)}</b> · morgen — ${kg(d.weight_kg)}<br>målvægt ${kg(t)} · ${tag}`,e.clientX,e.clientY);});
+    el.addEventListener("mouseleave",hideTT);
+  });
+}
+
+// ---- generic day-bar chart (kcal / fat) ----
+function dayBars(map, target, unit, colOK, colOver, id){
+  const days=Object.keys(map).sort().slice(-21);
+  if(!days.length) return `<div style="color:var(--muted);font-size:13px;padding:24px 0;text-align:center">Intet logget endnu.</div>`;
+  const w=330,h=170,mL=34,mR=6,mT=10,mB=18;
+  const vals=days.map(d=>map[d]);
+  const yMax=Math.max(target,...vals)*1.1;
+  const Y=v=>mT+(yMax-v)/yMax*(h-mT-mB);
+  const bw=(w-mL-mR)/days.length;
+  let bars="",gl="";
+  const step=unit==="g"?20:500;
+  for(let g=0;g<=yMax;g+=step){const y=Y(g);gl+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-5}" y="${y+3}" text-anchor="end" class="axis-t">${g}</text>`;}
+  days.forEach((d,i)=>{const v=map[d];const x=mL+i*bw+bw*0.16,bwi=bw*0.68,y=Y(v),over=v>target;
+    bars+=`<rect x="${x}" y="${y}" width="${bwi}" height="${Math.max(1,Y(0)-y)}" rx="3" fill="${over?colOver:colOK}" opacity="${over?0.9:0.92}" class="dbar" data-id="${id}" data-d="${d}" data-v="${v}" style="cursor:pointer"/>`;});
+  const ty=Y(target);
+  return `<svg viewBox="0 0 ${w} ${h}" role="img">${gl}${bars}
+    <line x1="${mL}" x2="${w-mR}" y1="${ty}" y2="${ty}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="${w-mR}" y="${ty-4}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">${unit==="g"?"loft "+target:"mål "+target}</text></svg>`;
+}
+function bindBars(container){
+  container.querySelectorAll(".dbar").forEach(b=>{
+    b.addEventListener("mousemove",e=>{const u=b.dataset.id==="fat"?"g fedt":"kcal";
+      showTT(`<b>${fmtD(b.dataset.d)}</b> — ${num(b.dataset.v,b.dataset.id==="fat"?1:0)} ${u}`,e.clientX,e.clientY);});
+    b.addEventListener("mouseleave",hideTT);
+  });
+}
+
+function weekBounds(){const d=new Date();const day=(d.getDay()+6)%7;const mon=new Date(d);mon.setDate(d.getDate()-day);const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  const iso=x=>x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate());return{from:iso(mon),to:iso(sun)};}
+function trainingSummary(){
+  const {from,to}=weekBounds();const wk=S.workouts.filter(w=>w.log_date>=from&&w.log_date<=to);
+  const runs=wk.filter(w=>w.kind==="loeb");const km=runs.reduce((a,r)=>a+(r.distance_km||0),0);
+  const strength=wk.filter(w=>w.kind==="styrke").length;const st=wk.filter(w=>w.kind==="skridt");
+  const avg=st.length?Math.round(st.reduce((a,r)=>a+(r.steps||0),0)/st.length):null;
+  return {runs:runs.length,km,strength,avg};
+}
+
+// ---- render ----
+function render(){
+  const s=S.settings, st=stats(), t=todayISO();
+  const mToday=weighToday("morgen"), aToday=weighToday("foraften"), sToday=weighToday("sengetid");
+  const targetToday=malvaegt(t,s.kur_basis_weight);
+  const FLOOR=s.ration_floor_g||600;
+  const withFloor=x=>Math.max(FLOOR,Math.round(x));
+
+  // hero action
+  let big,sub;
+  if(aToday){
+    const raw=(targetToday-aToday.weight_kg)*1000, v=withFloor(raw);
+    big=gram(v);
+    sub=(raw<FLOOR?`minimum ${FLOOR} g · `:`plads til aftensmad · `)+`vejet ${num(aToday.weight_kg,1)} kg før aftensmad`;
+  } else if(mToday){
+    const raw=(targetToday-mToday.weight_kg)*1000, v=withFloor(raw);
+    big=gram(v);
+    sub=(raw<FLOOR?`minimum ${FLOOR} g · `:``)+`dagens madbudget · vej dig igen før aftensmad`;
+  } else {
+    big="Vej dig";sub=`ingen morgenvejning i dag · dagens målvægt er ${num(targetToday,1)} kg`;
+  }
+  const heroActLabel=aToday?"Til aftensmad":mToday?"Dagens madbudget":"I dag";
+
+  // today totals
+  const kcalToday=sumDay(S.nutrition,t,"calories_in");
+  const fatToday=sumDay(S.nutrition,t,"fat_g");
+  const kcalRem=s.calorie_target-kcalToday;
+  const fatPct=Math.min(100,fatToday/s.fat_target_g*100);
+  const kcalPct=Math.min(100,kcalToday/s.calorie_target*100);
+  const fatCol=fatToday>s.fat_target_g?"var(--bad)":fatToday>s.fat_target_g*0.85?"var(--warn)":"var(--good)";
+  const kcalCol=kcalToday>s.calorie_target?"var(--bad)":"var(--accent)";
+  // madration (gram) — dagens ration fra morgenvejning, spist = loggede gram
+  const gramsToday=sumDay(S.nutrition,t,"grams");
+  const ration=mToday?withFloor((targetToday-mToday.weight_kg)*1000):null;
+  const gramsRem=ration!=null?ration-gramsToday:null;
+  const gramsPct=(ration&&ration>0)?Math.min(100,gramsToday/ration*100):(gramsToday>0?100:0);
+  const gramsCol=(ration!=null&&gramsToday>ration)?"var(--bad)":"var(--accent)";
+
+  const goalPct=((s.start_weight-s.goal_weight)/(s.start_weight-s.kur_basis_weight))*100;
+  const planTag=st.vsPlan>=0?`<span class="dot" style="background:var(--good)"></span> ${gram(st.vsPlan*1000)} foran linjen`:`<span class="dot" style="background:var(--warn)"></span> ${gram(-st.vsPlan*1000)} bagud`;
+  $("#statusLine").innerHTML=`${planTag} · morgenvægt ${kg(st.cur)} (${fmtD(st.latest.log_date)})`;
+
+  const rate=st.rate!=null?num(st.rate,2)+" kg/uge":"–";
+  const rateSub=st.rate!=null?(st.rate>=0.4&&st.rate<=0.7?"på sporet":st.rate>0.7?"hurtigt":st.rate>0?"langsomt":"stigende"):"log flere morgenvejninger";
+
+  // kcal/fat maps for charts
+  const kMap={},fMap={};
+  S.nutrition.forEach(n=>{kMap[n.log_date]=(kMap[n.log_date]||0)+(n.calories_in||0);});
+  S.nutrition.forEach(n=>{if(n.fat_g!=null)fMap[n.log_date]=(fMap[n.log_date]||0)+n.fat_g;});
+  const tr=trainingSummary();
+
+  $("#app").innerHTML=`
+  <section class="hero">
+    <div class="hero-now">
+      <div class="lbl">Morgenvægt</div>
+      <div class="big tnum">${num(st.cur,1)}<span> kg</span></div>
+      <div class="delta" style="color:${st.lost>=0?'var(--good)':'var(--bad)'}">${st.lost>=0?'↓ '+kg(st.lost)+' tabt':'↑ '+kg(-st.lost)}</div>
+      <div class="progress-wrap">
+        <div class="progress-head"><span>${num(s.start_weight,1)} start</span><span>63,5</span></div>
+        <div class="bar"><i style="width:${st.pct}%"></i><span class="goalmark" style="left:${goalPct}%" title="mål 62"></span></div>
+        <div class="progress-head" style="margin-top:6px"><span>${num(st.pct,0)}% af vejen</span><span>mål 62</span></div>
+      </div>
+    </div>
+    <div class="hero-action">
+      <div class="lbl">${heroActLabel}</div>
+      <div class="action-big tnum">${big}</div>
+      <div class="action-sub">${sub}</div>
+      <div class="action-meta">
+        <div class="m"><div class="k">Dagens målvægt</div><div class="v tnum">${num(targetToday,1)} kg</div></div>
+        <div class="m"><div class="k">Morgenvejning</div><div class="v tnum">${mToday?num(mToday.weight_kg,1)+" kg":"—"}</div></div>
+        <div class="m"><div class="k">Før aftensmad</div><div class="v tnum">${aToday?num(aToday.weight_kg,1)+" kg":"—"}</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats stats3">
+    <div class="tile"><div class="k">Madration i dag</div><div class="v tnum">${ration!=null?num(gramsToday,0):"—"}${ration!=null?`<small> / ${num(ration,0)} g</small>`:""}</div>
+      ${ration!=null?`<div class="meter"><i style="width:${gramsPct}%;background:${gramsCol}"></i></div>
+      <div class="sub" style="color:${gramsCol}">${gramsRem>=0?num(gramsRem,0)+" g tilbage":num(-gramsRem,0)+" g over"}</div>`:`<div class="meter"><i style="width:0%"></i></div><div class="sub">vej dig i morges</div>`}</div>
+    <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ${s.calorie_target}</small></div>
+      <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
+      <div class="sub">${kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over"}</div></div>
+    <div class="tile"><div class="k">Fedt i dag</div><div class="v tnum">${num(fatToday,0)}<small> / ${s.fat_target_g} g</small></div>
+      <div class="meter"><i style="width:${fatPct}%;background:${fatCol}"></i></div>
+      <div class="sub" style="color:${fatCol}">${fatToday>s.fat_target_g?'over loftet':fatToday>s.fat_target_g*0.85?'nærmer sig loft':'inden for loft'}</div></div>
+  </section>
+  <section class="stats stats4">
+    <div class="tile"><div class="k">Tabt i alt</div><div class="v tnum">${num(st.lost,1)}<small> kg</small></div><div class="sub">siden start</div></div>
+    <div class="tile"><div class="k">Til 63,5</div><div class="v tnum">${num(Math.max(0,st.cur-s.kur_basis_weight),1)}<small> kg</small></div><div class="sub">til 62: ${num(Math.max(0,st.cur-s.goal_weight),1)} kg</div></div>
+    <div class="tile"><div class="k">Dage til 18/12</div><div class="v tnum">${st.daysLeft}</div><div class="sub">af ${s.kur_days} kurdage</div></div>
+    <div class="tile"><div class="k">Tempo</div><div class="v tnum" style="font-size:20px">${rate}</div><div class="sub">${rateSub}</div></div>
+  </section>
+
+  <section class="cards c2a">
+    <div class="card">
+      <div class="ch"><h2>Vægtudvikling</h2><span class="hint">morgenvægt mod målvægt-linjerne</span></div>
+      <div id="wchart">${weightChart()}</div>
+      <div class="legend">
+        <span style="color:var(--accent)"><i style="background:var(--accent)"></i>morgenvægt</span>
+        <span style="color:var(--accent-ink)"><i class="dash" style="color:var(--accent-ink)"></i>målvægt 63,5</span>
+        <span><i class="dash" style="color:var(--muted)"></i>målvægt 62</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><h2>Log</h2></div>
+      <div class="tabs" id="tabs">
+        <button data-t="w" class="on">Vejning</button>
+        <button data-t="c">Mad</button>
+      </div>
+      <form id="formW">
+        <div id="liveBudget"></div>
+        <div class="row2">
+          <div class="field"><label>Dato</label><input type="date" id="w_date"></div>
+          <div class="field"><label>Tidspunkt</label><select id="w_moment"><option value="morgen">Morgen</option><option value="foraften">Før aftensmad</option><option value="sengetid">Sengetid</option></select></div>
+        </div>
+        <div class="field"><label>Vægt (kg)</label><input type="number" step="0.1" id="w_kg" placeholder="fx 67,8" inputmode="decimal"></div>
+        <button class="btn" type="submit">Gem vejning</button>
+        <div class="form-note" id="noteW"></div>
+      </form>
+      <form id="formC" hidden>
+        ${ration!=null?`<div class="budget-live">Dagens ration: ${num(ration,0)} g · spist ${num(gramsToday,0)} g · <b>${gramsRem>=0?num(gramsRem,0)+" g tilbage":num(-gramsRem,0)+" g over"}</b></div>`:``}
+        <div class="row2">
+          <div class="field"><label>Dato</label><input type="date" id="c_date"></div>
+          <div class="field"><label>Måltid</label><select id="c_meal"><option value="">—</option><option>Morgenmad</option><option>Frokost</option><option>Aftensmad</option><option>Snack</option></select></div>
+        </div>
+        <div class="field"><label>Gram mad</label><input type="number" id="c_grams" placeholder="fx 300" inputmode="numeric"></div>
+        <div class="row2">
+          <div class="field"><label>Kalorier (kcal)</label><input type="number" id="c_kcal" placeholder="fx 450" inputmode="numeric"></div>
+          <div class="field"><label>Fedt (g)</label><input type="number" step="0.1" id="c_fat" placeholder="fx 14" inputmode="decimal"></div>
+        </div>
+        <button class="btn" type="submit">Gem mad</button>
+        <div class="form-note" id="noteC">Gram mad er kurens kerne — kalorier og fedt er valgfrit oveni.</div>
+      </form>
+    </div>
+  </section>
+
+  <section class="cards c2b">
+    <div class="card">
+      <div class="ch"><h2>Kalorier & fedt</h2><span class="hint">daglige totaler, seneste 3 uger</span></div>
+      <div class="dual">
+        <div><h3>Kalorier</h3><div class="cap">mod ${s.calorie_target} kcal</div><div id="kchart">${dayBars(kMap,s.calorie_target,"kcal","var(--accent)","var(--amber)","kcal")}</div></div>
+        <div><h3>Fedt</h3><div class="cap">mod loft ${s.fat_target_g} g</div><div id="fchart">${dayBars(fMap,s.fat_target_g,"g","var(--accent)","var(--bad)","fat")}</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><h2>Ugens træning</h2><div style="display:flex;gap:9px;align-items:center"><span class="hint" id="syncNote">${syncStatus}</span><button type="button" id="syncBtn" class="sync-btn">↻ Synk nu</button></div></div>
+      <div class="mini-grid">
+        <div class="mini"><div class="k">Løbeture</div><div class="v tnum">${tr.runs}<small> / 3</small></div></div>
+        <div class="mini"><div class="k">Km løbet</div><div class="v tnum">${num(tr.km,1)}</div></div>
+        <div class="mini"><div class="k">Styrke</div><div class="v tnum">${tr.strength}<small> / 1</small></div></div>
+        <div class="mini"><div class="k">Ø. skridt</div><div class="v tnum">${tr.avg?tr.avg.toLocaleString("da-DK"):"–"}</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cards"><div class="card">
+    <div class="ch"><h2>Seneste aktivitet</h2><span class="hint" id="logCount"></span></div>
+    <div class="log-list" id="logList"></div>
+  </div></section>`;
+
+  bindWeightHover($("#wchart"));
+  bindBars($("#kchart")); bindBars($("#fchart"));
+  wireForms();
+  bindSync();
+  renderLog();
+}
+
+async function reloadData(){
+  const [wk,wg]=await Promise.all([
+    apiGet("workouts","?select=*&order=log_date.desc"),
+    apiGet("weighins","?select=*&order=log_date.asc")
+  ]);
+  S.workouts=wk.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
+  S.weighins=wg.map(w=>({...w,weight_kg:+w.weight_kg}));
+}
+async function runSync(days){
+  // henter både træning (intervals) og vægt (withings) — den ene må gerne fejle
+  const opt={headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}};
+  await Promise.allSettled([
+    fetch(FN_URL+"?days="+days,opt).then(r=>r.json()),
+    fetch(FN_WEIGH+"?days="+days,opt).then(r=>r.json())
+  ]);
+}
+const nowHM=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes());};
+function bindSync(){
+  const btn=$("#syncBtn"); if(!btn) return;
+  btn.addEventListener("click",async()=>{
+    btn.disabled=true; btn.textContent="Synker…";
+    try{ await runSync(30); await reloadData(); syncStatus="opdateret "+nowHM(); render(); }
+    catch(e){ btn.textContent="↻ Synk nu"; btn.disabled=false; const n=$("#syncNote"); if(n){n.textContent="synk-fejl"; n.style.color="var(--bad)";} }
+  });
+}
+async function backgroundSync(){
+  if(bgSynced) return; bgSynced=true;
+  try{ await runSync(14); await reloadData(); syncStatus="opdateret "+nowHM(); render(); }catch(e){}
+}
+
+function renderLog(){
+  const items=[];
+  S.weighins.forEach(w=>items.push({date:w.log_date,ord:w.moment==="morgen"?0:w.moment==="foraften"?1:2,html:`<span class="chip w">${MOMENTS[w.moment]}</span> <b>${kg(w.weight_kg)}</b>`}));
+  S.nutrition.forEach(n=>{const p=[];if(n.grams!=null)p.push(n.grams+" g");if(n.calories_in!=null)p.push(n.calories_in+" kcal");if(n.fat_g!=null)p.push(num(n.fat_g,0)+" g fedt");
+    items.push({date:n.log_date,ord:3,html:`<span class="chip c">${n.label||"Mad"}</span> <b>${p.join(" · ")||"—"}</b>`});});
+  S.workouts.forEach(w=>{const lab=w.kind==="loeb"?"Løb":w.kind==="styrke"?"Styrke":"Skridt";
+    let d=w.kind==="loeb"?`${w.distance_km!=null?num(w.distance_km,1)+" km":""}${w.duration_min?" · "+w.duration_min+" min":""}`:w.kind==="styrke"?"Styrketræning":`${w.steps?w.steps.toLocaleString("da-DK")+" skridt":""}`;
+    items.push({date:w.log_date,ord:4,html:`<span class="chip t">${lab}</span> <b>${d||lab}</b>${w.note?` · <span style="color:var(--muted)">${esc(w.note)}</span>`:""}`});});
+  items.sort((a,b)=> a.date!==b.date?(a.date<b.date?1:-1):a.ord-b.ord);
+  $("#logCount").textContent=items.length+" poster";
+  $("#logList").innerHTML=items.slice(0,80).map(it=>`<div class="log-row"><div class="d tnum">${fmtD(it.date)}</div><div class="m">${it.html}</div></div>`).join("")||`<div style="color:var(--muted);padding:16px 4px">Ingen poster endnu.</div>`;
+}
+
+function setNote(el,msg,cls){const n=$(el);n.textContent=msg;n.className="form-note"+(cls?" "+cls:"");}
+function updateLiveBudget(){
+  const el=$("#liveBudget"); if(!el)return;
+  const dt=$("#w_date").value, mom=$("#w_moment").value, kgv=parseFloat(($("#w_kg").value||"").replace(",","."));
+  if(!kgv||mom==="sengetid"){el.innerHTML="";return;}
+  const target=malvaegt(dt,S.settings.kur_basis_weight); const raw=(target-kgv)*1000;
+  const FLOOR=S.settings.ration_floor_g||600; const v=Math.max(FLOOR,Math.round(raw));
+  const label=mom==="foraften"?"Til aftensmad":"Dagens madbudget";
+  el.className="budget-live";
+  el.innerHTML = `${label}: ${gram(v)}${raw<FLOOR?" (minimum)":""} (målvægt ${num(target,1)} kg)`;
+  el.style.background="var(--accent-soft)"; el.style.color="var(--accent-ink)";
+}
+function wireForms(){
+  const t=todayISO();
+  ["#w_date","#c_date"].forEach(s=>$(s).value=t);
+  $("#tabs").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    $("#tabs").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+    const k=b.dataset.t;$("#formW").hidden=k!=="w";$("#formC").hidden=k!=="c";}));
+  $("#w_kg").addEventListener("input",updateLiveBudget);
+  $("#w_moment").addEventListener("change",updateLiveBudget);
+  $("#w_date").addEventListener("change",updateLiveBudget);
+
+  $("#formW").addEventListener("submit",async e=>{e.preventDefault();
+    const kgv=parseFloat(($("#w_kg").value||"").replace(",","."));
+    if(!kgv){setNote("#noteW","Skriv en vægt.","err");return;}
+    const btn=e.target.querySelector("button");btn.disabled=true;setNote("#noteW","Gemmer…");
+    try{const row=await apiUpsert("weighins",{log_date:$("#w_date").value,moment:$("#w_moment").value,weight_kg:kgv},"log_date,moment");
+      mergeWeigh(row[0]);$("#w_kg").value="";$("#liveBudget").innerHTML="";setNote("#noteW","Gemt ✓","ok");render();
+    }catch(err){setNote("#noteW","Fejl: "+err.message,"err");}finally{btn.disabled=false;}});
+
+  $("#formC").addEventListener("submit",async e=>{e.preventDefault();
+    const g=$("#c_grams").value===""?null:parseInt($("#c_grams").value,10);
+    const v=$("#c_kcal").value===""?null:parseInt($("#c_kcal").value,10);
+    const fat=$("#c_fat").value===""?null:parseFloat($("#c_fat").value.replace(",","."));
+    if(!g&&!v){setNote("#noteC","Skriv gram mad eller kalorier.","err");return;}
+    const btn=e.target.querySelector("button");btn.disabled=true;setNote("#noteC","Gemmer…");
+    try{const row=await apiInsert("nutrition",{log_date:$("#c_date").value,grams:g,calories_in:v,fat_g:fat,label:$("#c_meal").value||null});
+      S.nutrition.push({...row[0],calories_in:row[0].calories_in==null?null:+row[0].calories_in,fat_g:row[0].fat_g==null?null:+row[0].fat_g,grams:row[0].grams==null?null:+row[0].grams});
+      $("#c_grams").value="";$("#c_kcal").value="";$("#c_fat").value="";setNote("#noteC","Gemt ✓","ok");render();
+    }catch(err){setNote("#noteC","Fejl: "+err.message,"err");}finally{btn.disabled=false;}});
+}
+function mergeWeigh(row){
+  const n={...row,weight_kg:+row.weight_kg};
+  const i=S.weighins.findIndex(x=>x.log_date===n.log_date&&x.moment===n.moment);
+  if(i>=0)S.weighins[i]=n;else S.weighins.push(n);
+  S.weighins.sort((a,b)=>a.log_date<b.log_date?-1:1);
+}
+
+(function(){const root=document.documentElement;let t=null;try{t=localStorage.getItem("vt-theme");}catch(e){}
+  if(t)root.setAttribute("data-theme",t);
+  $("#themeBtn").addEventListener("click",()=>{const cur=root.getAttribute("data-theme");
+    const sysDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    const now=cur?cur:(sysDark?"dark":"light");const next=now==="dark"?"light":"dark";
+    root.setAttribute("data-theme",next);try{localStorage.setItem("vt-theme",next);}catch(e){}});})();
+
+(async function(){
+  try{await loadAll();if(!S.settings)throw new Error("Ingen indstillinger fundet.");render();backgroundSync();}
+  catch(err){document.querySelector(".loading")?.remove();const b=$("#errBanner");b.style.display="block";
+    b.innerHTML="Kunne ikke hente data fra Supabase.<br><span style='opacity:.8'>"+esc(err.message)+"</span>";
+    $("#statusLine").innerHTML='<span class="dot" style="background:var(--bad)"></span> Ingen forbindelse';}
+})();
+</script>
+</body>
+</html>
