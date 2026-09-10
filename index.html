@@ -304,7 +304,7 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
       <p class="hint" style="margin-top:10px">Grå, våde dage koster ofte aftenløbet — planlæg dem indenfor eller tidligt.</p>
     </div>
     <div class="card">
-      <div class="ch"><h3>Læsning</h3><span class="hint">sider/dag · fra Books</span></div>
+      <div class="ch"><h3>Læsning</h3><span class="hint">sider/dag · 7-dages snit · fra Books</span></div>
       <div id="readChart"><div class="empty">henter…</div></div>
       <p class="hint" style="margin-top:8px" id="readNote"></p>
     </div>
@@ -446,7 +446,7 @@ function spark(id,pts,color,fill){ // pts: [{d,v}]
   const X=i=>mL+(pts.length>1?i/(pts.length-1):0.5)*(w-mL-mR);const Y=v=>mT+(mx-v)/((mx-mn)||1)*(h-mT-mB);
   let d="";data.forEach((v,i)=>{d+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";});
   const a=d+`L ${X(data.length-1)} ${h-mB} L ${X(0)} ${h-mB} Z`;
-  let dots="";pts.forEach((p,i)=>{dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="${color}" data-t="${daLabel(p.d)}: ${fmt(p.v,1)}"/>`;});
+  let dots="";const dStep=Math.max(1,Math.ceil(pts.length/26));pts.forEach((p,i)=>{if(i%dStep!==0&&i!==pts.length-1)return;dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${pts.length>30?2:3}" fill="${color}" data-t="${daLabel(p.d)}: ${fmt(p.v,1)}"/>`;});
   el.innerHTML=`<svg viewBox="0 0 ${w} ${h}"><path d="${a}" fill="${fill}"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
   bindDots(el);
 }
@@ -675,10 +675,12 @@ function render(){
     const hard=wdays.filter(d=>wmap[d]>=4).length;$("#arbNote").innerHTML=hard?`<b style="color:var(--arb)">${hard} hårde dage</b> i vinduet — hold øje med energi og aftenløb.`:"";}
 
   // --- læsning ---
-  const rs=readingSeries(14);
+  const rsRaw=readingSeries(90);
+  // 7-dages glidende snit → læse-intensitet over tid (fjerner enkeltdags-spidser fra hurtige bøger)
+  const rs=rsRaw.map((p,i)=>{let s=0,n=0;for(let j=Math.max(0,i-6);j<=i;j++){s+=rsRaw[j].v;n++;}return {d:p.d,v:Math.round(s/n)};});
   if(rs.some(p=>p.v>0)){spark("readChart",rs,"var(--energi)","var(--energi-soft)");
     const mx=Math.max(...rs.map(p=>p.v));const av=avg(rs.map(p=>p.v));
-    $("#readNote").innerHTML=mx>av*2.2?`Spids på ~${mx} sider/dag — hold øje om det følger sofadage og lav energi (<b>flugt?</b>).`:`Jævn læsning, ~${Math.round(av)} sider/dag i snit.`;}
+    $("#readNote").innerHTML=mx>av*1.8?`Intensiv læse-periode (~${mx} sider/dag i snit på det højeste) — hold øje om den følger sofadage og lav energi (<b>flugt?</b>).`:`~${Math.round(av)} sider/dag i snit · 3 mdr.`;}
   else $("#readChart").innerHTML='<div class="empty">Ingen læsedata i vinduet.</div>';
 
   // --- coach + insights ---
