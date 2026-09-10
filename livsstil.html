@@ -53,6 +53,11 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .btn{background:var(--surface); border:1px solid var(--border); color:var(--muted); height:38px; border-radius:10px; cursor:pointer; font:inherit; font-size:13px; font-weight:600; padding:0 13px; display:inline-flex; align-items:center; gap:6px}
 .btn:hover{border-color:var(--accent)}
 .theme-btn{width:38px; padding:0; font-size:16px}
+.tabbar{display:flex; gap:5px; margin:2px 0 4px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:4px; width:fit-content}
+.tab{border:0; background:transparent; color:var(--muted); font:inherit; font-weight:600; font-size:14px; padding:8px 18px; border-radius:9px; cursor:pointer}
+.tab.on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
+.framewrap{margin-top:10px}
+#vaegtFrame{width:100%; border:0; border-radius:16px; min-height:640px; background:var(--bg); display:block}
 .section-label{font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--muted); margin:26px 4px 12px; display:flex; align-items:center; gap:8px}
 .section-label .bar{width:22px; height:3px; border-radius:2px}
 .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:var(--shadow)}
@@ -131,6 +136,12 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
   </header>
 
+  <div class="tabbar" id="tabbar">
+    <button class="tab on" data-tab="liv">Livsstil</button>
+    <button class="tab" data-tab="vaegt">Vægttab &amp; log</button>
+  </div>
+
+  <div id="viewLiv">
   <!-- I DAG -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span><span id="todayLabel">I dag</span></div>
   <div class="grid lead">
@@ -302,6 +313,11 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <!-- SAMMENHÆNGE -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge — hvorfor</div>
   <div class="card" id="insights"></div>
+  </div><!-- /viewLiv -->
+
+  <div id="viewVaegt" hidden>
+    <div class="framewrap"><iframe id="vaegtFrame" title="Vægttab & log" loading="lazy"></iframe></div>
+  </div>
 
   <footer>
     Livsstil — krop · behandling · træning · kost · restitution · energi · arbejde · vejr · læsning, samlet ét sted.<br>
@@ -825,6 +841,24 @@ $("#lCancel").onclick=()=>$("#lDialog").classList.remove("open");
 $("#lSave").onclick=saveLab;
 $("#syncBtn").onclick=doSync;
 window.addEventListener("scroll",hideTT,{passive:true});
+
+// ---------- faner (Livsstil / Vægttab) ----------
+const frame=$("#vaegtFrame");let frameTimer=null;
+function sizeFrame(){try{const d=frame.contentWindow.document;if(d&&d.body){const hgt=Math.max(d.body.scrollHeight,d.documentElement.scrollHeight);if(hgt>200)frame.style.height=hgt+"px";}}catch(e){}}
+frame.addEventListener("load",()=>{ // vægt-dashboardet henter data async → mål højden nogle gange efter load
+  let n=0;clearInterval(frameTimer);frameTimer=setInterval(()=>{sizeFrame();if(++n>12)clearInterval(frameTimer);},400);
+});
+function showTab(t){
+  $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");
+  $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  $("#syncBtn").style.display=(t==="liv")?"":"none"; // vægt-fanen har egne knapper
+  if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","index.html");
+  if(t==="vaegt")sizeFrame();
+  try{localStorage.setItem("liv-tab",t)}catch(e){}
+}
+$("#tabbar").querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();});
+(function(){let t="liv";try{t=localStorage.getItem("liv-tab")||"liv"}catch(e){}if(t==="vaegt")showTab("vaegt");})();
 
 // ---------- boot ----------
 (async function(){
