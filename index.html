@@ -184,7 +184,7 @@ footer{margin-top:30px; text-align:center; color:var(--faint); font-size:12px}
 
   <div class="err-banner" id="errBanner"></div>
   <div id="app"><div class="loading">Henter dine data…</div></div>
-  <footer>Data gemmes i din egen Supabase-database · Matematikkuren efter Jens Bøgh + kalorie- og fedtsporing</footer>
+  <footer>Data gemmes i din egen Supabase-database · Matematikkuren efter Jens Bøgh</footer>
 </div>
 <div class="tt" id="tooltip"></div>
 
@@ -225,7 +225,7 @@ async function loadAll(){
   ]);
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
-  S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,fat_g:n.fat_g==null?null:+n.fat_g,grams:n.grams==null?null:+n.grams}));
+  S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
 }
 
@@ -314,7 +314,7 @@ function bindWeightHover(c){
   });
 }
 
-// ---- generic day-bar chart (kcal / fat) ----
+// ---- generic day-bar chart (kcal) ----
 function dayBars(map, target, unit, colOK, colOver, id){
   const days=Object.keys(map).sort().slice(-21);
   if(!days.length) return `<div style="color:var(--muted);font-size:13px;padding:24px 0;text-align:center">Intet logget endnu.</div>`;
@@ -335,8 +335,7 @@ function dayBars(map, target, unit, colOK, colOver, id){
 }
 function bindBars(container){
   container.querySelectorAll(".dbar").forEach(b=>{
-    b.addEventListener("mousemove",e=>{const u=b.dataset.id==="fat"?"g fedt":"kcal";
-      showTT(`<b>${fmtD(b.dataset.d)}</b> — ${num(b.dataset.v,b.dataset.id==="fat"?1:0)} ${u}`,e.clientX,e.clientY);});
+    b.addEventListener("mousemove",e=>{showTT(`<b>${fmtD(b.dataset.d)}</b> — ${num(b.dataset.v,0)} kcal`,e.clientX,e.clientY);});
     b.addEventListener("mouseleave",hideTT);
   });
 }
@@ -376,11 +375,8 @@ function render(){
 
   // today totals
   const kcalToday=sumDay(S.nutrition,t,"calories_in");
-  const fatToday=sumDay(S.nutrition,t,"fat_g");
   const kcalRem=s.calorie_target-kcalToday;
-  const fatPct=Math.min(100,fatToday/s.fat_target_g*100);
   const kcalPct=Math.min(100,kcalToday/s.calorie_target*100);
-  const fatCol=fatToday>s.fat_target_g?"var(--bad)":fatToday>s.fat_target_g*0.85?"var(--warn)":"var(--good)";
   const kcalCol=kcalToday>s.calorie_target?"var(--bad)":"var(--accent)";
   // madration (gram) — dagens ration fra morgenvejning, spist = loggede gram
   const gramsToday=sumDay(S.nutrition,t,"grams");
@@ -396,10 +392,9 @@ function render(){
   const rate=st.rate!=null?num(st.rate,2)+" kg/uge":"–";
   const rateSub=st.rate!=null?(st.rate>=0.4&&st.rate<=0.7?"på sporet":st.rate>0.7?"hurtigt":st.rate>0?"langsomt":"stigende"):"log flere morgenvejninger";
 
-  // kcal/fat maps for charts
-  const kMap={},fMap={};
+  // kcal map for charts
+  const kMap={};
   S.nutrition.forEach(n=>{kMap[n.log_date]=(kMap[n.log_date]||0)+(n.calories_in||0);});
-  S.nutrition.forEach(n=>{if(n.fat_g!=null)fMap[n.log_date]=(fMap[n.log_date]||0)+n.fat_g;});
   const tr=trainingSummary();
 
   $("#app").innerHTML=`
@@ -426,16 +421,13 @@ function render(){
     </div>
   </section>
 
-  <section class="stats stats3">
+  <section class="stats" style="grid-template-columns:repeat(2,1fr)">
     <div class="tile"><div class="k">Madration i dag</div><div class="v tnum">${ration!=null?num(gramsToday,0):"—"}${ration!=null?`<small> / ${num(ration,0)} g</small>`:""}</div>
       ${ration!=null?`<div class="meter"><i style="width:${gramsPct}%;background:${gramsCol}"></i></div>
       <div class="sub" style="color:${gramsCol}">${gramsRem>=0?num(gramsRem,0)+" g tilbage":num(-gramsRem,0)+" g over"}</div>`:`<div class="meter"><i style="width:0%"></i></div><div class="sub">vej dig i morges</div>`}</div>
     <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ${s.calorie_target}</small></div>
       <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
       <div class="sub">${kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over"}</div></div>
-    <div class="tile"><div class="k">Fedt i dag</div><div class="v tnum">${num(fatToday,0)}<small> / ${s.fat_target_g} g</small></div>
-      <div class="meter"><i style="width:${fatPct}%;background:${fatCol}"></i></div>
-      <div class="sub" style="color:${fatCol}">${fatToday>s.fat_target_g?'over loftet':fatToday>s.fat_target_g*0.85?'nærmer sig loft':'inden for loft'}</div></div>
   </section>
   <section class="stats stats4">
     <div class="tile"><div class="k">Tabt i alt</div><div class="v tnum">${num(st.lost,1)}<small> kg</small></div><div class="sub">siden start</div></div>
@@ -477,23 +469,17 @@ function render(){
           <div class="field"><label>Måltid</label><select id="c_meal"><option value="">—</option><option>Morgenmad</option><option>Frokost</option><option>Aftensmad</option><option>Snack</option></select></div>
         </div>
         <div class="field"><label>Gram mad</label><input type="number" id="c_grams" placeholder="fx 300" inputmode="numeric"></div>
-        <div class="row2">
-          <div class="field"><label>Kalorier (kcal)</label><input type="number" id="c_kcal" placeholder="fx 450" inputmode="numeric"></div>
-          <div class="field"><label>Fedt (g)</label><input type="number" step="0.1" id="c_fat" placeholder="fx 14" inputmode="decimal"></div>
-        </div>
+        <div class="field"><label>Kalorier (kcal, valgfrit)</label><input type="number" id="c_kcal" placeholder="fx 450" inputmode="numeric"></div>
         <button class="btn" type="submit">Gem mad</button>
-        <div class="form-note" id="noteC">Gram mad er kurens kerne — kalorier og fedt er valgfrit oveni.</div>
+        <div class="form-note" id="noteC">Gram mad er kurens kerne — kalorier er valgfrit oveni.</div>
       </form>
     </div>
   </section>
 
   <section class="cards c2b">
     <div class="card">
-      <div class="ch"><h2>Kalorier & fedt</h2><span class="hint">daglige totaler, seneste 3 uger</span></div>
-      <div class="dual">
-        <div><h3>Kalorier</h3><div class="cap">mod ${s.calorie_target} kcal</div><div id="kchart">${dayBars(kMap,s.calorie_target,"kcal","var(--accent)","var(--amber)","kcal")}</div></div>
-        <div><h3>Fedt</h3><div class="cap">mod loft ${s.fat_target_g} g</div><div id="fchart">${dayBars(fMap,s.fat_target_g,"g","var(--accent)","var(--bad)","fat")}</div></div>
-      </div>
+      <div class="ch"><h2>Kalorier</h2><span class="hint">daglige totaler, seneste 3 uger</span></div>
+      <div><div class="cap">mod ${s.calorie_target} kcal</div><div id="kchart">${dayBars(kMap,s.calorie_target,"kcal","var(--accent)","var(--amber)","kcal")}</div></div>
     </div>
     <div class="card">
       <div class="ch"><h2>Ugens træning</h2><div style="display:flex;gap:9px;align-items:center"><span class="hint" id="syncNote">${syncStatus}</span><button type="button" id="syncBtn" class="sync-btn">↻ Synk nu</button></div></div>
@@ -551,7 +537,7 @@ async function backgroundSync(){
 function renderLog(){
   const items=[];
   S.weighins.forEach(w=>items.push({date:w.log_date,ord:w.moment==="morgen"?0:w.moment==="foraften"?1:2,html:`<span class="chip w">${MOMENTS[w.moment]}</span> <b>${kg(w.weight_kg)}</b>`}));
-  S.nutrition.forEach(n=>{const p=[];if(n.grams!=null)p.push(n.grams+" g");if(n.calories_in!=null)p.push(n.calories_in+" kcal");if(n.fat_g!=null)p.push(num(n.fat_g,0)+" g fedt");
+  S.nutrition.forEach(n=>{const p=[];if(n.grams!=null)p.push(n.grams+" g");if(n.calories_in!=null)p.push(n.calories_in+" kcal");
     items.push({date:n.log_date,ord:3,html:`<span class="chip c">${n.label||"Mad"}</span> <b>${p.join(" · ")||"—"}</b>`});});
   S.workouts.forEach(w=>{const lab=w.kind==="loeb"?"Løb":w.kind==="styrke"?"Styrke":"Skridt";
     let d=w.kind==="loeb"?`${w.distance_km!=null?num(w.distance_km,1)+" km":""}${w.duration_min?" · "+w.duration_min+" min":""}`:w.kind==="styrke"?"Styrketræning":`${w.steps?w.steps.toLocaleString("da-DK")+" skridt":""}`;
@@ -594,12 +580,11 @@ function wireForms(){
   $("#formC").addEventListener("submit",async e=>{e.preventDefault();
     const g=$("#c_grams").value===""?null:parseInt($("#c_grams").value,10);
     const v=$("#c_kcal").value===""?null:parseInt($("#c_kcal").value,10);
-    const fat=$("#c_fat").value===""?null:parseFloat($("#c_fat").value.replace(",","."));
     if(!g&&!v){setNote("#noteC","Skriv gram mad eller kalorier.","err");return;}
     const btn=e.target.querySelector("button");btn.disabled=true;setNote("#noteC","Gemmer…");
-    try{const row=await apiInsert("nutrition",{log_date:$("#c_date").value,grams:g,calories_in:v,fat_g:fat,label:$("#c_meal").value||null});
-      S.nutrition.push({...row[0],calories_in:row[0].calories_in==null?null:+row[0].calories_in,fat_g:row[0].fat_g==null?null:+row[0].fat_g,grams:row[0].grams==null?null:+row[0].grams});
-      $("#c_grams").value="";$("#c_kcal").value="";$("#c_fat").value="";setNote("#noteC","Gemt ✓","ok");render();
+    try{const row=await apiInsert("nutrition",{log_date:$("#c_date").value,grams:g,calories_in:v,label:$("#c_meal").value||null});
+      S.nutrition.push({...row[0],calories_in:row[0].calories_in==null?null:+row[0].calories_in,grams:row[0].grams==null?null:+row[0].grams});
+      $("#c_grams").value="";$("#c_kcal").value="";setNote("#noteC","Gemt ✓","ok");render();
     }catch(err){setNote("#noteC","Fejl: "+err.message,"err");}finally{btn.disabled=false;}});
 }
 function mergeWeigh(row){
