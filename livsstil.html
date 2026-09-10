@@ -356,8 +356,8 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
 <div class="dialog" id="lDialog"><div class="box">
   <h3>Blodprøve</h3>
   <div class="field"><label>Dato</label><input class="inp" id="lDate" type="date"></div>
-  <div class="field"><label>TSH</label><input class="inp" id="lTsh" type="number" step="0.01" inputmode="decimal" placeholder="fx 2,4"></div>
-  <div class="field"><label>Fri T4 <span class="hint">(valgfri)</span></label><input class="inp" id="lT4" type="number" step="0.1" inputmode="decimal"></div>
+  <div class="field"><label>TSH</label><input class="inp" id="lTsh" type="text" inputmode="decimal" placeholder="fx 2,4"></div>
+  <div class="field"><label>Fri T4 <span class="hint">(valgfri)</span></label><input class="inp" id="lT4" type="text" inputmode="decimal" placeholder="fx 16,6"></div>
   <div class="field"><label>Dosis-note <span class="hint">(valgfri)</span></label><input class="inp" id="lDose" placeholder="fx Eltroxin 100→112,5"></div>
   <div style="display:flex;gap:8px;margin-top:14px">
     <button class="btn" id="lCancel" style="flex:1">Annullér</button>
@@ -805,10 +805,11 @@ async function saveMigraine(){
   }catch(e){setNote("#noteM","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
 async function saveLab(){
-  const dt=$("#lDate").value,tsh=$("#lTsh").value,t4=$("#lT4").value,dose=$("#lDose").value.trim();
+  const pn=v=>{v=(v||"").trim().replace(",",".");return v===""?null:parseFloat(v);};
+  const dt=$("#lDate").value,tsh=pn($("#lTsh").value),t4=pn($("#lT4").value),dose=$("#lDose").value.trim();
   if(!dt){setNote("#noteL","Vælg en dato.","err");return;}
   const btn=$("#lSave");btn.disabled=true;setNote("#noteL","Gemmer…");
-  try{const row=(await insert("thyroid_labs",{test_date:dt,tsh:tsh===""?null:+tsh,t4:t4===""?null:+t4,dose_note:dose||null}))[0];
+  try{const row=(await insert("thyroid_labs",{test_date:dt,tsh,t4,dose_note:dose||null}))[0];
     S.labs.push({...row,tsh:row.tsh==null?null:+row.tsh});S.labs.sort((a,b)=>a.test_date<b.test_date?-1:1);
     setNote("#noteL","Gemt ✓","ok");
     setTimeout(()=>{$("#lDialog").classList.remove("open");$("#lTsh").value="";$("#lT4").value="";$("#lDose").value="";setNote("#noteL","");render();},600);
