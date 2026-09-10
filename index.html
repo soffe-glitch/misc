@@ -419,7 +419,7 @@ async function loadAll(){
   S.wellness=wellness.map(w=>({...w,sleep_hours:w.sleep_hours==null?null:+w.sleep_hours,hrv:w.hrv==null?null:+w.hrv}));
   S.daily=daily; S.checkins=checkins; S.migraines=migraines; S.meds=meds;
   S.labs=labs.map(l=>({...l,tsh:l.tsh==null?null:+l.tsh}));
-  try{ S.books=await booksGet("?select=title,pages,started_at,finished_at,paused_days,status&limit=500"); }catch(e){ S.books=[]; }
+  try{ S.books=await booksGet("?select=title,pages,word_count,started_at,finished_at,paused_days,status&limit=500"); }catch(e){ S.books=[]; }
 }
 
 // ---------- Matematikkur math ----------
@@ -549,7 +549,9 @@ function readingSeries(nDays){
   const map={};const today=todayISO();
   for(let i=nDays-1;i>=0;i--){map[addDays(today,-i)]=0;}
   S.books.forEach(b=>{
-    const pg=+b.pages||0; if(!pg||!b.started_at||!b.finished_at)return;
+    // sidetal: brug pages, ellers udled fra ordantal (~275 ord/side) så bøger uden sidetal også tæller
+    let pg=+b.pages||0; if(!pg&&+b.word_count>0)pg=Math.round(+b.word_count/275);
+    if(!pg||!b.started_at||!b.finished_at)return;
     const s=new Date(b.started_at),f=new Date(b.finished_at);
     const sIso=`${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
     const fIso=`${f.getFullYear()}-${pad(f.getMonth()+1)}-${pad(f.getDate())}`;
