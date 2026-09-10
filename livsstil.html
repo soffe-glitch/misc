@@ -49,8 +49,10 @@ h1,h2,h3{margin:0; font-family:"Fraunces",Georgia,serif; font-weight:500; letter
 header.top{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px}
 .eyebrow{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
 .brand h1{font-size:30px; line-height:1.05; margin-top:2px}
-.draft{display:inline-block; margin-top:7px; font-size:11.5px; font-weight:600; color:var(--warn); background:var(--kost-soft); padding:3px 9px; border-radius:99px}
-.theme-btn{background:var(--surface); border:1px solid var(--border); color:var(--muted); width:38px; height:38px; border-radius:10px; cursor:pointer; font-size:16px}
+.tools{display:flex; gap:8px; align-items:center}
+.btn{background:var(--surface); border:1px solid var(--border); color:var(--muted); height:38px; border-radius:10px; cursor:pointer; font:inherit; font-size:13px; font-weight:600; padding:0 13px; display:inline-flex; align-items:center; gap:6px}
+.btn:hover{border-color:var(--accent)}
+.theme-btn{width:38px; padding:0; font-size:16px}
 .section-label{font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--muted); margin:26px 4px 12px; display:flex; align-items:center; gap:8px}
 .section-label .bar{width:22px; height:3px; border-radius:2px}
 .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:var(--shadow)}
@@ -66,12 +68,7 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 :root[data-theme="dark"] .coach .who .av{color:#07130e} @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .coach .who .av{color:#07130e}}
 .coach p{margin:0; font-size:15.5px; line-height:1.6}
 .coach .nudge{margin-top:10px; font-family:"Fraunces",serif; font-style:italic; font-size:16px; color:var(--accent-ink)}
-.coach .ask{margin-top:14px; display:flex; gap:8px}
-.coach .ask input{flex:1; border:1px solid var(--border); background:var(--surface); border-radius:10px; padding:9px 12px; font:inherit; font-size:14px; color:var(--ink)}
-.coach .ask button{border:0; background:var(--accent); color:#fff; border-radius:10px; padding:0 15px; font:inherit; font-weight:700; cursor:pointer}
-.banner{display:flex; gap:12px; align-items:flex-start; border-radius:14px; padding:13px 16px; margin-bottom:14px; border:1px solid var(--warn); background:var(--kost-soft)}
-.banner .ic{font-size:20px; line-height:1}
-.banner b{color:var(--warn)} .banner p{margin:2px 0 0; font-size:13px; color:var(--ink)}
+.coach .soon{margin-top:13px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); padding-top:10px}
 .tile{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow)}
 .tile .k{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600}
 .tile .v{font-size:23px; font-weight:600; font-family:"Fraunces",serif; margin-top:3px; line-height:1}
@@ -86,6 +83,7 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .dots{display:inline-flex; gap:3px; margin-bottom:2px}
 .dots i{width:9px;height:9px;border-radius:50%;background:var(--surface-3)} .dots i.on{background:var(--energi)}
 .mood{font-size:14px}
+.empty{color:var(--faint); font-size:13px; text-align:center; padding:18px 6px}
 .formstrip{display:flex; gap:4px; flex-wrap:wrap; margin-top:6px}
 .fp{flex:1; min-width:16px; height:26px; border-radius:6px; display:grid; place-items:center; font-size:10px; color:#fff}
 .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:10px}
@@ -93,8 +91,9 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .medgrid{display:grid; grid-template-columns:auto repeat(7,1fr); gap:6px; align-items:center; font-size:12px}
 .medgrid .hd{font-size:10.5px; color:var(--muted); text-align:center; font-weight:600}
 .medgrid .rl{font-size:11.5px; color:var(--muted); font-weight:600}
-.mc{height:26px; border-radius:7px; background:var(--surface-3); display:grid; place-items:center; font-size:13px; color:var(--muted)}
-.mc.on{background:var(--krop-soft); color:var(--krop)} .mc.miss{background:var(--kost-soft); color:var(--bad)}
+.mc{height:28px; border-radius:7px; background:var(--surface-3); display:grid; place-items:center; font-size:13px; color:var(--muted); cursor:pointer; border:0; font-family:inherit}
+.mc.on{background:var(--krop-soft); color:var(--krop)} .mc.miss{background:var(--surface-3); color:var(--faint)}
+.mc.future{opacity:.4; cursor:default}
 svg{display:block; width:100%; height:auto; overflow:visible}
 .axis{font-size:10px; fill:var(--faint)}
 .insight{display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border)}
@@ -103,31 +102,49 @@ svg{display:block; width:100%; height:auto; overflow:visible}
 .insight b{font-weight:600} .insight p{margin:2px 0 0; font-size:13px; color:var(--muted)}
 .runrow{display:grid; grid-template-columns:52px 1fr auto; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13.5px}
 .runrow:last-child{border-bottom:0} .runrow .d{color:var(--muted); font-size:12px; font-weight:600}
+.field{margin-top:10px}
+.field label{display:block; font-size:11.5px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em}
+.seg{display:flex; gap:5px; flex-wrap:wrap}
+.seg button{flex:1; min-width:38px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:9px; padding:7px 4px; font:inherit; font-size:13px; font-weight:600; cursor:pointer}
+.seg button.sel{background:var(--energi); color:#fff; border-color:var(--energi)}
+.inp{width:100%; border:1px solid var(--border); background:var(--surface-2); border-radius:10px; padding:9px 12px; font:inherit; font-size:14px; color:var(--ink)}
+.pbtn{border:0; border-radius:10px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; color:#fff}
+.note{font-size:12.5px; margin-top:8px; min-height:16px}
+.note.ok{color:var(--good)} .note.err{color:var(--bad)}
+.tooltip{position:fixed; pointer-events:none; opacity:0; transition:opacity .1s; background:var(--ink); color:var(--bg); font-size:12px; padding:6px 9px; border-radius:8px; z-index:50; white-space:nowrap}
+.dialog{position:fixed; inset:0; background:rgba(10,20,16,.45); display:none; place-items:center; z-index:60; padding:18px}
+.dialog.open{display:grid}
+.dialog .box{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; width:100%; max-width:400px; box-shadow:var(--shadow)}
+.dialog h3{font-size:18px; margin-bottom:4px}
 footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; line-height:1.6}
 @media(max-width:820px){ .g4{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:1fr} .g2{grid-template-columns:1fr} .lead{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
+<div class="tooltip" id="tooltip"></div>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><div class="eyebrow">Livsstil</div><h1>Sofies dashboard</h1><div class="draft">Udkast · eksempeldata — fuld vision</div></div>
-    <button class="theme-btn" id="themeBtn" title="Skift tema">◐</button>
+    <div class="brand"><div class="eyebrow">Livsstil</div><h1>Sofies dashboard</h1><div class="hint" id="sub" style="margin-top:6px">indlæser…</div></div>
+    <div class="tools">
+      <button class="btn" id="syncBtn" title="Hent nyeste fra Withings + intervals.icu">↻ Synk</button>
+      <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
+    </div>
   </header>
 
   <!-- I DAG -->
-  <div class="section-label"><span class="bar" style="background:var(--accent)"></span>I dag · torsdag 10. sep</div>
+  <div class="section-label"><span class="bar" style="background:var(--accent)"></span><span id="todayLabel">I dag</span></div>
   <div class="grid lead">
-    <div class="coach">
+    <div class="coach" id="coach">
       <div class="who"><span class="av">C</span>Din coach</div>
-      <p>Godmorgen. Du sov <b>6t 20</b>, HVR er nede, og i går var en lang dag — kroppen beder om en rolig dag. Du har en let <b>6 km</b> på programmet: tag den stille, eller flyt den. På vægten ligger du <b>0,3 kg foran</b>, så der er plads til en ordentlig aftensmad (~700 g). Lyt til kroppen i dag.</p>
-      <div class="nudge">Men hvis du står frisk og tøver ved 17-tiden: sko på, ud ad døren.</div>
-      <div class="ask"><input placeholder="Spørg din coach…"><button>Spørg</button></div>
+      <p id="coachText">…</p>
+      <div class="nudge" id="coachNudge"></div>
+      <div class="soon">💬 Live-coach du kan spørge frit kommer som næste skridt — indtil da er dagens brief her, læst fra dine data.</div>
     </div>
     <div class="grid g2" style="align-content:start">
-      <div class="tile"><div class="k">Til aftensmad</div><div class="v tnum">705<small> g</small></div><div class="sub">før-aften 67,6 kg</div></div>
-      <div class="tile"><div class="k">Kalorier</div><div class="v tnum">1065<small> / 1648</small></div><div class="meter"><i style="width:65%;background:var(--accent)"></i></div></div>
-      <div class="tile"><div class="k">Dagens træning</div><div class="v" style="font-size:16px">6 km rolig</div><div class="sub" style="color:var(--warn)">planlagt · ikke løbet</div></div>
-      <div class="tile"><div class="k">Restitution</div><div class="v" style="font-size:16px">Lav ↓</div><div class="sub">HVR 42 · hvilepuls 54</div></div>
+      <div class="tile"><div class="k">Til aftensmad</div><div class="v tnum" id="tRation">—</div><div class="sub" id="tRationSub">vej før aften</div></div>
+      <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum" id="tKcal">—</div><div class="meter"><i id="tKcalBar" style="width:0%;background:var(--accent)"></i></div></div>
+      <div class="tile"><div class="k">Dagens træning</div><div class="v" style="font-size:16px" id="tTrain">—</div><div class="sub" id="tTrainSub"></div></div>
+      <div class="tile"><div class="k">Restitution</div><div class="v" style="font-size:16px" id="tRest">—</div><div class="sub" id="tRestSub"></div></div>
     </div>
   </div>
 
@@ -136,18 +153,58 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <div class="grid lead">
     <div class="card">
       <div class="ch"><h2>Dagens check-in</h2><span class="hint">flere nedslag pr. dag</span></div>
-      <div class="entry"><div class="t">07:10</div><div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="mood">Lidt tung efter dårlig søvn 🙂</div></div></div>
-      <div class="entry"><div class="t">13:30</div><div><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div><div class="mood">Frisk! God frokost</div></div></div>
-      <div class="entry"><div class="t">18:00</div><div><div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="mood">Død træt. Overvejer at skippe løbet 😴</div></div></div>
-      <div style="display:flex;gap:8px;margin-top:12px"><input style="flex:1;border:1px solid var(--border);background:var(--surface-2);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;color:var(--ink)" placeholder="Hvordan har du det lige nu?"><button style="border:0;background:var(--energi);color:#fff;border-radius:10px;padding:0 14px;font:inherit;font-weight:700;cursor:pointer">Log</button></div>
-      <button type="button" style="margin-top:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--warn);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer">+ Log migræne-anfald</button>
+      <div id="checkinList"></div>
+      <div class="field">
+        <div class="seg" id="moodSeg" data-val="">
+          <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+          <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+          <button type="button" data-v="5">5</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="checkinNote" style="flex:1" placeholder="Hvordan har du det lige nu?">
+        <button class="pbtn" id="checkinBtn" style="background:var(--energi)">Log</button>
+      </div>
+      <div class="note" id="noteCheckin"></div>
+      <button type="button" class="btn" id="migraineBtn" style="margin-top:8px;color:var(--warn);border-color:var(--kost-soft)">+ Log migræne-anfald</button>
     </div>
-    <div class="card">
-      <div class="ch"><h3>Energi — 14 dage</h3></div>
-      <div id="energiChart"></div>
-      <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">overskud → sofa</span></div>
-      <div class="formstrip" id="formstrip"></div>
-      <div class="legend"><span style="--x:var(--krop)">overskud</span><span style="--x:var(--faint)">neutral</span><span style="--x:var(--rest)">sofadag</span></div>
+    <div>
+      <div class="card">
+        <div class="ch"><h3>Energi & humør — 14 dage</h3></div>
+        <div id="energiChart"><div class="empty">Log dit humør, så tegnes kurven her.</div></div>
+        <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">overskud → sofa</span></div>
+        <div class="formstrip" id="formstrip"></div>
+        <div class="legend"><span style="--x:var(--krop)">overskud</span><span style="--x:var(--faint)">blandet</span><span style="--x:var(--rest)">sofadag</span></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="ch"><h3>Dagens log</h3><span class="hint">én pr. dag</span></div>
+        <div class="field"><label>Dagsform</label>
+          <div class="seg" id="dayTypeSeg" data-val="">
+            <button type="button" data-v="overskud">▲ Overskud</button>
+            <button type="button" data-v="blandet">– Blandet</button>
+            <button type="button" data-v="sofa">▼ Sofa</button>
+          </div>
+        </div>
+        <div class="field"><label>Kommunikations­belastning <span class="hint">(socialt batteri drænet)</span></label>
+          <div class="seg" id="commSeg" data-val="">
+            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+            <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+            <button type="button" data-v="5">5</button>
+          </div>
+        </div>
+        <div class="field"><label>Arbejdsbelastning</label>
+          <div class="seg" id="workSeg" data-val="">
+            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+            <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+            <button type="button" data-v="5">5</button>
+          </div>
+        </div>
+        <div class="field"><label>Alkohol i dag <span class="hint">(genstande)</span></label>
+          <input class="inp" id="alcInp" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+        </div>
+        <button class="pbtn" id="dailyBtn" style="background:var(--energi);width:100%;margin-top:12px">Gem dagens log</button>
+        <div class="note" id="noteDaily"></div>
+      </div>
     </div>
   </div>
 
@@ -155,27 +212,27 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <div class="section-label"><span class="bar" style="background:var(--krop)"></span>Krop & behandling</div>
   <div class="grid lead">
     <div class="card">
-      <div class="ch"><h2>Vægt mod målvægt</h2><span class="hint">Matematikkuren</span></div>
-      <div id="vaegtChart"></div>
+      <div class="ch"><h2>Vægt mod målvægt</h2><span class="hint">Matematikkuren · markør = blodprøve</span></div>
+      <div id="vaegtChart"><div class="empty">Vejninger hentes fra Withings.</div></div>
     </div>
     <div class="grid g2" style="align-content:start">
-      <div class="tile"><div class="k">Morgenvægt</div><div class="v tnum">67,6<small> kg</small></div><div class="sub" style="color:var(--good)">0,3 kg foran</div></div>
-      <div class="tile"><div class="k">Til mål 62</div><div class="v tnum">5,6<small> kg</small></div><div class="sub">realistisk 4,1</div></div>
-      <div class="tile"><div class="k">Fedt%</div><div class="v tnum">27,8<small> %</small></div><div class="sub" style="color:var(--good)">↓ 1,2 %</div></div>
-      <div class="tile"><div class="k">Muskel</div><div class="v tnum">46,9<small> kg</small></div><div class="sub">stabil</div></div>
+      <div class="tile"><div class="k">Morgenvægt</div><div class="v tnum" id="tWeight">—</div><div class="sub" id="tWeightSub"></div></div>
+      <div class="tile"><div class="k">Til mål 62</div><div class="v tnum" id="tToGoal">—</div><div class="sub" id="tToGoalSub"></div></div>
+      <div class="tile"><div class="k">Fedt%</div><div class="v tnum" id="tFat">—</div><div class="sub" id="tFatSub"></div></div>
+      <div class="tile"><div class="k">Muskel</div><div class="v tnum" id="tMuscle">—</div><div class="sub" id="tMuscleSub"></div></div>
     </div>
   </div>
-  <div class="card" style="margin-top:14px"><div class="ch"><h2>Vægt over tid</h2><span class="hint">alle Withings-målinger · 6 mdr</span></div><div id="vaegtLang"></div></div>
+  <div class="card" style="margin-top:14px"><div class="ch"><h2>Vægt vs. fedt%</h2><span class="hint">recomposition-tjek · vægt kan stå stille mens fedt falder</span></div><div id="fatChart"><div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen.</div></div></div>
   <div class="grid g2" style="margin-top:14px">
     <div class="card">
-      <div class="ch"><h2>Medicin</h2><span class="hint">Eltroxin · morgen + aften</span></div>
+      <div class="ch"><h2>Medicin</h2><span class="hint">Eltroxin · klik for at logge</span></div>
       <div class="medgrid" id="medgrid"></div>
-      <p class="hint" style="margin-top:10px">Denne uge: <b style="color:var(--krop)">12 / 14</b> doser · glemte aften ons.</p>
+      <p class="hint" style="margin-top:10px" id="medSummary"></p>
     </div>
     <div class="card">
       <div class="ch"><h2>Blodprøver</h2><span class="hint">TSH over tid</span></div>
-      <div id="tshChart"></div>
-      <p class="hint" style="margin-top:8px">Din energi dykkede i juli, hvor TSH drev op til 4,1 — noget at tage med til ambulatoriet.</p>
+      <div id="tshChart"><div class="empty">Tilføj blodprøve-resultater, så plottes TSH her.</div></div>
+      <button type="button" class="btn" id="labBtn" style="margin-top:10px">+ Tilføj blodprøve</button>
     </div>
   </div>
 
@@ -184,15 +241,13 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <div class="grid lead">
     <div class="card">
       <div class="ch"><h2>Seneste løb</h2><span class="hint">fra intervals.icu</span></div>
-      <div class="runrow"><div class="d">9. sep</div><div>16,0 km · lang tur</div><div class="chip" style="background:var(--trae-soft);color:var(--trae)">5:31/km</div></div>
-      <div class="runrow"><div class="d">7. sep</div><div>7,5 km · strides</div><div class="chip" style="background:var(--trae-soft);color:var(--trae)">6:00/km</div></div>
-      <div class="runrow"><div class="d">4. sep</div><div>10,1 km · aerob</div><div class="chip" style="background:var(--trae-soft);color:var(--trae)">5:45/km</div></div>
+      <div id="runList"></div>
       <div id="loadChart" style="margin-top:12px"></div>
     </div>
     <div class="grid g2" style="align-content:start">
-      <div class="tile" style="grid-column:span 2"><div class="k">Næste løb</div><div class="v" style="font-size:19px">CPH Half</div><div class="sub">om 12 dage · mål sub-1:50</div><div class="meter"><i style="width:78%;background:var(--trae)"></i></div></div>
-      <div class="tile"><div class="k">Ugens km</div><div class="v tnum">38,1</div><div class="sub">3 løb / 3</div></div>
-      <div class="tile"><div class="k">Belastning</div><div class="v" style="font-size:16px">Høj</div><div class="sub">hvil anbefales</div></div>
+      <div class="tile"><div class="k">Ugens km</div><div class="v tnum" id="tWeekKm">—</div><div class="sub" id="tWeekKmSub"></div></div>
+      <div class="tile"><div class="k">Skridt i dag</div><div class="v tnum" id="tSteps">—</div><div class="sub" id="tStepsSub">mål 7.000</div></div>
+      <div class="tile" style="grid-column:span 2"><div class="k">Styrke denne uge</div><div class="v" style="font-size:16px" id="tStrength">—</div><div class="sub" id="tStrengthSub"></div></div>
     </div>
   </div>
 
@@ -200,21 +255,22 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <div class="grid g2">
     <div>
       <div class="section-label"><span class="bar" style="background:var(--rest)"></span>Restitution</div>
-      <div class="card"><div class="grid g2">
-        <div class="tile"><div class="k">Søvn i nat</div><div class="v tnum">6:20</div><div class="sub" style="color:var(--warn)">under snit 7:05</div></div>
-        <div class="tile"><div class="k">HVR</div><div class="v tnum">42<small> ms</small></div><div class="sub" style="color:var(--warn)">↓ 8</div></div>
-        <div class="tile"><div class="k">Hvilepuls</div><div class="v tnum">54</div><div class="sub">+3</div></div>
-        <div class="tile"><div class="k">Readiness</div><div class="v" style="font-size:16px">62/100</div><div class="meter"><i style="width:62%;background:var(--rest)"></i></div></div>
-      </div></div>
+      <div class="card"><div class="grid g3">
+        <div class="tile"><div class="k">Søvn i nat</div><div class="v tnum" id="tSleep">—</div><div class="sub" id="tSleepSub"></div></div>
+        <div class="tile"><div class="k">HVR</div><div class="v tnum" id="tHrv">—</div><div class="sub" id="tHrvSub"></div></div>
+        <div class="tile"><div class="k">Hvilepuls</div><div class="v tnum" id="tRhr">—</div><div class="sub" id="tRhrSub"></div></div>
+      </div>
+      <div id="sleepChart" style="margin-top:14px"></div>
+      </div>
     </div>
     <div>
       <div class="section-label"><span class="bar" style="background:var(--kost)"></span>Kost</div>
       <div class="card">
         <div class="ch"><h3>Kalorier — 14 dage</h3></div>
-        <div id="kostChart"></div>
+        <div id="kostChart"><div class="empty">Log mad i vægt-dashboardet, så vises kalorierne her.</div></div>
         <div class="grid g2" style="margin-top:12px">
-          <div class="tile"><div class="k">Snit kcal</div><div class="v tnum">1610</div><div class="sub">mål 1648</div></div>
-          <div class="tile"><div class="k">Snit ration</div><div class="v tnum">612<small> g</small></div><div class="sub">bund 600 g</div></div>
+          <div class="tile"><div class="k">Snit kcal</div><div class="v tnum" id="tAvgKcal">—</div><div class="sub">mål 1648</div></div>
+          <div class="tile"><div class="k">Dage logget</div><div class="v tnum" id="tKostDays">—</div><div class="sub">seneste 14</div></div>
         </div>
       </div>
     </div>
@@ -224,107 +280,557 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <div class="section-label"><span class="bar" style="background:var(--arb)"></span>Liv — arbejde, vejr & læsning</div>
   <div class="grid g3">
     <div class="card">
-      <div class="ch"><h3>Arbejdsbelastning</h3><span class="hint">fra kalender</span></div>
-      <div id="arbChart"></div>
-      <p class="hint" style="margin-top:8px"><b style="color:var(--arb)">3 lange dage</b> denne uge — energien og aftenløbet mærker det.</p>
+      <div class="ch"><h3>Arbejdsbelastning</h3><span class="hint">fra dagens log</span></div>
+      <div id="arbChart"><div class="empty">Log arbejdsbelastning i dagens log.</div></div>
+      <p class="hint" style="margin-top:8px" id="arbNote"></p>
     </div>
     <div class="card">
       <div class="ch"><h3>Vejr</h3><span class="hint">København</span></div>
       <div class="grid g2">
-        <div class="tile"><div class="k">I dag</div><div class="v tnum">11<small>°</small></div><div class="sub">regn · mørkt</div></div>
-        <div class="tile"><div class="k">Løbelyst</div><div class="v" style="font-size:16px">Lav</div><div class="sub">gråvejr</div></div>
+        <div class="tile"><div class="k">Lige nu</div><div class="v tnum" id="wTemp">—</div><div class="sub" id="wDesc">henter…</div></div>
+        <div class="tile"><div class="k">Løbelyst</div><div class="v" style="font-size:16px" id="wRun">—</div><div class="sub" id="wRunSub"></div></div>
       </div>
-      <p class="hint" style="margin-top:10px">Du skipper oftere løb på grå, våde dage — planlæg dem indenfor eller tidligt.</p>
+      <p class="hint" style="margin-top:10px">Grå, våde dage koster ofte aftenløbet — planlæg dem indenfor eller tidligt.</p>
     </div>
     <div class="card">
       <div class="ch"><h3>Læsning</h3><span class="hint">sider/dag · fra Books</span></div>
-      <div id="readChart"></div>
-      <p class="hint" style="margin-top:8px">Spids i sidste uge (420 s./dag) faldt sammen med 3 sofadage og lav energi — <b>mere flugt end påfyld?</b></p>
+      <div id="readChart"><div class="empty">henter…</div></div>
+      <p class="hint" style="margin-top:8px" id="readNote"></p>
     </div>
   </div>
 
   <!-- SAMMENHÆNGE -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge — hvorfor</div>
-  <div class="card">
-    <div class="insight"><div class="ic" style="background:var(--kost-soft);color:var(--warn)">🤕</div><div><b>Migræne — vi samler mønsteret.</b><p>Først logger du dine anfald. Når der er nok til at se en reel sammenhæng med søvn, HVR og arbejde, tænder vi et evidensbaseret forvarsel — ikke før. Ingen falske alarmer.</p></div></div>
-    <div class="insight"><div class="ic" style="background:var(--rest-soft);color:var(--rest)">😴</div><div><b>Du skipper løb efter lidt søvn.</b><p>4 af 5 sprungne løb kom efter en nat under 6 timer. Ved ≥7 t løber du 9 ud af 10 gange.</p></div></div>
-    <div class="insight"><div class="ic" style="background:var(--arb-soft);color:var(--arb)">💼</div><div><b>Lange arbejdsdage rammer aftenløbet.</b><p>På dage med møder efter 16 ryger aftenløbet dobbelt så ofte. Morgenløb gennemføres 2× oftere.</p></div></div>
-    <div class="insight"><div class="ic" style="background:var(--energi-soft);color:var(--energi)">📖</div><div><b>Læsning skifter mellem påfyld og flugt.</b><p>Jævn læsning følger gode uger. Pludselige spidser + sofadage + lav energi ligner tilbagetrækning — værd at lægge mærke til.</p></div></div>
-    <div class="insight"><div class="ic" style="background:var(--krop-soft);color:var(--krop)">💊</div><div><b>Energi følger stofskiftet.</b><p>Din energi og vægt bevæger sig med TSH og medicin-konsistens — hold øje omkring dosisændringer og kontroller.</p></div></div>
-  </div>
+  <div class="card" id="insights"></div>
 
-  <footer>Udkast med eksempeldata · alle tal er opdigtede til at vise layoutet.<br>Livsstil — krop · behandling · træning · kost · restitution · energi · arbejde · vejr · læsning, samlet ét sted.</footer>
+  <footer>
+    Livsstil — krop · behandling · træning · kost · restitution · energi · arbejde · vejr · læsning, samlet ét sted.<br>
+    Data live fra Supabase, Withings, intervals.icu og dit Books-dashboard. <span id="foot"></span>
+  </footer>
 </div>
 
-<script>
-(function(){const r=document.documentElement;let t=null;try{t=localStorage.getItem("liv-theme")}catch(e){}
-  if(t)r.setAttribute("data-theme",t);
-  document.getElementById("themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}};})();
+<!-- migræne-dialog -->
+<div class="dialog" id="mDialog"><div class="box">
+  <h3>Migræne-anfald</h3>
+  <p class="hint" style="margin-bottom:6px">Vi logger først — forvarsel tændes først når der er nok data til en reel sammenhæng.</p>
+  <div class="field"><label>Intensitet</label>
+    <div class="seg" id="mIntSeg" data-val="">
+      <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+      <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+      <button type="button" data-v="5">5</button>
+    </div>
+  </div>
+  <div class="field"><label>Mistænkt udløser</label>
+    <div class="seg" id="mTrigSeg" data-val="" style="flex-wrap:wrap">
+      <button type="button" data-v="søvn">Søvn</button><button type="button" data-v="skærm">Skærm</button>
+      <button type="button" data-v="vejr">Vejr</button><button type="button" data-v="stress">Stress</button>
+      <button type="button" data-v="mad">Mad</button><button type="button" data-v="dosis">Dosis</button>
+      <button type="button" data-v="ved ikke">Ved ikke</button>
+    </div>
+  </div>
+  <div class="field"><input class="inp" id="mNote" placeholder="Note (valgfri)"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn" id="mCancel" style="flex:1">Annullér</button>
+    <button class="pbtn" id="mSave" style="flex:1;background:var(--warn)">Gem</button>
+  </div>
+  <div class="note" id="noteM"></div>
+</div></div>
 
-function spark(id,data,color,fill){
-  const w=340,h=90,mL=6,mR=6,mT=8,mB=8;const mn=Math.min(...data),mx=Math.max(...data);
-  const X=i=>mL+i/(data.length-1)*(w-mL-mR);const Y=v=>mT+(mx-v)/((mx-mn)||1)*(h-mT-mB);
+<!-- blodprøve-dialog -->
+<div class="dialog" id="lDialog"><div class="box">
+  <h3>Blodprøve</h3>
+  <div class="field"><label>Dato</label><input class="inp" id="lDate" type="date"></div>
+  <div class="field"><label>TSH</label><input class="inp" id="lTsh" type="number" step="0.01" inputmode="decimal" placeholder="fx 2,4"></div>
+  <div class="field"><label>Fri T4 <span class="hint">(valgfri)</span></label><input class="inp" id="lT4" type="number" step="0.1" inputmode="decimal"></div>
+  <div class="field"><label>Dosis-note <span class="hint">(valgfri)</span></label><input class="inp" id="lDose" placeholder="fx Eltroxin 100→112,5"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn" id="lCancel" style="flex:1">Annullér</button>
+    <button class="pbtn" id="lSave" style="flex:1;background:var(--krop)">Gem</button>
+  </div>
+  <div class="note" id="noteL"></div>
+</div></div>
+
+<script>
+// ---------- config ----------
+const SB="https://kphfvznawqcslkubdsyy.supabase.co";
+const KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
+const REST=SB+"/rest/v1/";
+const HEAD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
+const FN_INT=SB+"/functions/v1/sync-intervals";
+const FN_WITH=SB+"/functions/v1/sync-withings";
+const BOOKS_URL="https://fhlotfddxcpczokbvzdq.supabase.co/rest/v1/";
+const BOOKS_KEY="sb_publishable_j5HwrulwEUxT9WVKjTsRsg_bYyaRa9r";
+
+const $=s=>document.querySelector(s);
+const MONTHS=["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
+const DAYS_DA=["søn","man","tir","ons","tor","fre","lør"];
+const pad=n=>(n<10?"0":"")+n;
+function todayISO(){const f=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Copenhagen",year:"numeric",month:"2-digit",day:"2-digit"});return f.format(new Date());}
+function parseD(iso){const [y,m,d]=iso.split("-").map(Number);return new Date(y,m-1,d);}
+function daysBetween(a,b){return Math.round((parseD(b)-parseD(a))/86400000);}
+function addDays(iso,n){const d=parseD(iso);d.setDate(d.getDate()+n);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function fmt(n,d=1){return (n==null||isNaN(n))?"—":n.toLocaleString("da-DK",{minimumFractionDigits:d,maximumFractionDigits:d});}
+function daLabel(iso){const d=parseD(iso);return d.getDate()+". "+MONTHS[d.getMonth()];}
+
+// ---------- rest helpers ----------
+async function get(t,qs=""){const r=await fetch(REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function insert(t,body){const r=await fetch(REST+t,{method:"POST",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="+oc):""),{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
+
+// ---------- state ----------
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[]};
+
+async function loadAll(){
+  const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs]=await Promise.all([
+    get("settings","?select=*&limit=1"),
+    get("weighins","?select=*&order=log_date.asc"),
+    get("nutrition","?select=*&order=log_date.asc"),
+    get("workouts","?select=*&order=log_date.desc"),
+    get("body_comp","?select=*&order=log_date.asc"),
+    get("wellness","?select=*&order=log_date.asc"),
+    get("daily_log","?select=*&order=log_date.asc"),
+    get("checkins","?select=*&order=ts.asc"),
+    get("migraines","?select=*&order=ts.asc"),
+    get("thyroid_meds","?select=*&order=log_date.asc"),
+    get("thyroid_labs","?select=*&order=test_date.asc")
+  ]);
+  S.settings=settings[0];
+  S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
+  S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
+  S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
+  S.body=body.map(b=>({...b,fat_pct:b.fat_pct==null?null:+b.fat_pct,muscle_kg:b.muscle_kg==null?null:+b.muscle_kg}));
+  S.wellness=wellness.map(w=>({...w,sleep_hours:w.sleep_hours==null?null:+w.sleep_hours,hrv:w.hrv==null?null:+w.hrv}));
+  S.daily=daily; S.checkins=checkins; S.migraines=migraines; S.meds=meds;
+  S.labs=labs.map(l=>({...l,tsh:l.tsh==null?null:+l.tsh}));
+  try{ S.books=await booksGet("?select=title,pages,started_at,finished_at,paused_days,status&limit=500"); }catch(e){ S.books=[]; }
+}
+
+// ---------- Matematikkur math ----------
+function malvaegt(iso,endW){
+  const s=S.settings;
+  const totalDays=daysBetween(s.kur_start_date,s.kur_end_date)+1;
+  let dayNum=daysBetween(s.kur_start_date,iso)+1;
+  dayNum=Math.max(1,Math.min(totalDays,dayNum));
+  return +s.start_weight-((+s.start_weight-endW)/totalDays)*dayNum;
+}
+const morning=()=>S.weighins.filter(w=>w.moment==="morgen").sort((a,b)=>a.log_date<b.log_date?-1:1);
+const weighToday=m=>{const t=todayISO();return S.weighins.find(w=>w.log_date===t&&w.moment===m);};
+const sumDay=(arr,iso,key)=>arr.filter(x=>x.log_date===iso).reduce((a,x)=>a+(+x[key]||0),0);
+
+// ---------- charts ----------
+const tt=$("#tooltip");
+function showTT(html,x,y){tt.innerHTML=html;tt.style.opacity=1;tt.style.left=(x+14)+"px";tt.style.top=(y+14)+"px";}
+function hideTT(){tt.style.opacity=0;}
+
+function spark(id,pts,color,fill){ // pts: [{d,v}]
+  const el=$("#"+id); if(!pts.length){return;}
+  const data=pts.map(p=>p.v);
+  const w=340,h=90,mL=6,mR=6,mT=10,mB=10;const mn=Math.min(...data),mx=Math.max(...data);
+  const X=i=>mL+(pts.length>1?i/(pts.length-1):0.5)*(w-mL-mR);const Y=v=>mT+(mx-v)/((mx-mn)||1)*(h-mT-mB);
   let d="";data.forEach((v,i)=>{d+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";});
   const a=d+`L ${X(data.length-1)} ${h-mB} L ${X(0)} ${h-mB} Z`;
-  document.getElementById(id).innerHTML=`<svg viewBox="0 0 ${w} ${h}"><path d="${a}" fill="${fill}"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${X(data.length-1)}" cy="${Y(data[data.length-1])}" r="4" fill="${color}"/></svg>`;
+  let dots="";pts.forEach((p,i)=>{dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="${color}" data-t="${daLabel(p.d)}: ${fmt(p.v,1)}"/>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}"><path d="${a}" fill="${fill}"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
+  bindDots(el);
 }
-function bars(id,data,target,ok,over){
-  const w=340,h=120,mL=6,mR=6,mT=10,mB=10;const mx=Math.max(target,...data)*1.1;const bw=(w-mL-mR)/data.length;let s="";
-  data.forEach((v,i)=>{const bh=(v/mx)*(h-mT-mB);s+=`<rect x="${(mL+i*bw+bw*0.15).toFixed(1)}" y="${(h-mB-bh).toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${bh.toFixed(1)}" rx="2.5" fill="${v>target?over:ok}"/>`;});
-  const ty=h-mB-(target/mx)*(h-mT-mB);
-  document.getElementById(id).innerHTML=`<svg viewBox="0 0 ${w} ${h}">${s}${target?`<line x1="${mL}" x2="${w-mR}" y1="${ty}" y2="${ty}" stroke="var(--accent-ink)" stroke-width="1.4" stroke-dasharray="4 3"/>`:""}</svg>`;
+function bars(id,pts,target,ok,over){ // pts:[{d,v,label?}]
+  const el=$("#"+id); if(!pts.length){return;}
+  const data=pts.map(p=>p.v);
+  const w=340,h=120,mL=6,mR=6,mT=10,mB=10;const mx=Math.max(target||0,...data)*1.12||1;const bw=(w-mL-mR)/data.length;let s="";
+  pts.forEach((p,i)=>{const bh=(p.v/mx)*(h-mT-mB);s+=`<rect x="${(mL+i*bw+bw*0.15).toFixed(1)}" y="${(h-mB-bh).toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="2.5" fill="${(target&&p.v>target)?over:ok}" data-t="${daLabel(p.d)}: ${p.label||fmt(p.v,0)}"/>`;});
+  const ty=target?h-mB-(target/mx)*(h-mT-mB):0;
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${s}${target?`<line x1="${mL}" x2="${w-mR}" y1="${ty}" y2="${ty}" stroke="var(--accent-ink)" stroke-width="1.4" stroke-dasharray="4 3"/>`:""}</svg>`;
+  bindDots(el);
 }
-function line(id,data,color,lo,hi,band){
-  const w=340,h=120,mL=24,mR=8,mT=10,mB=16;const X=i=>mL+i/(data.length-1)*(w-mL-mR);const Y=v=>mT+(hi-v)/(hi-lo)*(h-mT-mB);
-  let g="";for(let v=Math.ceil(lo);v<=hi;v+=Math.max(1,Math.round((hi-lo)/4))){const y=Y(v);g+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-4}" y="${y+3}" text-anchor="end" class="axis">${v}</text>`;}
-  let bandrect="";if(band){bandrect=`<rect x="${mL}" y="${Y(band[1])}" width="${w-mL-mR}" height="${Y(band[0])-Y(band[1])}" fill="var(--krop)" opacity=".08"/>`;}
-  let d="";data.forEach((v,i)=>{d+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";});
-  let dots="";data.forEach((v,i)=>{dots+=`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${color}"/>`;});
-  document.getElementById(id).innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}${bandrect}<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2"/>${dots}</svg>`;
+function bindDots(el){
+  el.querySelectorAll("[data-t]").forEach(n=>{
+    n.style.cursor="pointer";
+    n.addEventListener("mousemove",e=>showTT(n.getAttribute("data-t"),e.clientX,e.clientY));
+    n.addEventListener("mouseleave",hideTT);
+  });
 }
-function vaegt(id){
-  const w=340,h=150,mL=26,mR=8,mT=10,mB=18;const days=45,start=68.4,basis=63.5,goal=62;
-  const act=[68.4,68.1,67.9,68.0,67.7,67.6,67.4,67.6,67.3];const yMax=68.8,yMin=61.6;
-  const X=i=>mL+i/(days-1)*(w-mL-mR);const Y=v=>mT+(yMax-v)/(yMax-yMin)*(h-mT-mB);
-  let g="";for(let v=62;v<=68;v+=2){const y=Y(v);g+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-4}" y="${y+3}" text-anchor="end" class="axis">${v}</text>`;}
-  let d="";act.forEach((v,i)=>{d+=(i?"L":"M")+X(i)+" "+Y(v)+" ";});
-  document.getElementById(id).innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}
-    <path d="M ${X(0)} ${Y(start)} L ${X(days-1)} ${Y(goal)}" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="2 4" fill="none" opacity=".6"/>
-    <path d="M ${X(0)} ${Y(start)} L ${X(days-1)} ${Y(basis)}" stroke="var(--krop)" stroke-width="1.4" stroke-dasharray="5 4" fill="none" opacity=".8"/>
-    <path d="${d}" fill="none" stroke="var(--krop)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${X(act.length-1)}" cy="${Y(act[act.length-1])}" r="4.5" fill="var(--krop)" stroke="var(--surface)" stroke-width="2"/></svg>`;
+
+function weightChart(){
+  const s=S.settings,M=morning();
+  const el=$("#vaegtChart");
+  const w=680,h=300,mL=34,mR=14,mT=16,mB=26;
+  const x0=parseD(s.kur_start_date).getTime(),x1=parseD(s.kur_end_date).getTime();
+  const X=t=>mL+(t-x0)/(x1-x0)*(w-mL-mR);
+  const all=[+s.start_weight,+s.kur_basis_weight,+s.goal_weight,...M.map(d=>d.weight_kg)];
+  const yMax=Math.ceil(Math.max(...all)+0.4),yMin=Math.floor(Math.min(...all)-0.4);
+  const Y=v=>mT+(yMax-v)/(yMax-yMin)*(h-mT-mB);
+  let grid="";for(let v=yMin;v<=yMax;v++){const y=Y(v);grid+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-6}" y="${y+3.5}" text-anchor="end" class="axis">${v}</text>`;}
+  let xt="";const start=parseD(s.kur_start_date);
+  for(let m=0;m<6;m++){const d=new Date(start.getFullYear(),start.getMonth()+m,1);if(d.getTime()<x0||d.getTime()>x1)continue;const x=X(d.getTime());xt+=`<text x="${x}" y="${h-8}" text-anchor="middle" class="axis">${MONTHS[d.getMonth()]}</text>`;}
+  const lineReal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,+s.kur_basis_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,+s.kur_basis_weight))}`;
+  const lineGoal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,+s.goal_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,+s.goal_weight))}`;
+  let dPath="",dots="";
+  M.forEach((d,i)=>{const x=X(parseD(d.log_date).getTime()),y=Y(d.weight_kg);dPath+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";});
+  M.forEach((d,i)=>{const x=X(parseD(d.log_date).getTime()),y=Y(d.weight_kg),big=i===M.length-1;
+    const t=malvaegt(d.log_date,+s.kur_basis_weight),diff=t-d.weight_kg;
+    dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${big?5:3.5}" fill="var(--krop)" stroke="var(--surface)" stroke-width="2" data-t="${daLabel(d.log_date)}: ${fmt(d.weight_kg,1)} kg (${diff>=0?'+':''}${fmt(diff,1)} vs linje)"/>`;});
+  // blodprøve-markører
+  let marks="";S.labs.forEach(l=>{const t=parseD(l.test_date).getTime();if(t<x0||t>x1)return;const x=X(t);
+    marks+=`<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${mT}" y2="${h-mB}" stroke="var(--kost)" stroke-width="1.3" stroke-dasharray="3 3" opacity=".8"/><circle cx="${x.toFixed(1)}" cy="${mT}" r="3.5" fill="var(--kost)" data-t="Blodprøve ${daLabel(l.test_date)}${l.tsh!=null?' · TSH '+fmt(l.tsh,1):''}${l.dose_note?' · '+l.dose_note:''}"/>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${grid}${xt}
+    <path d="${lineGoal}" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="2 4" fill="none" opacity=".6"/>
+    <path d="${lineReal}" stroke="var(--krop)" stroke-width="1.4" stroke-dasharray="5 4" fill="none" opacity=".8"/>
+    ${marks}
+    <path d="${dPath}" fill="none" stroke="var(--krop)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>
+    <div class="legend"><span style="--x:var(--krop)">faktisk</span><span style="--x:var(--muted)">linje mod 62</span><span style="--x:var(--kost)">blodprøve</span></div>`;
+  bindDots(el);
 }
-function vaegtLang(id){
-  const N=180,raw=[];for(let i=0;i<N;i++){const t=i/(N-1);let b=70.2-4.2*t;b+=1.3*Math.sin(t*Math.PI*1.6);b+=Math.sin(i*1.7)*0.18+(i%7===0?0.25:0);raw.push(b);}
-  const sm=raw.map((_,i)=>{let s=0,n=0;for(let j=Math.max(0,i-6);j<=i;j++){s+=raw[j];n++;}return s/n;});
-  const w=1040,h=190,mL=28,mR=10,mT=12,mB=22,yMax=71,yMin=62;
-  const X=i=>mL+i/(N-1)*(w-mL-mR);const Y=v=>mT+(yMax-v)/(yMax-yMin)*(h-mT-mB);
-  let g="";for(let v=63;v<=71;v+=2){const y=Y(v);g+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-4}" y="${y+3}" text-anchor="end" class="axis">${v}</text>`;}
-  const mon=["apr","maj","jun","jul","aug","sep"];let xl="";for(let m=0;m<6;m++){const x=mL+m/5*(w-mL-mR);xl+=`<text x="${x}" y="${h-6}" text-anchor="middle" class="axis">${mon[m]}</text>`;}
-  let dots="";for(let i=0;i<N;i+=2){dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(raw[i]).toFixed(1)}" r="1.5" fill="var(--faint)" opacity=".5"/>`;}
-  let d="";sm.forEach((v,i)=>{d+=(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";});
-  document.getElementById(id).innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}${xl}${dots}<path d="${d}" fill="none" stroke="var(--krop)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${X(N-1)}" cy="${Y(sm[N-1])}" r="4.5" fill="var(--krop)" stroke="var(--surface)" stroke-width="2"/></svg>`;
+
+function fatChart(){
+  const el=$("#fatChart"); const B=S.body.filter(b=>b.fat_pct!=null);
+  if(B.length<2){el.innerHTML='<div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen. Withings har '+B.length+' indtil videre.</div>';return;}
+  // vægt (morgen) på venstre akse, fedt% på højre — fælles dato-akse
+  const M=morning();
+  const w=680,h=240,mL=36,mR=40,mT=16,mB=24;
+  const dates=[...new Set([...M.map(d=>d.log_date),...B.map(b=>b.log_date)])].sort();
+  const x0=parseD(dates[0]).getTime(),x1=parseD(dates[dates.length-1]).getTime();
+  const X=t=>mL+((x1-x0)?(t-x0)/(x1-x0):0.5)*(w-mL-mR);
+  const wv=M.map(d=>d.weight_kg),wMax=Math.ceil(Math.max(...wv)+0.4),wMin=Math.floor(Math.min(...wv)-0.4);
+  const fv=B.map(b=>b.fat_pct),fMax=Math.ceil(Math.max(...fv)+1),fMin=Math.floor(Math.min(...fv)-1);
+  const YW=v=>mT+(wMax-v)/((wMax-wMin)||1)*(h-mT-mB);
+  const YF=v=>mT+(fMax-v)/((fMax-fMin)||1)*(h-mT-mB);
+  let grid="";for(let i=0;i<=4;i++){const y=mT+i/4*(h-mT-mB);const wvv=wMax-i/4*(wMax-wMin);const fvv=fMax-i/4*(fMax-fMin);
+    grid+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-6}" y="${y+3}" text-anchor="end" class="axis">${wvv.toFixed(0)}</text><text x="${w-mR+6}" y="${y+3}" class="axis" fill="var(--kost)">${fvv.toFixed(0)}</text>`;}
+  const line=(arr,val,Y,col)=>{let d="",dots="";arr.forEach((o,i)=>{const x=X(parseD(o.log_date).getTime()),y=Y(val(o));d+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.2" fill="${col}"/>`;});return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.4"/>${dots}`;};
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${grid}
+    ${M.length?line(M,o=>o.weight_kg,YW,"var(--krop)"):""}
+    ${line(B,o=>o.fat_pct,YF,"var(--kost)")}</svg>
+    <div class="legend"><span style="--x:var(--krop)">vægt (kg)</span><span style="--x:var(--kost)">fedt%</span></div>`;
 }
-function formstrip(){
-  const st=[1,0,2,1,1,0,2,1,0,1,2,2,0,1]; // 0 neutral,1 overskud,2 sofa
-  const col=["var(--faint)","var(--krop)","var(--rest)"];const lab=["","▲","▼"];
-  document.getElementById("formstrip").innerHTML=st.map(s=>`<span class="fp" style="background:${col[s]}">${lab[s]}</span>`).join("");
+
+function tshChart(){
+  const el=$("#tshChart"); if(S.labs.filter(l=>l.tsh!=null).length<1)return;
+  const L=S.labs.filter(l=>l.tsh!=null);
+  const pts=L.map(l=>({d:l.test_date,v:l.tsh}));
+  const w=340,h=120,mL=26,mR=8,mT=10,mB=16;const vals=pts.map(p=>p.v);
+  const hi=Math.max(4.5,Math.ceil(Math.max(...vals))),lo=0;
+  const X=i=>mL+(pts.length>1?i/(pts.length-1):0.5)*(w-mL-mR);const Y=v=>mT+(hi-v)/(hi-lo)*(h-mT-mB);
+  let g="";for(let v=0;v<=hi;v+=Math.max(1,Math.round(hi/4))){const y=Y(v);g+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-4}" y="${y+3}" text-anchor="end" class="axis">${v}</text>`;}
+  const band=`<rect x="${mL}" y="${Y(3.5)}" width="${w-mL-mR}" height="${Y(0.4)-Y(3.5)}" fill="var(--krop)" opacity=".08"/>`;
+  let d="",dots="";pts.forEach((p,i)=>{const x=X(i),y=Y(p.v);d+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.4" fill="var(--krop)" data-t="${daLabel(p.d)}: TSH ${fmt(p.v,1)}"/>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}${band}<path d="${d}" fill="none" stroke="var(--krop)" stroke-width="2.2"/>${dots}</svg><div class="hint" style="margin-top:6px">Skyggen = normalområde (0,4–3,5).</div>`;
+  bindDots(el);
 }
+
+function sleepChart(){
+  const el=$("#sleepChart");const W=S.wellness.filter(w=>w.sleep_hours!=null).slice(-14);
+  if(!W.length)return;
+  bars("sleepChart",W.map(w=>({d:w.log_date,v:w.sleep_hours,label:fmt(w.sleep_hours,1)+" t"})),7,"var(--rest)","var(--rest)");
+}
+
+// ---------- reading pages/day fra Books ----------
+function readingSeries(nDays){
+  const map={};const today=todayISO();
+  for(let i=nDays-1;i>=0;i--){map[addDays(today,-i)]=0;}
+  S.books.forEach(b=>{
+    const pg=+b.pages||0; if(!pg||!b.started_at||!b.finished_at)return;
+    const s=new Date(b.started_at),f=new Date(b.finished_at);
+    const sIso=`${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
+    const fIso=`${f.getFullYear()}-${pad(f.getMonth()+1)}-${pad(f.getDate())}`;
+    let span=daysBetween(sIso,fIso)+1-(+b.paused_days||0); if(span<1)span=1;
+    const per=pg/span;
+    for(let i=0;i<span;i++){const day=addDays(sIso,i); if(day in map)map[day]+=per;}
+  });
+  return Object.keys(map).sort().map(d=>({d,v:Math.round(map[d])}));
+}
+
+// ---------- render ----------
+function render(){
+  const s=S.settings,t=todayISO(),M=morning();
+  const now=new Date();const df=new Intl.DateTimeFormat("da-DK",{timeZone:"Europe/Copenhagen",weekday:"long",day:"numeric",month:"long"});
+  $("#todayLabel").textContent="I dag · "+df.format(now);
+  const dag=daysBetween(s.kur_start_date,t)+1;
+  $("#sub").textContent=`Kurdag ${dag} af ${daysBetween(s.kur_start_date,s.kur_end_date)+1} · start ${fmt(+s.start_weight,1)} kg → mål ${fmt(+s.goal_weight,0)} (realistisk ${fmt(+s.realistic_goal,1)})`;
+
+  // --- I dag tiles ---
+  const foraften=weighToday("foraften"),morg=weighToday("morgen");
+  const wNow=foraften||morg||(M.length?M[M.length-1]:null);
+  if(wNow){
+    const target=malvaegt(t,+s.kur_basis_weight);const raw=(target-wNow.weight_kg)*1000;
+    const ration=Math.max(s.ration_floor_g||600,Math.round(raw));
+    $("#tRation").innerHTML=ration+'<small> g</small>';
+    $("#tRationSub").textContent=(foraften?"før-aften ":(morg?"morgen ":"seneste "))+fmt(wNow.weight_kg,1)+" kg";
+  }
+  const kcal=sumDay(S.nutrition,t,"calories_in");
+  $("#tKcal").innerHTML=kcal?`${kcal}<small> / ${s.calorie_target}</small>`:'—';
+  $("#tKcalBar").style.width=Math.min(100,kcal/(s.calorie_target||1648)*100)+"%";
+  const wt=S.workouts.filter(w=>w.log_date===t);
+  const runT=wt.find(w=>w.kind==="loeb"),strT=wt.find(w=>w.kind==="styrke"),stepT=wt.find(w=>w.kind==="skridt");
+  if(runT){$("#tTrain").textContent=fmt(runT.distance_km,1)+" km";$("#tTrainSub").textContent="løbet ✓";$("#tTrainSub").style.color="var(--good)";}
+  else if(strT){$("#tTrain").textContent="Styrke";$("#tTrainSub").textContent="✓";$("#tTrainSub").style.color="var(--good)";}
+  else{$("#tTrain").textContent="—";$("#tTrainSub").textContent="intet løb endnu i dag";}
+  const wl=S.wellness[S.wellness.length-1];
+  if(wl){
+    const avgHrv=avg(S.wellness.slice(-14).map(w=>w.hrv).filter(x=>x!=null));
+    const low=wl.hrv!=null&&avgHrv&&wl.hrv<avgHrv-4;
+    $("#tRest").textContent=low?"Lav ↓":"OK";$("#tRest").style.color=low?"var(--warn)":"var(--good)";
+    $("#tRestSub").textContent=`HVR ${wl.hrv??"–"} · hvilepuls ${wl.resting_hr??"–"}`;
+  }
+
+  // --- check-ins today ---
+  const todays=S.checkins.filter(c=>c.log_date===t);
+  const cl=$("#checkinList");
+  if(todays.length){cl.innerHTML=todays.map(c=>{
+    const hm=new Date(c.ts).toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
+    const on=c.energy||c.mood||0;let dots="";for(let i=1;i<=5;i++)dots+=`<i class="${i<=on?'on':''}"></i>`;
+    return `<div class="entry"><div class="t">${hm}</div><div><div class="dots">${dots}</div><div class="mood">${esc(c.note||"")}</div></div></div>`;
+  }).join("");}
+  else cl.innerHTML='<div class="empty">Ingen nedslag i dag endnu.</div>';
+
+  // --- energi chart (avg mood/energy per day, 14) ---
+  const emap={};S.checkins.forEach(c=>{const v=c.energy||c.mood;if(v==null)return;(emap[c.log_date]=emap[c.log_date]||[]).push(v);});
+  const edays=Object.keys(emap).sort().slice(-14);
+  if(edays.length)spark("energiChart",edays.map(d=>({d,v:avg(emap[d])})),"var(--energi)","var(--energi-soft)");
+
+  // --- dagsform strip (14) ---
+  const dmap={};S.daily.forEach(d=>{if(d.day_type)dmap[d.log_date]=d.day_type;});
+  const last14=[];for(let i=13;i>=0;i--)last14.push(addDays(t,-i));
+  const col={overskud:"var(--krop)",blandet:"var(--faint)",sofa:"var(--rest)"},lab={overskud:"▲",blandet:"–",sofa:"▼"};
+  $("#formstrip").innerHTML=last14.map(d=>{const v=dmap[d];return `<span class="fp" style="background:${v?col[v]:'var(--surface-3)'}" title="${daLabel(d)}${v?': '+v:''}">${v?lab[v]:""}</span>`;}).join("");
+
+  // --- weight + tiles ---
+  if(M.length)weightChart();
+  if(M.length){const cur=M[M.length-1].weight_kg;const target=malvaegt(M[M.length-1].log_date,+s.kur_basis_weight);const diff=target-cur;
+    $("#tWeight").innerHTML=fmt(cur,1)+'<small> kg</small>';
+    $("#tWeightSub").textContent=(diff>=0?fmt(diff,1)+" kg foran":fmt(-diff,1)+" kg bagud");
+    $("#tWeightSub").style.color=diff>=0?"var(--good)":"var(--warn)";
+    $("#tToGoal").innerHTML=fmt(cur-+s.goal_weight,1)+'<small> kg</small>';
+    $("#tToGoalSub").textContent="realistisk "+fmt(cur-+s.realistic_goal,1);
+  }
+  const bLast=S.body[S.body.length-1];
+  if(bLast){
+    if(bLast.fat_pct!=null){$("#tFat").innerHTML=fmt(bLast.fat_pct,1)+'<small> %</small>';
+      const bFirst=S.body.find(b=>b.fat_pct!=null);if(bFirst&&bFirst!==bLast){const d=bLast.fat_pct-bFirst.fat_pct;$("#tFatSub").textContent=(d<=0?"↓ ":"↑ ")+fmt(Math.abs(d),1)+" %";$("#tFatSub").style.color=d<=0?"var(--good)":"var(--warn)";}else $("#tFatSub").textContent="baseline";}
+    if(bLast.muscle_kg!=null){$("#tMuscle").innerHTML=fmt(bLast.muscle_kg,1)+'<small> kg</small>';$("#tMuscleSub").textContent="muskelmasse";}
+  }
+  fatChart(); tshChart();
+
+  // --- medicin uge-grid (denne uge, man-søn) ---
+  medgrid();
+  // --- træning ---
+  const runs=S.workouts.filter(w=>w.kind==="loeb").sort((a,b)=>a.log_date<b.log_date?1:-1).slice(0,4);
+  $("#runList").innerHTML=runs.length?runs.map(r=>{
+    const pace=(r.distance_km&&r.duration_min)?(r.duration_min/r.distance_km):null;
+    const pc=pace?`${Math.floor(pace)}:${pad(Math.round((pace%1)*60))}/km`:"";
+    return `<div class="runrow"><div class="d">${daLabel(r.log_date)}</div><div>${fmt(r.distance_km,1)} km${r.note?" · "+esc(r.note):""}</div><div class="chip" style="background:var(--trae-soft);color:var(--trae)">${pc}</div></div>`;
+  }).join(""):'<div class="empty">Ingen løb i vinduet.</div>';
+  // load chart: km per løb seneste 8
+  const runL=S.workouts.filter(w=>w.kind==="loeb"&&w.distance_km).sort((a,b)=>a.log_date<b.log_date?-1:1).slice(-8);
+  if(runL.length)bars("loadChart",runL.map(r=>({d:r.log_date,v:r.distance_km,label:fmt(r.distance_km,1)+" km"})),0,"var(--trae)","var(--trae)");
+  // ugens km + skridt + styrke
+  const wkStart=weekStart(t);
+  const wkRuns=S.workouts.filter(w=>w.kind==="loeb"&&w.log_date>=wkStart);
+  const wkKm=wkRuns.reduce((a,r)=>a+(r.distance_km||0),0);
+  $("#tWeekKm").textContent=fmt(wkKm,1);$("#tWeekKmSub").textContent=wkRuns.length+" løb";
+  const stepToday=stepT?stepT.steps:null;
+  $("#tSteps").textContent=stepToday?stepToday.toLocaleString("da-DK"):"—";
+  if(stepToday)$("#tStepsSub").style.color=stepToday>=7000?"var(--good)":"var(--muted)";
+  const wkStr=S.workouts.filter(w=>w.kind==="styrke"&&w.log_date>=wkStart).length;
+  $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
+
+  // --- restitution ---
+  if(wl){
+    if(wl.sleep_hours!=null){$("#tSleep").textContent=hhmm(wl.sleep_hours);const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));$("#tSleepSub").textContent="snit "+hhmm(avgS);if(wl.sleep_hours<avgS-0.5)$("#tSleepSub").style.color="var(--warn)";}
+    if(wl.hrv!=null){$("#tHrv").innerHTML=wl.hrv+'<small> ms</small>';}
+    if(wl.resting_hr!=null){$("#tRhr").textContent=wl.resting_hr;}
+  }
+  sleepChart();
+
+  // --- kost 14d ---
+  const kmap={};S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
+  const kdays=Object.keys(kmap).filter(d=>kmap[d]>0).sort().slice(-14);
+  if(kdays.length){bars("kostChart",kdays.map(d=>({d,v:kmap[d]})),+s.calorie_target,"var(--accent)","var(--kost)");
+    $("#tAvgKcal").textContent=Math.round(avg(kdays.map(d=>kmap[d])));$("#tKostDays").textContent=kdays.length;}
+
+  // --- arbejde 7d ---
+  const wmap={};S.daily.forEach(d=>{if(d.work_load!=null)wmap[d.log_date]=d.work_load;});
+  const wdays=Object.keys(wmap).sort().slice(-14);
+  if(wdays.length){bars("arbChart",wdays.map(d=>({d,v:wmap[d]})),0,"var(--arb)","var(--arb)");
+    const hard=wdays.filter(d=>wmap[d]>=4).length;$("#arbNote").innerHTML=hard?`<b style="color:var(--arb)">${hard} hårde dage</b> i vinduet — hold øje med energi og aftenløb.`:"";}
+
+  // --- læsning ---
+  const rs=readingSeries(14);
+  if(rs.some(p=>p.v>0)){spark("readChart",rs,"var(--energi)","var(--energi-soft)");
+    const mx=Math.max(...rs.map(p=>p.v));const av=avg(rs.map(p=>p.v));
+    $("#readNote").innerHTML=mx>av*2.2?`Spids på ~${mx} sider/dag — hold øje om det følger sofadage og lav energi (<b>flugt?</b>).`:`Jævn læsning, ~${Math.round(av)} sider/dag i snit.`;}
+  else $("#readChart").innerHTML='<div class="empty">Ingen læsedata i vinduet.</div>';
+
+  // --- coach + insights ---
+  coach();
+  insights();
+  $("#foot").textContent="Sidst opdateret "+now.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
+}
+
 function medgrid(){
-  const days=["ma","ti","on","to","fr","lø","sø"];
-  const m=[1,1,1,1,1,1,1], a=[1,1,0,1,1,1,1]; // aften ons glemt
-  let h=`<div></div>`+days.map(d=>`<div class="hd">${d}</div>`).join("");
-  h+=`<div class="rl">Morgen</div>`+m.map(v=>`<div class="mc ${v?'on':'miss'}">${v?'✓':'–'}</div>`).join("");
-  h+=`<div class="rl">Aften</div>`+a.map(v=>`<div class="mc ${v?'on':'miss'}">${v?'✓':'✕'}</div>`).join("");
-  document.getElementById("medgrid").innerHTML=h;
+  const t=todayISO();const ws=weekStart(t);const days=["ma","ti","on","to","fr","lø","sø"];
+  const mmap={};S.meds.forEach(m=>{mmap[m.log_date]=m;});
+  let done=0,total=0;
+  let html=`<div></div>`+days.map(d=>`<div class="hd">${d}</div>`).join("");
+  ["morning","evening"].forEach(slot=>{
+    html+=`<div class="rl">${slot==="morning"?"Morgen":"Aften"}</div>`;
+    for(let i=0;i<7;i++){const day=addDays(ws,i);const future=day>t;const rec=mmap[day];const on=rec&&rec[slot];
+      if(!future)total++; if(on)done++;
+      html+=`<button class="mc ${future?'future':(on?'on':'miss')}" data-day="${day}" data-slot="${slot}" ${future?'disabled':''}>${on?'✓':(future?'':'–')}</button>`;}
+  });
+  $("#medgrid").innerHTML=html;
+  $("#medSummary").innerHTML=`Denne uge: <b style="color:var(--krop)">${done} / ${total}</b> doser logget.`;
+  $("#medgrid").querySelectorAll("button:not(.future)").forEach(b=>b.addEventListener("click",()=>toggleMed(b.dataset.day,b.dataset.slot)));
 }
-spark("energiChart",[3,4,3,2,4,4,3,2,3,4,2,3,4,2],"var(--energi)","var(--energi-soft)");
-bars("kostChart",[1620,1710,1580,1490,1650,1900,1560,1610,1470,1640,1720,1510,1600,1580],1648,"var(--accent)","var(--kost)");
-bars("loadChart",[42,55,38,60,48,66,40],55,"var(--trae)","var(--trae)");
-bars("arbChart",[6,9,7,10,11,4,3],8,"var(--arb)","var(--arb)");
-spark("readChart",[40,60,30,55,45,90,120,420,380,260,120,60,40,55],"var(--energi)","var(--energi-soft)");
-line("tshChart",[1.8,2.2,3.1,4.1,3.4,2.6,2.1],"var(--krop)",1,4.5,[0.4,3.5]);
-vaegt("vaegtChart"); vaegtLang("vaegtLang"); formstrip(); medgrid();
+async function toggleMed(day,slot){
+  const rec=S.meds.find(m=>m.log_date===day)||{log_date:day,morning:false,evening:false};
+  const body={log_date:day,morning:rec.morning,evening:rec.evening};body[slot]=!rec[slot];
+  try{const r=await upsert("thyroid_meds",body,"log_date");const row=r[0];
+    const i=S.meds.findIndex(m=>m.log_date===day);if(i>=0)S.meds[i]=row;else S.meds.push(row);medgrid();
+  }catch(e){alert("Kunne ikke gemme: "+e.message);}
+}
+
+function coach(){
+  const s=S.settings,t=todayISO(),M=morning();const h=new Date().getHours();
+  const hi=h<10?"Godmorgen":h<14?"Goddag":h<18?"Hej":"Godaften";
+  let parts=[hi+"."];
+  const wl=S.wellness[S.wellness.length-1];
+  if(wl&&wl.sleep_hours!=null){const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));
+    if(wl.sleep_hours<avgS-0.7)parts.push(`Du sov <b>${hhmm(wl.sleep_hours)}</b> — under dit snit på ${hhmm(avgS)}, så kroppen har lidt mindre i tanken i dag.`);
+    else parts.push(`Du sov <b>${hhmm(wl.sleep_hours)}</b> — fint niveau.`);}
+  if(M.length){const cur=M[M.length-1].weight_kg,target=malvaegt(M[M.length-1].log_date,+s.kur_basis_weight),diff=target-cur;
+    if(diff>=0)parts.push(`På vægten ligger du <b>${fmt(diff,1)} kg foran</b> linjen — der er plads til en ordentlig aftensmad.`);
+    else parts.push(`Du ligger <b>${fmt(-diff,1)} kg bag</b> linjen lige nu — ikke alarmerende, hold rationen i dag.`);
+  }else parts.push("Vej dig i morgen tidlig, så følger jeg kurven herfra.");
+  const wt=S.workouts.filter(w=>w.log_date===t&&w.kind==="loeb");
+  if(!wt.length)parts.push("Intet løb logget i dag endnu.");
+  $("#coachText").innerHTML=parts.join(" ");
+  // nudge — hendes egen regel
+  const skip=wl&&wl.hrv!=null&&!wt.length;
+  $("#coachNudge").textContent = (!wt.length) ? "Og hvis du står frisk og tøver ved 17-tiden: sko på, ud ad døren." : "";
+}
+
+function insights(){
+  const rows=[];
+  // migræne: log-først
+  const nMig=S.migraines.length;
+  rows.push({ic:"🤕",bg:"kost-soft",col:"warn",t:"Migræne — vi samler mønsteret.",p:nMig?`Du har logget ${nMig} anfald. Når der er nok til at se en reel sammenhæng med søvn, HVR og arbejde, tænder vi et evidensbaseret forvarsel — ikke før.`:"Log dine anfald efterhånden. Forvarsel tændes først når data viser en reel sammenhæng — ingen falske alarmer."});
+  // søvn niveau
+  const sl=S.wellness.filter(w=>w.sleep_hours!=null).slice(-14);
+  if(sl.length>=5){const av=avg(sl.map(w=>w.sleep_hours));rows.push({ic:"😴",bg:"rest-soft",col:"rest",t:"Søvn lige nu.",p:`Snit ${hhmm(av)} de sidste ${sl.length} dage. Når du har logget nok skippede løb, kobler vi de to sammen.`});}
+  // stofskifte
+  rows.push({ic:"💊",bg:"krop-soft",col:"krop",t:"Energi følger stofskiftet.",p:S.labs.length?`Blodprøverne er markeret på vægtkurven — hold øje med energi og vægt omkring dosisændringer.`:"Tilføj blodprøver + dosis-noter, så lægger jeg markører på vægt- og energikurverne og kan pege på skift."});
+  // recomposition
+  const B=S.body.filter(b=>b.fat_pct!=null);
+  if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden start. Se overlejringen ovenfor før du dømmer et vægt-plateau.`});}
+  // læsning
+  rows.push({ic:"📖",bg:"energi-soft",col:"energi",t:"Læsning som balance-signal.",p:"Jævn læsning følger gode uger; pludselige spidser + sofadage + lav energi ligner tilbagetrækning. Kurven samler mønsteret."});
+  $("#insights").innerHTML=rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--${r.bg});color:var(--${r.col})">${r.ic}</div><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("");
+}
+
+// ---------- weather (open-meteo, ingen nøgle) ----------
+async function weather(){
+  try{
+    const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m,precipitation,cloud_cover,weather_code&timezone=Europe%2FCopenhagen");
+    const j=await r.json();const c=j.current;if(!c)return;
+    $("#wTemp").innerHTML=Math.round(c.temperature_2m)+'<small>°</small>';
+    const wc=c.weather_code,rain=c.precipitation>0.1,cloudy=c.cloud_cover>70;
+    const desc=wc>=71&&wc<=77?"sne":rain?"regn":cloudy?"skyet":wc<=1?"klart":"lettere skyet";
+    $("#wDesc").textContent=desc;
+    const bad=rain||(cloudy&&c.temperature_2m<8);
+    $("#wRun").textContent=bad?"Lav":c.temperature_2m>=6&&!rain?"God":"OK";
+    $("#wRun").style.color=bad?"var(--warn)":"var(--good)";
+    $("#wRunSub").textContent=rain?"vådt":cloudy?"gråvejr":"tørt";
+  }catch(e){$("#wDesc").textContent="ikke tilgængelig";}
+}
+
+// ---------- utils ----------
+function avg(a){a=a.filter(x=>x!=null&&!isNaN(x));return a.length?a.reduce((s,x)=>s+x,0)/a.length:0;}
+function hhmm(h){if(!h)return"—";const m=Math.round(h*60);return Math.floor(m/60)+":"+pad(m%60);}
+function weekStart(iso){const d=parseD(iso);const wd=(d.getDay()+6)%7;return addDays(iso,-wd);} // mandag
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+// ---------- segmented control helper ----------
+function seg(id){const el=$("#"+id);el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+  const sel=el.getAttribute("data-val")===b.dataset.v;
+  el.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+  if(!sel){b.classList.add("sel");el.setAttribute("data-val",b.dataset.v);}else el.setAttribute("data-val","");
+}));}
+function segVal(id){return $("#"+id).getAttribute("data-val")||null;}
+function segReset(id){const el=$("#"+id);el.setAttribute("data-val","");el.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));}
+
+// ---------- forms ----------
+function setNote(id,msg,cls){const n=$(id);n.textContent=msg;n.className="note "+(cls||"");}
+
+async function submitCheckin(){
+  const note=$("#checkinNote").value.trim();const mv=segVal("moodSeg");
+  if(!note&&!mv){setNote("#noteCheckin","Skriv lidt eller vælg et tal.","err");return;}
+  const btn=$("#checkinBtn");btn.disabled=true;setNote("#noteCheckin","Gemmer…");
+  try{const row=(await insert("checkins",{log_date:todayISO(),energy:mv?+mv:null,mood:mv?+mv:null,note:note||null}))[0];
+    S.checkins.push(row);$("#checkinNote").value="";segReset("moodSeg");setNote("#noteCheckin","Logget ✓","ok");render();
+  }catch(e){setNote("#noteCheckin","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
+}
+async function submitDaily(){
+  const dt=segVal("dayTypeSeg"),cl=segVal("commSeg"),wk=segVal("workSeg"),al=$("#alcInp").value;
+  if(!dt&&!cl&&!wk&&al==="") {setNote("#noteDaily","Udfyld mindst ét felt.","err");return;}
+  const btn=$("#dailyBtn");btn.disabled=true;setNote("#noteDaily","Gemmer…");
+  const body={log_date:todayISO(),day_type:dt,comm_load:cl?+cl:null,work_load:wk?+wk:null,alcohol_units:al===""?null:+al,updated_at:new Date().toISOString()};
+  try{const row=(await upsert("daily_log",body,"log_date"))[0];
+    const i=S.daily.findIndex(d=>d.log_date===row.log_date);if(i>=0)S.daily[i]=row;else S.daily.push(row);
+    setNote("#noteDaily","Gemt ✓","ok");render();
+  }catch(e){setNote("#noteDaily","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
+}
+async function saveMigraine(){
+  const intv=segVal("mIntSeg"),tr=segVal("mTrigSeg"),note=$("#mNote").value.trim();
+  const btn=$("#mSave");btn.disabled=true;setNote("#noteM","Gemmer…");
+  try{const row=(await insert("migraines",{log_date:todayISO(),intensity:intv?+intv:null,trigger:tr,note:note||null}))[0];
+    S.migraines.push(row);setNote("#noteM","Logget ✓","ok");
+    setTimeout(()=>{$("#mDialog").classList.remove("open");segReset("mIntSeg");segReset("mTrigSeg");$("#mNote").value="";setNote("#noteM","");render();},600);
+  }catch(e){setNote("#noteM","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
+}
+async function saveLab(){
+  const dt=$("#lDate").value,tsh=$("#lTsh").value,t4=$("#lT4").value,dose=$("#lDose").value.trim();
+  if(!dt){setNote("#noteL","Vælg en dato.","err");return;}
+  const btn=$("#lSave");btn.disabled=true;setNote("#noteL","Gemmer…");
+  try{const row=(await insert("thyroid_labs",{test_date:dt,tsh:tsh===""?null:+tsh,t4:t4===""?null:+t4,dose_note:dose||null}))[0];
+    S.labs.push({...row,tsh:row.tsh==null?null:+row.tsh});S.labs.sort((a,b)=>a.test_date<b.test_date?-1:1);
+    setNote("#noteL","Gemt ✓","ok");
+    setTimeout(()=>{$("#lDialog").classList.remove("open");$("#lTsh").value="";$("#lT4").value="";$("#lDose").value="";setNote("#noteL","");render();},600);
+  }catch(e){setNote("#noteL","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
+}
+
+async function doSync(){
+  const btn=$("#syncBtn");btn.disabled=true;const old=btn.textContent;btn.textContent="synker…";
+  const opt={headers:{apikey:KEY,Authorization:"Bearer "+KEY}};
+  try{await Promise.all([fetch(FN_INT+"?days=30",opt),fetch(FN_WITH+"?days=30",opt)]);
+    await loadAll();render();btn.textContent="✓ opdateret";
+  }catch(e){btn.textContent="↻ Synk";alert("Synk-fejl: "+e.message);}
+  finally{setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1500);}
+}
+
+// ---------- theme ----------
+(function(){const r=document.documentElement;let th=null;try{th=localStorage.getItem("liv-theme")}catch(e){}
+  if(th)r.setAttribute("data-theme",th);
+  $("#themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}};})();
+
+// ---------- wire up ----------
+["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg"].forEach(seg);
+$("#checkinBtn").onclick=submitCheckin;
+$("#dailyBtn").onclick=submitDaily;
+$("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
+$("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
+$("#mSave").onclick=saveMigraine;
+$("#labBtn").onclick=()=>{$("#lDate").value=todayISO();$("#lDialog").classList.add("open");};
+$("#lCancel").onclick=()=>$("#lDialog").classList.remove("open");
+$("#lSave").onclick=saveLab;
+$("#syncBtn").onclick=doSync;
+window.addEventListener("scroll",hideTT,{passive:true});
+
+// ---------- boot ----------
+(async function(){
+  try{await loadAll();if(!S.settings)throw new Error("Ingen indstillinger fundet.");render();weather();}
+  catch(e){$("#sub").textContent="Kunne ikke hente data: "+e.message;$("#sub").style.color="var(--bad)";}
+})();
 </script>
 </body>
 </html>
