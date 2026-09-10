@@ -857,7 +857,7 @@ function showTab(t){
   $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");
   $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   $("#syncBtn").style.display=(t==="liv")?"":"none"; // vægt-fanen har egne knapper
-  if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","index.html");
+  if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","vaegt.html");
   if(t==="vaegt")sizeFrame();
   try{localStorage.setItem("liv-tab",t)}catch(e){}
 }
