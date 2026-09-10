@@ -832,7 +832,7 @@ async function doSync(){
 // ---------- theme ----------
 (function(){const r=document.documentElement;let th=null;try{th=localStorage.getItem("liv-theme")}catch(e){}
   if(th)r.setAttribute("data-theme",th);
-  $("#themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}};})();
+  $("#themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}try{syncFrameTheme()}catch(e){}};})();
 
 // ---------- wire up ----------
 ["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg"].forEach(seg);
@@ -850,7 +850,9 @@ window.addEventListener("scroll",hideTT,{passive:true});
 // ---------- faner (Livsstil / Vægttab) ----------
 const frame=$("#vaegtFrame");let frameTimer=null;
 function sizeFrame(){try{const d=frame.contentWindow.document;if(d&&d.body){const hgt=Math.max(d.body.scrollHeight,d.documentElement.scrollHeight);if(hgt>200)frame.style.height=hgt+"px";}}catch(e){}}
+function syncFrameTheme(){try{const dt=document.documentElement.getAttribute("data-theme");const idoc=frame.contentDocument;if(!idoc)return;if(dt)idoc.documentElement.setAttribute("data-theme",dt);else idoc.documentElement.removeAttribute("data-theme");}catch(e){}}
 frame.addEventListener("load",()=>{ // vægt-dashboardet henter data async → mål højden nogle gange efter load
+  syncFrameTheme();
   let n=0;clearInterval(frameTimer);frameTimer=setInterval(()=>{sizeFrame();if(++n>12)clearInterval(frameTimer);},400);
 });
 function showTab(t){
