@@ -233,9 +233,10 @@ async function loadAll(){
 // målvægt-linje fra (startdato, startvægt) til (slutdato, slutvægt)
 function malvaegt(iso,endW){
   const s=S.settings;
-  const total=daysBetween(s.kur_start_date,s.kur_end_date);
-  let el=daysBetween(s.kur_start_date,iso); el=Math.max(0,Math.min(total,el));
-  return s.start_weight-(s.start_weight-endW)*(el/total);
+  const totalDays=daysBetween(s.kur_start_date,s.kur_end_date)+1; // antal kurdage inkl. begge dage (100)
+  let dayNum=daysBetween(s.kur_start_date,iso)+1;                 // dag 1 = kur-start (allerede ét dagstab under start)
+  dayNum=Math.max(1,Math.min(totalDays,dayNum));
+  return s.start_weight-((s.start_weight-endW)/totalDays)*dayNum;
 }
 const MOMENTS={morgen:"Morgen",foraften:"Før aftensmad",sengetid:"Sengetid"};
 function morningSeries(){return S.weighins.filter(w=>w.moment==="morgen").sort((a,b)=>a.log_date<b.log_date?-1:1);}
@@ -281,8 +282,8 @@ function weightChart(){
   for(let m=0;m<6;m++){const d=new Date(start.getFullYear(),start.getMonth()+m,1); if(d.getTime()<x0||d.getTime()>x1)continue; const x=X(d.getTime());
     xticks+=`<text x="${x}" y="${h-8}" text-anchor="middle" class="axis-t">${MONTHS[d.getMonth()]}</text><line x1="${x}" x2="${x}" y1="${mT}" y2="${h-mB}" stroke="var(--grid)" opacity=".6"/>`;}
   // to målvægt-linjer
-  const lineReal=`M ${X(x0)} ${Y(s.start_weight)} L ${X(x1)} ${Y(s.kur_basis_weight)}`;
-  const lineGoal=`M ${X(x0)} ${Y(s.start_weight)} L ${X(x1)} ${Y(s.goal_weight)}`;
+  const lineReal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,s.kur_basis_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.kur_basis_weight))}`;
+  const lineGoal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,s.goal_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.goal_weight))}`;
   // faktisk (morgen)
   let dPath="",area="",dots="";
   if(M.length){
