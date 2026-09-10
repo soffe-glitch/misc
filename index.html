@@ -224,7 +224,9 @@ async function loadAll(){
     apiGet("workouts","?select=*&order=log_date.desc")
   ]);
   S.settings=settings[0];
-  S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
+  // vægttabs-dashboardet er afgrænset til kurperioden (livsstil-dashboardet viser fuld historik)
+  const kurStart=settings[0].kur_start_date;
+  S.weighins=weighins.filter(w=>w.log_date>=kurStart).map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
 }
