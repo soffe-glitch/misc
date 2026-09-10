@@ -169,6 +169,10 @@ footer{margin-top:30px; text-align:center; color:var(--faint); font-size:12px}
   .stats3,.stats4{grid-template-columns:repeat(2,1fr)}
   .dual{grid-template-columns:1fr}
 }
+/* Indlejret som fane i livsstil-dashboardet: skjul egen header/footer (forsiden har dem) */
+body.embed .top{display:none}
+body.embed footer{display:none}
+body.embed .wrap{padding:8px 4px 28px;max-width:none}
 </style>
 </head>
 <body>
@@ -596,8 +600,11 @@ function mergeWeigh(row){
   S.weighins.sort((a,b)=>a.log_date<b.log_date?-1:1);
 }
 
+// Indlejret som fane? Skjul egen header/footer; temaet styres af forsiden.
+const EMBED=(window.self!==window.top);
+if(EMBED)document.body.classList.add("embed");
 (function(){const root=document.documentElement;let t=null;try{t=localStorage.getItem("vt-theme");}catch(e){}
-  if(t)root.setAttribute("data-theme",t);
+  if(t&&!EMBED)root.setAttribute("data-theme",t);
   $("#themeBtn").addEventListener("click",()=>{const cur=root.getAttribute("data-theme");
     const sysDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
     const now=cur?cur:(sysDark?"dark":"light");const next=now==="dark"?"light":"dark";
