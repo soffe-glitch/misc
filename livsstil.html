@@ -91,6 +91,11 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .empty{color:var(--faint); font-size:13px; text-align:center; padding:18px 6px}
 .formstrip{display:flex; gap:4px; flex-wrap:wrap; margin-top:6px}
 .fp{flex:1; min-width:16px; height:26px; border-radius:6px; display:grid; place-items:center; font-size:10px; color:#fff}
+.fp.today{outline:2px solid var(--accent); outline-offset:1px}
+.streakrow{display:flex; gap:26px; align-items:center; flex-wrap:wrap}
+.streaknum .v{font-size:44px; color:var(--trae); line-height:.9}
+.streakmeta{display:flex; flex-direction:column; gap:4px; font-size:15px; font-weight:600}
+.streakmeta .hint{font-weight:400}
 .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:10px}
 .legend span::before{content:""; display:inline-block; width:10px;height:10px;border-radius:3px; margin-right:5px; vertical-align:middle; background:var(--x)}
 .medgrid{display:grid; grid-template-columns:auto repeat(7,1fr); gap:6px; align-items:center; font-size:12px}
@@ -249,6 +254,19 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
 
   <!-- TRÆNING -->
   <div class="section-label"><span class="bar" style="background:var(--trae)"></span>Træning</div>
+  <div class="card" id="streakCard" style="margin-bottom:14px">
+    <div class="ch"><h2>Morgenstreak 🔥</h2><span class="hint">løb (mindst 1 km) — bryd ikke kæden</span></div>
+    <div class="streakrow">
+      <div class="streaknum"><div class="v tnum" id="streakCur">—</div><div class="sub">dage i træk</div></div>
+      <div class="streakmeta">
+        <div><span id="streakRec">—</span> <span class="hint">rekord (90 d)</span></div>
+        <div><span id="streakWeek">—</span> <span class="hint">løb denne uge</span></div>
+      </div>
+    </div>
+    <div class="formstrip" id="streakStrip" style="margin-top:14px"></div>
+    <div class="legend"><span style="--x:var(--trae)">løb</span><span style="--x:var(--surface-3)">fri</span><span style="--x:var(--accent)">i dag</span></div>
+    <p class="hint" id="streakNote" style="margin-top:8px"></p>
+  </div>
   <div class="grid lead">
     <div class="card">
       <div class="ch"><h2>Seneste løb</h2><span class="hint">fra intervals.icu</span></div>
@@ -655,6 +673,7 @@ function render(){
   if(stepToday)$("#tStepsSub").style.color=stepToday>=7000?"var(--good)":"var(--muted)";
   const wkStr=S.workouts.filter(w=>w.kind==="styrke"&&w.log_date>=wkStart).length;
   $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
+  streak();
 
   // --- restitution ---
   if(wl){
@@ -691,6 +710,32 @@ function render(){
   $("#foot").textContent="Sidst opdateret "+now.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
 }
 
+function streak(){
+  const days=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
+  const t=todayISO();
+  // aktuel streak: tæl sammenhængende dage bagud fra seneste løbedag (i dag eller i går = stadig i live)
+  let cur=0, cursor = days.has(t) ? t : addDays(t,-1);
+  while(days.has(cursor)){ cur++; cursor=addDays(cursor,-1); }
+  const activeToday=days.has(t);
+  // rekord i seneste 90 dage
+  let longest=0, run=0;
+  for(let i=90;i>=0;i--){ if(days.has(addDays(t,-i))){ run++; longest=Math.max(longest,run); } else run=0; }
+  // løb denne uge (fra mandag)
+  const ws=weekStart(t); const week=[...days].filter(d=>d>=ws&&d<=t).length;
+  $("#streakCur").textContent=cur;
+  $("#streakRec").textContent=longest;
+  $("#streakWeek").textContent=week;
+  // 21-dages strip
+  let strip="";
+  for(let i=20;i>=0;i--){const d=addDays(t,-i);const ran=days.has(d);const today=d===t;
+    strip+=`<span class="fp${today?' today':''}" style="background:${ran?'var(--trae)':'var(--surface-3)'}" title="${daLabel(d)}${ran?': løb ✓':''}"></span>`;}
+  $("#streakStrip").innerHTML=strip;
+  let note;
+  if(cur===0) note="Ny start — løb i morgen tidlig, så begynder kæden. 1 km tæller.";
+  else if(!activeToday) note=`${cur} dage i træk — et løb i dag holder kæden i live.`;
+  else note=`${cur} dage i træk ✓ — bliv ved, én morgen ad gangen.`;
+  $("#streakNote").textContent=note;
+}
 function medgrid(){
   const t=todayISO();const ws=weekStart(t);const days=["ma","ti","on","to","fr","lø","sø"];
   const mmap={};S.meds.forEach(m=>{mmap[m.log_date]=m;});
