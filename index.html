@@ -268,7 +268,7 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
       <div class="section-label"><span class="bar" style="background:var(--rest)"></span>Restitution</div>
       <div class="card"><div class="grid g3">
         <div class="tile"><div class="k">Søvn i nat</div><div class="v tnum" id="tSleep">—</div><div class="sub" id="tSleepSub"></div></div>
-        <div class="tile"><div class="k">HVR</div><div class="v tnum" id="tHrv">—</div><div class="sub" id="tHrvSub"></div></div>
+        <div class="tile"><div class="k">HRV</div><div class="v tnum" id="tHrv">—</div><div class="sub" id="tHrvSub"></div></div>
         <div class="tile"><div class="k">Hvilepuls</div><div class="v tnum" id="tRhr">—</div><div class="sub" id="tRhrSub"></div></div>
       </div>
       <div id="sleepChart" style="margin-top:14px"></div>
@@ -592,7 +592,7 @@ function render(){
     const avgHrv=avg(S.wellness.slice(-14).map(w=>w.hrv).filter(x=>x!=null));
     const low=wl.hrv!=null&&avgHrv&&wl.hrv<avgHrv-4;
     $("#tRest").textContent=low?"Lav ↓":"OK";$("#tRest").style.color=low?"var(--warn)":"var(--good)";
-    $("#tRestSub").textContent=`HVR ${wl.hrv??"–"} · hvilepuls ${wl.resting_hr??"–"}`;
+    $("#tRestSub").textContent=`HRV ${wl.hrv??"–"} · hvilepuls ${wl.resting_hr??"–"}`;
   }
 
   // --- check-ins today ---
@@ -738,7 +738,7 @@ function insights(){
   const rows=[];
   // migræne: log-først
   const nMig=S.migraines.length;
-  rows.push({ic:"🤕",bg:"kost-soft",col:"warn",t:"Migræne — vi samler mønsteret.",p:nMig?`Du har logget ${nMig} anfald. Når der er nok til at se en reel sammenhæng med søvn, HVR og arbejde, tænder vi et evidensbaseret forvarsel — ikke før.`:"Log dine anfald efterhånden. Forvarsel tændes først når data viser en reel sammenhæng — ingen falske alarmer."});
+  rows.push({ic:"🤕",bg:"kost-soft",col:"warn",t:"Migræne — vi samler mønsteret.",p:nMig?`Du har logget ${nMig} anfald. Når der er nok til at se en reel sammenhæng med søvn, HRV og arbejde, tænder vi et evidensbaseret forvarsel — ikke før.`:"Log dine anfald efterhånden. Forvarsel tændes først når data viser en reel sammenhæng — ingen falske alarmer."});
   // søvn niveau
   const sl=S.wellness.filter(w=>w.sleep_hours!=null).slice(-14);
   if(sl.length>=5){const av=avg(sl.map(w=>w.sleep_hours));rows.push({ic:"😴",bg:"rest-soft",col:"rest",t:"Søvn lige nu.",p:`Snit ${hhmm(av)} de sidste ${sl.length} dage. Når du har logget nok skippede løb, kobler vi de to sammen.`});}
