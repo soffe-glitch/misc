@@ -991,6 +991,19 @@ function coach(){
     parts.push(w2+". Aftenrationen sættes af før-aften-vejningen.");
   } else parts.push("Vej dig i morgen tidlig, så følger jeg kurven herfra.");
 
+  // ---- brændstof-tjek: blid nudge hvis underforsynet (kalorier under 1200-gulvet) ----
+  // Matematikkuren styrer (gram); kalorier er kun en nedre grænse. Kun eftermiddag/aften,
+  // og kun når der faktisk er logget mad, så den ikke fyrer for tidligt på dagen.
+  const kcalToday=sumDay(S.nutrition,t,"calories_in");
+  const choresToday=S.choreLog.filter(l=>l.log_date===t).length;
+  const stepsRow=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt");
+  const stepsToday=stepsRow?stepsRow.steps:0;
+  const activeToday = ranToday || choresToday>=3 || stepsToday>=9000;
+  if(h>=15 && kcalToday>0 && kcalToday<1200){
+    const act = ranToday?"du har løbet i dag":activeToday?"du har været en del på benene i dag":null;
+    parts.push(`<b>Brændstof:</b> du har logget ~${Math.round(kcalToday)} kcal indtil nu${act?` og ${act}`:""} — under 1.200-gulvet. Kuren styrer efter gram, men giv gerne kroppen lidt mere i aften (fx en skyr eller lidt rugsprø); det modarbejder ikke vægttabet.`);
+  }
+
   $("#coachText").innerHTML=parts.join(" ");
   $("#coachNudge").textContent = (!ranToday) ? "Og hvis du tøver ved sko-hylden: sko på, ud ad døren." : "";
 }
