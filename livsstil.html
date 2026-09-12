@@ -67,6 +67,18 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .logdots i.on{background:var(--accent)}
 .medbtn{flex:1; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:10px; padding:13px 8px; font:inherit; font-weight:700; cursor:pointer}
 .medbtn.on{background:var(--krop-soft); color:var(--krop); border-color:var(--krop)}
+.chipwrap{display:flex; flex-wrap:wrap; gap:6px}
+.chorechip{border:1px solid var(--border); background:var(--surface-2); color:var(--ink); border-radius:99px; padding:6px 11px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer}
+.chorechip.due{border-color:var(--arb); color:var(--arb)}
+.chorechip.done{background:var(--krop-soft); border-color:var(--krop); color:var(--krop)}
+.editlink{margin-top:10px; background:none; border:0; color:var(--muted); font:inherit; font-size:12.5px; text-decoration:underline; cursor:pointer; padding:0}
+.suggest{margin-top:10px; padding:11px 13px; border-radius:12px; background:var(--arb-soft); display:flex; align-items:center; gap:8px; justify-content:space-between}
+.suggest b{color:var(--arb)}
+.crow{display:flex; gap:6px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border)}
+.crow input.nm{flex:1; min-width:0; border:1px solid var(--border); background:var(--surface-2); border-radius:8px; padding:6px 8px; font:inherit; font-size:13px; color:var(--ink)}
+.crow input.iv{width:52px; border:1px solid var(--border); background:var(--surface-2); border-radius:8px; padding:6px 4px; font:inherit; font-size:13px; text-align:center; color:var(--ink)}
+.crow .cad{font-size:10.5px; color:var(--muted); width:38px; text-align:center; text-transform:uppercase}
+.crow .del{border:0; background:none; color:var(--bad); font-size:18px; cursor:pointer; padding:0 4px; line-height:1}
 .section-label{font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--muted); margin:26px 4px 12px; display:flex; align-items:center; gap:8px}
 .section-label .bar{width:22px; height:3px; border-radius:2px}
 .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:var(--shadow)}
@@ -222,6 +234,18 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
 
     <div class="logcard card">
+      <div class="ch"><h3>Praktisk</h3><span class="hint" id="choreCount">0 i dag</span></div>
+      <div class="seg" id="choreCad">
+        <button type="button" data-v="uge" class="sel">Uge</button>
+        <button type="button" data-v="maaned">Måned</button>
+      </div>
+      <button type="button" class="pbtn" id="choreRandom" style="background:var(--arb);width:100%;margin-top:8px">🎲 Foreslå en opgave</button>
+      <div id="choreSuggest"></div>
+      <div id="choreChips" class="chipwrap" style="margin-top:10px"></div>
+      <button type="button" class="editlink" id="choreEdit">Rediger opgaver</button>
+    </div>
+
+    <div class="logcard card">
       <div class="ch"><h3>Medicin i dag</h3><span class="hint">Eltroxin</span></div>
       <div class="field"><label>Klik når taget</label>
         <div style="display:flex;gap:8px">
@@ -254,6 +278,8 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
       <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">overskud → sofa</span></div>
       <div class="formstrip" id="formstrip"></div>
       <div class="legend"><span style="--x:var(--krop)">overskud</span><span style="--x:var(--faint)">blandet</span><span style="--x:var(--rest)">sofadag</span></div>
+      <div class="ch" style="margin:16px 0 6px"><h3>Praktisk aktivitet — 21 dage</h3><span class="hint">ting gjort/dag</span></div>
+      <div id="praktiskSpark"></div>
     </div>
   </div>
 
@@ -417,6 +443,26 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <div class="note" id="noteL"></div>
 </div></div>
 
+<!-- rediger opgaver-dialog -->
+<div class="dialog" id="cDialog"><div class="box">
+  <h3>Rediger opgaver</h3>
+  <p class="hint" style="margin-bottom:6px">Ret navn, hvor tit (dage) den bør gøres, eller slet. Tilføj nye nederst.</p>
+  <div id="choreEditList" style="max-height:46vh;overflow:auto"></div>
+  <div class="field" style="margin-top:12px"><label>Tilføj opgave</label>
+    <input class="inp" id="cNewName" placeholder="Navn">
+    <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+      <div class="seg" id="cNewCad" data-val="uge" style="flex:1">
+        <button type="button" data-v="uge" class="sel">Uge</button>
+        <button type="button" data-v="maaned">Måned</button>
+      </div>
+      <input class="inp" id="cNewInt" type="number" min="1" style="width:74px" placeholder="dage">
+    </div>
+    <button type="button" class="pbtn" id="cAdd" style="background:var(--arb);width:100%;margin-top:8px">+ Tilføj opgave</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px"><button type="button" class="btn" id="cClose" style="flex:1">Luk</button></div>
+  <div class="note" id="noteC2"></div>
+</div></div>
+
 <script>
 // ---------- config ----------
 const SB="https://kphfvznawqcslkubdsyy.supabase.co";
@@ -446,7 +492,7 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
@@ -464,6 +510,7 @@ async function loadAll(){
     get("planned","?select=*&order=log_date.asc")
   ]);
   S.planned=planned;
+  try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc&limit=2000")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -712,6 +759,8 @@ function render(){
   $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
   streak();
   renderMedQuick();
+  renderChores();
+  praktiskSpark();
 
   // --- restitution ---
   if(wl){
@@ -806,6 +855,69 @@ function renderMedQuick(){
   $("#medQuick").innerHTML=`Denne uge: <b style="color:var(--krop)">${done}/${tot}</b> doser.`;
 }
 
+// ---------- Praktisk (chores) ----------
+function choreLastDone(id){let m=null;for(const l of S.choreLog){if(l.chore_id===id&&(!m||l.log_date>m))m=l.log_date;}return m;}
+function choreDoneToday(id){const t=todayISO();return S.choreLog.some(l=>l.chore_id===id&&l.log_date===t);}
+function choreScore(c){const ld=choreLastDone(c.id);const ds=ld?daysBetween(ld,todayISO()):9999;return ds/(c.interval_days||7);}
+function renderChores(){
+  if(!$("#choreChips"))return;
+  const pool=$("#choreCad").getAttribute("data-val")||"uge";
+  const list=S.chores.filter(c=>c.active!==false&&c.cadence===pool).slice().sort((a,b)=>choreScore(b)-choreScore(a));
+  const wrap=$("#choreChips");
+  wrap.innerHTML=list.map(c=>{const done=choreDoneToday(c.id),due=!done&&choreScore(c)>=1;
+    return `<button type="button" class="chorechip${done?' done':due?' due':''}" data-id="${c.id}">${done?'✓ ':''}${esc(c.name)}</button>`;}).join("")||'<div class="empty">Ingen opgaver i denne pool.</div>';
+  wrap.querySelectorAll(".chorechip").forEach(b=>b.onclick=()=>toggleChore(b.dataset.id));
+  const n=S.choreLog.filter(l=>l.log_date===todayISO()).length;
+  $("#choreCount").textContent=n+" i dag";
+}
+async function toggleChore(id){
+  const t=todayISO();const ex=S.choreLog.find(l=>l.chore_id===id&&l.log_date===t);
+  try{
+    if(ex){await fetch(REST+"chore_log?id=eq."+ex.id,{method:"DELETE",headers:HEAD});S.choreLog=S.choreLog.filter(l=>l!==ex);}
+    else{const row=(await insert("chore_log",{chore_id:id,log_date:t}))[0];S.choreLog.unshift(row);}
+    renderChores();praktiskSpark();
+  }catch(e){alert("Kunne ikke gemme: "+e.message);}
+}
+function choreRandom(){
+  const pool=$("#choreCad").getAttribute("data-val")||"uge";
+  const cand=S.chores.filter(c=>c.active!==false&&c.cadence===pool&&!choreDoneToday(c.id)).map(c=>({c,s:choreScore(c)}));
+  const box=$("#choreSuggest");
+  if(!cand.length){box.innerHTML='<div class="suggest">Alt i denne pool er gjort i dag ✓</div>';return;}
+  const due=cand.filter(x=>x.s>=1);let pick;
+  if(due.length){const tot=due.reduce((a,x)=>a+x.s,0);let r=Math.random()*tot;for(const x of due){r-=x.s;if(r<=0){pick=x.c;break;}}if(!pick)pick=due[0].c;}
+  else pick=cand.sort((a,b)=>b.s-a.s)[0].c;
+  const ld=choreLastDone(pick.id);const ds=ld?daysBetween(ld,todayISO()):null;
+  const info=ds==null?"aldrig gjort":(ds===0?"gjort i dag":`sidst for ${ds} ${ds===1?"dag":"dage"} siden`);
+  box.innerHTML=`<div class="suggest"><span>🎯 <b>${esc(pick.name)}</b> <span class="hint">(${info})</span></span><button type="button" class="pbtn" id="choreDid" style="background:var(--krop);padding:7px 12px">Gjort ✓</button></div>`;
+  $("#choreDid").onclick=()=>{toggleChore(pick.id);box.innerHTML="";};
+}
+function renderChoreEdit(){
+  const el=$("#choreEditList");if(!el)return;
+  const rows=S.chores.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+  el.innerHTML=rows.map(c=>`<div class="crow" data-id="${c.id}"><input class="nm" value="${esc(c.name)}"><span class="cad">${c.cadence==="maaned"?"MÅ":"UGE"}</span><input class="iv" type="number" min="1" value="${c.interval_days}"><button type="button" class="del">×</button></div>`).join("");
+  el.querySelectorAll(".crow").forEach(r=>{const id=r.dataset.id;
+    r.querySelector(".nm").addEventListener("change",e=>patchChore(id,{name:e.target.value.trim()}));
+    r.querySelector(".iv").addEventListener("change",e=>patchChore(id,{interval_days:Math.max(1,parseInt(e.target.value)||7)}));
+    r.querySelector(".del").onclick=()=>delChore(id,r);});
+}
+async function patchChore(id,body){try{await fetch(REST+"chores?id=eq."+id,{method:"PATCH",headers:{...HEAD,Prefer:"return=minimal"},body:JSON.stringify(body)});const c=S.chores.find(x=>x.id===id);if(c)Object.assign(c,body);renderChores();}catch(e){setNote("#noteC2","Fejl: "+e.message,"err");}}
+async function delChore(id,rowEl){try{await fetch(REST+"chores?id=eq."+id,{method:"DELETE",headers:HEAD});S.chores=S.chores.filter(x=>x.id!==id);rowEl.remove();renderChores();}catch(e){setNote("#noteC2","Fejl: "+e.message,"err");}}
+async function addChore(){
+  const name=$("#cNewName").value.trim();const cad=$("#cNewCad").getAttribute("data-val")||"uge";
+  const iv=parseInt($("#cNewInt").value)||(cad==="maaned"?30:7);
+  if(!name){setNote("#noteC2","Skriv et navn.","err");return;}
+  const id=name.toLowerCase().replace(/æ/g,"ae").replace(/ø/g,"o").replace(/å/g,"aa").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"-"+Math.random().toString(36).slice(2,6);
+  const sort=Math.max(0,...S.chores.map(c=>c.sort||0))+1;
+  try{const row=(await insert("chores",{id,name,cadence:cad,interval_days:iv,sort}))[0];S.chores.push(row);$("#cNewName").value="";$("#cNewInt").value="";renderChoreEdit();renderChores();setNote("#noteC2","Tilføjet ✓","ok");}catch(e){setNote("#noteC2","Fejl: "+e.message,"err");}
+}
+function praktiskSpark(){
+  const el=$("#praktiskSpark");if(!el)return;
+  const t=todayISO();const map={};for(let i=20;i>=0;i--)map[addDays(t,-i)]=0;
+  S.choreLog.forEach(l=>{if(l.log_date in map)map[l.log_date]++;});
+  const pts=Object.keys(map).sort().map(d=>({d,v:map[d]}));
+  if(pts.some(p=>p.v>0))spark("praktiskSpark",pts,"var(--arb)","var(--arb-soft)");
+  else el.innerHTML='<div class="empty">Log praktiske ting, så tegnes aktiviteten her.</div>';
+}
 function coach(){
   const s=S.settings, t=todayISO(), M=morning(), h=new Date().getHours();
   const hi = h<10?"Godmorgen":h<14?"Goddag":h<18?"Hej":"Godaften";
@@ -995,6 +1107,13 @@ $("#lCancel").onclick=()=>$("#lDialog").classList.remove("open");
 $("#lSave").onclick=saveLab;
 $("#medMorn").onclick=()=>toggleMed(todayISO(),"morning");
 $("#medEve").onclick=()=>toggleMed(todayISO(),"evening");
+// praktisk / chores
+(function(){const cc=$("#choreCad");if(cc){cc.setAttribute("data-val","uge");cc.querySelectorAll("button").forEach(b=>b.onclick=()=>{cc.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");cc.setAttribute("data-val",b.dataset.v);$("#choreSuggest").innerHTML="";renderChores();});}
+  const nc=$("#cNewCad");if(nc){nc.setAttribute("data-val","uge");nc.querySelectorAll("button").forEach(b=>b.onclick=()=>{nc.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");nc.setAttribute("data-val",b.dataset.v);});}})();
+$("#choreRandom").onclick=choreRandom;
+$("#choreEdit").onclick=()=>{renderChoreEdit();$("#cDialog").classList.add("open");};
+$("#cClose").onclick=()=>$("#cDialog").classList.remove("open");
+$("#cAdd").onclick=addChore;
 $("#syncBtn").onclick=doSync;
 window.addEventListener("scroll",hideTT,{passive:true});
 
