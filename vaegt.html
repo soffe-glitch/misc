@@ -617,6 +617,19 @@ if(EMBED)document.body.classList.add("embed");
     b.innerHTML="Kunne ikke hente data fra Supabase.<br><span style='opacity:.8'>"+esc(err.message)+"</span>";
     $("#statusLine").innerHTML='<span class="dot" style="background:var(--bad)"></span> Ingen forbindelse';}
 })();
+
+// Videresend touch til den ydre side, så træk-ned-for-at-opdatere også virker
+// når vægt-fanen (denne iframe) er åben. Den ydre side afgør selv om siden er i top.
+(function(){
+  if(window.top===window.self)return; // kun når indlejret
+  function fwd(phase,e){
+    var t=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0]);
+    try{parent.postMessage({type:"ptr-touch",phase:phase,y:t?t.clientY:0},"*");}catch(_){}
+  }
+  window.addEventListener("touchstart",function(e){fwd("touchstart",e);},{passive:true});
+  window.addEventListener("touchmove",function(e){fwd("touchmove",e);},{passive:true});
+  window.addEventListener("touchend",function(e){fwd("touchend",e);},{passive:true});
+})();
 </script>
 </body>
 </html>
