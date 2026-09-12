@@ -767,9 +767,21 @@ function coach(){
   if(wl&&wl.sleep_hours!=null){const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));
     if(wl.sleep_hours<avgS-0.7)parts.push(`Du sov <b>${hhmm(wl.sleep_hours)}</b> — under dit snit på ${hhmm(avgS)}, så kroppen har lidt mindre i tanken i dag.`);
     else parts.push(`Du sov <b>${hhmm(wl.sleep_hours)}</b> — fint niveau.`);}
-  if(M.length){const cur=M[M.length-1].weight_kg,target=malvaegt(M[M.length-1].log_date,+s.kur_basis_weight),diff=target-cur;
-    if(diff>=0)parts.push(`På vægten ligger du <b>${fmt(diff,1)} kg foran</b> linjen — der er plads til en ordentlig aftensmad.`);
-    else parts.push(`Du ligger <b>${fmt(-diff,1)} kg bag</b> linjen lige nu — ikke alarmerende, hold rationen i dag.`);
+  if(M.length){
+    const cur=M[M.length-1].weight_kg, curDate=M[M.length-1].log_date;
+    const target=malvaegt(curDate,+s.kur_basis_weight), diff=target-cur;
+    if(diff>=0.3) parts.push(`På vægten ligger du <b>${fmt(diff,1)} kg foran</b> linjen.`);
+    else if(diff>-0.3) parts.push(`Du ligger stort set <b>på linjen</b> i dag.`);
+    else parts.push(`Du ligger <b>${fmt(-diff,1)} kg bag</b> linjen lige nu — ikke alarmerende.`);
+    // vand-kontekst: alkohol eller stor dag i går løfter typisk morgenvægten (vand, ikke fedt)
+    const yday=addDays(curDate,-1);
+    const yAlc=+(((S.daily.find(d=>d.log_date===yday)||{}).alcohol_units)||0);
+    const yKcal=sumDay(S.nutrition,yday,"calories_in");
+    const yMorning=M.find(w=>w.log_date===yday);
+    if((yAlc>0 || yKcal> (+s.calorie_target)+400) && yMorning && cur>yMorning.weight_kg){
+      parts.push(`Gårsdagens ${yAlc>0?"alkohol + salt":"store dag"} giver typisk lidt vand på vægten i dag — det er ikke fedt, og det er væk om et par dage.`);
+    }
+    parts.push(`Din aftenration sættes af før-aften-vejningen — hold øje med gram-budgettet dér.`);
   }else parts.push("Vej dig i morgen tidlig, så følger jeg kurven herfra.");
   const wt=S.workouts.filter(w=>w.log_date===t&&w.kind==="loeb");
   if(!wt.length)parts.push("Intet løb logget i dag endnu.");
