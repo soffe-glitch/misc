@@ -384,9 +384,10 @@ function render(){
   const kcalRem=s.calorie_target-kcalToday;
   const kcalPct=Math.min(100,kcalToday/s.calorie_target*100);
   const kcalCol=kcalToday>s.calorie_target?"var(--bad)":"var(--accent)";
-  // madration (gram) — dagens ration fra morgenvejning, spist = loggede gram
+  // madration (gram) — dagens ration fra seneste vejning (før-aften når den findes, ellers morgen)
   const gramsToday=sumDay(S.nutrition,t,"grams");
-  const ration=mToday?withFloor((targetToday-mToday.weight_kg)*1000):null;
+  const wRation=aToday||mToday;
+  const ration=wRation?withFloor((targetToday-wRation.weight_kg)*1000):null;
   const gramsRem=ration!=null?ration-gramsToday:null;
   const gramsPct=(ration&&ration>0)?Math.min(100,gramsToday/ration*100):(gramsToday>0?100:0);
   const gramsCol=(ration!=null&&gramsToday>ration)?"var(--bad)":"var(--accent)";
