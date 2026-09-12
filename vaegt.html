@@ -384,6 +384,11 @@ function render(){
   const kcalRem=s.calorie_target-kcalToday;
   const kcalPct=Math.min(100,kcalToday/s.calorie_target*100);
   const kcalCol=kcalToday>s.calorie_target?"var(--bad)":"var(--accent)";
+  // blid nedre guardrail: matematikkuren styrer, men markér hvis kalorier ryger for lavt (<1200)
+  const KCAL_FLOOR=1200;
+  const kcalLow=kcalToday>0&&kcalToday<KCAL_FLOOR;
+  const kcalSub=kcalLow?"under 1.200 · spis lidt mere":(kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over");
+  const kcalSubCol=kcalLow?"var(--warn)":"";
   // madration (gram) — dagens ration fra seneste vejning (før-aften når den findes, ellers morgen)
   const gramsToday=sumDay(S.nutrition,t,"grams");
   const wRation=aToday||mToday;
@@ -442,7 +447,7 @@ function render(){
       <div class="sub" style="color:${gramsCol}">${gramsSub}</div>`:`<div class="meter"><i style="width:0%"></i></div><div class="sub">vej dig i morges</div>`}</div>
     <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ${s.calorie_target}</small></div>
       <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
-      <div class="sub">${kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over"}</div></div>
+      <div class="sub" style="color:${kcalSubCol}">${kcalSub}</div></div>
   </section>
   <section class="stats stats4">
     <div class="tile"><div class="k">Tabt i alt</div><div class="v tnum">${num(st.lost,1)}<small> kg</small></div><div class="sub">siden start</div></div>
