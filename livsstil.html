@@ -58,6 +58,15 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .tab.on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
 .framewrap{margin-top:10px}
 #vaegtFrame{width:100%; border:0; border-radius:16px; min-height:640px; background:var(--bg); display:block}
+.logwrap{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:2px 2px 6px; scrollbar-width:none}
+.logwrap::-webkit-scrollbar{display:none}
+.logcard{scroll-snap-align:center; flex:0 0 87%; max-width:87%}
+@media(min-width:820px){ .logcard{flex-basis:31%; max-width:31%} }
+.logdots{display:flex; gap:6px; justify-content:center; margin-top:4px}
+.logdots i{width:7px; height:7px; border-radius:50%; background:var(--surface-3); cursor:pointer}
+.logdots i.on{background:var(--accent)}
+.medbtn{flex:1; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:10px; padding:13px 8px; font:inherit; font-weight:700; cursor:pointer}
+.medbtn.on{background:var(--krop-soft); color:var(--krop); border-color:var(--krop)}
 .section-label{font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--muted); margin:26px 4px 12px; display:flex; align-items:center; gap:8px}
 .section-label .bar{width:22px; height:3px; border-radius:2px}
 .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:var(--shadow)}
@@ -136,6 +145,7 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   <header class="top">
     <div class="brand"><div class="eyebrow">Livsstil</div><h1>Sofies dashboard</h1><div class="hint" id="sub" style="margin-top:6px">indlæser…</div></div>
     <div class="tools">
+      <a class="btn" href="run.html" style="text-decoration:none;color:var(--trae);border-color:var(--trae-soft)" title="Åbn run-dashboard">🏃 Run</a>
       <button class="btn" id="syncBtn" title="Hent nyeste fra Withings + intervals.icu">↻ Synk</button>
       <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
     </div>
@@ -164,63 +174,86 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
   </div>
 
-  <!-- ENERGI, HUMØR & OVERSKUD -->
-  <div class="section-label"><span class="bar" style="background:var(--energi)"></span>Energi, humør & overskud</div>
-  <div class="grid lead">
-    <div class="card">
-      <div class="ch"><h2>Dagens check-in</h2><span class="hint">flere nedslag pr. dag</span></div>
-      <div id="checkinList"></div>
-      <div class="field">
-        <div class="seg" id="moodSeg" data-val="">
-          <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
-          <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
-          <button type="button" data-v="5">5</button>
-        </div>
+  <!-- HURTIG-LOG (swipe) -->
+  <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Hurtig-log<span class="hint" style="margin-left:auto;text-transform:none;letter-spacing:0">swipe for felter →</span></div>
+  <div class="logwrap" id="logwrap">
+    <div class="logcard card">
+      <div class="ch"><h3>Check-in</h3><span class="hint">humør nu</span></div>
+      <div class="seg" id="moodSeg" data-val="">
+        <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+        <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+        <button type="button" data-v="5">5</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <input class="inp" id="checkinNote" style="flex:1" placeholder="Hvordan har du det lige nu?">
         <button class="pbtn" id="checkinBtn" style="background:var(--energi)">Log</button>
       </div>
       <div class="note" id="noteCheckin"></div>
-      <button type="button" class="btn" id="migraineBtn" style="margin-top:8px;color:var(--warn);border-color:var(--kost-soft)">+ Log migræne-anfald</button>
     </div>
-    <div>
-      <div class="card">
-        <div class="ch"><h3>Energi & humør — 14 dage</h3></div>
-        <div id="energiChart"><div class="empty">Log dit humør, så tegnes kurven her.</div></div>
-        <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">overskud → sofa</span></div>
-        <div class="formstrip" id="formstrip"></div>
-        <div class="legend"><span style="--x:var(--krop)">overskud</span><span style="--x:var(--faint)">blandet</span><span style="--x:var(--rest)">sofadag</span></div>
+
+    <div class="logcard card">
+      <div class="ch"><h3>Dagens log</h3><span class="hint">én pr. dag</span></div>
+      <div class="field"><label>Dagsform</label>
+        <div class="seg" id="dayTypeSeg" data-val="">
+          <button type="button" data-v="overskud">▲ Overskud</button>
+          <button type="button" data-v="blandet">– Blandet</button>
+          <button type="button" data-v="sofa">▼ Sofa</button>
+        </div>
       </div>
-      <div class="card" style="margin-top:14px">
-        <div class="ch"><h3>Dagens log</h3><span class="hint">én pr. dag</span></div>
-        <div class="field"><label>Dagsform</label>
-          <div class="seg" id="dayTypeSeg" data-val="">
-            <button type="button" data-v="overskud">▲ Overskud</button>
-            <button type="button" data-v="blandet">– Blandet</button>
-            <button type="button" data-v="sofa">▼ Sofa</button>
-          </div>
+      <div class="field"><label>Kommunikation <span class="hint">(batteri drænet)</span></label>
+        <div class="seg" id="commSeg" data-val="">
+          <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+          <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+          <button type="button" data-v="5">5</button>
         </div>
-        <div class="field"><label>Kommunikations­belastning <span class="hint">(socialt batteri drænet)</span></label>
-          <div class="seg" id="commSeg" data-val="">
-            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
-            <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
-            <button type="button" data-v="5">5</button>
-          </div>
-        </div>
-        <div class="field"><label>Arbejdsbelastning</label>
-          <div class="seg" id="workSeg" data-val="">
-            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
-            <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
-            <button type="button" data-v="5">5</button>
-          </div>
-        </div>
-        <div class="field"><label>Alkohol i dag <span class="hint">(genstande)</span></label>
-          <input class="inp" id="alcInp" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
-        </div>
-        <button class="pbtn" id="dailyBtn" style="background:var(--energi);width:100%;margin-top:12px">Gem dagens log</button>
-        <div class="note" id="noteDaily"></div>
       </div>
+      <div class="field"><label>Arbejde</label>
+        <div class="seg" id="workSeg" data-val="">
+          <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+          <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+          <button type="button" data-v="5">5</button>
+        </div>
+      </div>
+      <div class="field"><label>Alkohol <span class="hint">(genstande)</span></label>
+        <input class="inp" id="alcInp" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+      </div>
+      <button class="pbtn" id="dailyBtn" style="background:var(--energi);width:100%;margin-top:10px">Gem</button>
+      <div class="note" id="noteDaily"></div>
+    </div>
+
+    <div class="logcard card">
+      <div class="ch"><h3>Medicin i dag</h3><span class="hint">Eltroxin</span></div>
+      <div class="field"><label>Klik når taget</label>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="medbtn" id="medMorn">Morgen</button>
+          <button type="button" class="medbtn" id="medEve">Aften</button>
+        </div>
+      </div>
+      <p class="hint" id="medQuick" style="margin-top:12px"></p>
+    </div>
+
+    <div class="logcard card">
+      <div class="ch"><h3>Hændelser</h3><span class="hint">sjældnere</span></div>
+      <button type="button" class="pbtn" id="migraineBtn" style="background:var(--warn);width:100%">+ Migræne-anfald</button>
+      <button type="button" class="btn" id="labBtn2" style="width:100%;margin-top:10px">+ Blodprøve</button>
+      <p class="hint" style="margin-top:12px">Vejning og mad logges i <b>Vægttab &amp; log</b>-fanen.</p>
+    </div>
+  </div>
+  <div class="logdots" id="logdots"></div>
+
+  <!-- ENERGI, HUMØR & OVERSKUD -->
+  <div class="section-label"><span class="bar" style="background:var(--energi)"></span>Energi, humør & overskud</div>
+  <div class="grid lead">
+    <div class="card">
+      <div class="ch"><h2>Dagens check-in</h2><span class="hint">nedslag i dag</span></div>
+      <div id="checkinList"></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Energi & humør — 14 dage</h3></div>
+      <div id="energiChart"><div class="empty">Log dit humør, så tegnes kurven her.</div></div>
+      <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">overskud → sofa</span></div>
+      <div class="formstrip" id="formstrip"></div>
+      <div class="legend"><span style="--x:var(--krop)">overskud</span><span style="--x:var(--faint)">blandet</span><span style="--x:var(--rest)">sofadag</span></div>
     </div>
   </div>
 
@@ -253,7 +286,7 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
   </div>
 
   <!-- TRÆNING -->
-  <div class="section-label"><span class="bar" style="background:var(--trae)"></span>Træning<a href="run.html" style="margin-left:auto;text-transform:none;letter-spacing:0;font-weight:700;color:#fff;background:var(--trae);text-decoration:none;font-size:12.5px;padding:6px 13px;border-radius:99px;box-shadow:var(--shadow)">Åbn run-dashboard →</a></div>
+  <div class="section-label"><span class="bar" style="background:var(--trae)"></span>Træning</div>
   <div class="card" id="streakCard" style="margin-bottom:14px">
     <div class="ch"><h2>Morgenstreak 🔥</h2><span class="hint">løb (mindst 1 km) — bryd ikke kæden</span></div>
     <div class="streakrow">
@@ -678,6 +711,7 @@ function render(){
   const wkStr=S.workouts.filter(w=>w.kind==="styrke"&&w.log_date>=wkStart).length;
   $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
   streak();
+  renderMedQuick();
 
   // --- restitution ---
   if(wl){
@@ -759,8 +793,17 @@ async function toggleMed(day,slot){
   const rec=S.meds.find(m=>m.log_date===day)||{log_date:day,morning:false,evening:false};
   const body={log_date:day,morning:rec.morning,evening:rec.evening};body[slot]=!rec[slot];
   try{const r=await upsert("thyroid_meds",body,"log_date");const row=r[0];
-    const i=S.meds.findIndex(m=>m.log_date===day);if(i>=0)S.meds[i]=row;else S.meds.push(row);medgrid();
+    const i=S.meds.findIndex(m=>m.log_date===day);if(i>=0)S.meds[i]=row;else S.meds.push(row);medgrid();renderMedQuick();
   }catch(e){alert("Kunne ikke gemme: "+e.message);}
+}
+function renderMedQuick(){
+  const t=todayISO();const rec=S.meds.find(m=>m.log_date===t)||{};
+  const mb=$("#medMorn"),eb=$("#medEve");if(!mb||!eb)return;
+  mb.classList.toggle("on",!!rec.morning);mb.textContent=rec.morning?"Morgen ✓":"Morgen";
+  eb.classList.toggle("on",!!rec.evening);eb.textContent=rec.evening?"Aften ✓":"Aften";
+  const ws=weekStart(t);let done=0,tot=0;
+  for(let i=0;i<7;i++){const d=addDays(ws,i);if(d>t)continue;const r=S.meds.find(m=>m.log_date===d)||{};tot+=2;if(r.morning)done++;if(r.evening)done++;}
+  $("#medQuick").innerHTML=`Denne uge: <b style="color:var(--krop)">${done}/${tot}</b> doser.`;
 }
 
 function coach(){
@@ -945,11 +988,26 @@ $("#dailyBtn").onclick=submitDaily;
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
 $("#mSave").onclick=saveMigraine;
-$("#labBtn").onclick=()=>{$("#lDate").value=todayISO();$("#lDialog").classList.add("open");};
+const openLab=()=>{$("#lDate").value=todayISO();$("#lDialog").classList.add("open");};
+$("#labBtn").onclick=openLab;
+$("#labBtn2").onclick=openLab;
 $("#lCancel").onclick=()=>$("#lDialog").classList.remove("open");
 $("#lSave").onclick=saveLab;
+$("#medMorn").onclick=()=>toggleMed(todayISO(),"morning");
+$("#medEve").onclick=()=>toggleMed(todayISO(),"evening");
 $("#syncBtn").onclick=doSync;
 window.addEventListener("scroll",hideTT,{passive:true});
+
+// ---------- hurtig-log swipe-prikker ----------
+(function(){const wrap=$("#logwrap"),dots=$("#logdots");if(!wrap||!dots)return;
+  const cards=[...wrap.children];
+  dots.innerHTML=cards.map((_,i)=>`<i data-i="${i}"></i>`).join("");
+  const ds=[...dots.children];
+  function upd(){const span=wrap.scrollWidth-wrap.clientWidth;const idx=span>4?Math.round(wrap.scrollLeft/span*(cards.length-1)):0;ds.forEach((d,i)=>d.classList.toggle("on",i===idx));}
+  let tmr; wrap.addEventListener("scroll",()=>{clearTimeout(tmr);tmr=setTimeout(upd,60);},{passive:true});
+  ds.forEach((d,i)=>d.onclick=()=>cards[i].scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}));
+  upd();
+})();
 
 // ---------- faner (Livsstil / Vægttab) ----------
 const frame=$("#vaegtFrame");let frameTimer=null;
