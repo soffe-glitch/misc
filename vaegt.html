@@ -390,7 +390,15 @@ function render(){
   const ration=wRation?withFloor((targetToday-wRation.weight_kg)*1000):null;
   const gramsRem=ration!=null?ration-gramsToday:null;
   const gramsPct=(ration&&ration>0)?Math.min(100,gramsToday/ration*100):(gramsToday>0?100:0);
-  const gramsCol=(ration!=null&&gramsToday>ration)?"var(--bad)":"var(--accent)";
+  // balance: gram-rationen slår kun rød når du OGSÅ er over kaloriemålet.
+  // over gram men under kalorier = gulv-artefakt, ikke overspisning → grøn med forklaring.
+  const gramsOver=(ration!=null&&gramsToday>ration);
+  const kcalOver=kcalToday>=s.calorie_target;
+  const gramsCol=(gramsOver&&kcalOver)?"var(--bad)":"var(--accent)";
+  const gramsSub = ration==null ? "" :
+    (gramsRem>=0 ? num(gramsRem,0)+" g tilbage"
+     : (!kcalOver ? num(-gramsRem,0)+" g over · "+num(kcalRem,0)+" kcal under mål"
+        : num(-gramsRem,0)+" g over · "+num(-kcalRem,0)+" kcal over"));
 
   const goalPct=((s.start_weight-s.goal_weight)/(s.start_weight-s.kur_basis_weight))*100;
   const planTag=st.vsPlan>=0?`<span class="dot" style="background:var(--good)"></span> ${gram(st.vsPlan*1000)} foran linjen`:`<span class="dot" style="background:var(--warn)"></span> ${gram(-st.vsPlan*1000)} bagud`;
@@ -431,7 +439,7 @@ function render(){
   <section class="stats" style="grid-template-columns:repeat(2,1fr)">
     <div class="tile"><div class="k">Madration i dag</div><div class="v tnum">${ration!=null?num(gramsToday,0):"—"}${ration!=null?`<small> / ${num(ration,0)} g</small>`:""}</div>
       ${ration!=null?`<div class="meter"><i style="width:${gramsPct}%;background:${gramsCol}"></i></div>
-      <div class="sub" style="color:${gramsCol}">${gramsRem>=0?num(gramsRem,0)+" g tilbage":num(-gramsRem,0)+" g over"}</div>`:`<div class="meter"><i style="width:0%"></i></div><div class="sub">vej dig i morges</div>`}</div>
+      <div class="sub" style="color:${gramsCol}">${gramsSub}</div>`:`<div class="meter"><i style="width:0%"></i></div><div class="sub">vej dig i morges</div>`}</div>
     <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ${s.calorie_target}</small></div>
       <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
       <div class="sub">${kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over"}</div></div>
