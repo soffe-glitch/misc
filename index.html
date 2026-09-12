@@ -413,10 +413,10 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[]};
 
 async function loadAll(){
-  const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs]=await Promise.all([
+  const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
     get("settings","?select=*&limit=1"),
     get("weighins","?select=*&order=log_date.asc"),
     get("nutrition","?select=*&order=log_date.asc"),
@@ -427,8 +427,10 @@ async function loadAll(){
     get("checkins","?select=*&order=ts.asc"),
     get("migraines","?select=*&order=ts.asc"),
     get("thyroid_meds","?select=*&order=log_date.asc"),
-    get("thyroid_labs","?select=*&order=test_date.asc")
+    get("thyroid_labs","?select=*&order=test_date.asc"),
+    get("planned","?select=*&order=log_date.asc")
   ]);
+  S.planned=planned;
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -602,9 +604,11 @@ function render(){
   $("#tKcalBar").style.width=Math.min(100,kcal/(s.calorie_target||1648)*100)+"%";
   const wt=S.workouts.filter(w=>w.log_date===t);
   const runT=wt.find(w=>w.kind==="loeb"),strT=wt.find(w=>w.kind==="styrke"),stepT=wt.find(w=>w.kind==="skridt");
+  const plToday=S.planned.filter(p=>p.log_date===t);
   if(runT){$("#tTrain").textContent=fmt(runT.distance_km,1)+" km";$("#tTrainSub").textContent="løbet ✓";$("#tTrainSub").style.color="var(--good)";}
   else if(strT){$("#tTrain").textContent="Styrke";$("#tTrainSub").textContent="✓";$("#tTrainSub").style.color="var(--good)";}
-  else{$("#tTrain").textContent="—";$("#tTrainSub").textContent="intet løb endnu i dag";}
+  else if(plToday.length){$("#tTrain").textContent=plToday[0].name||"Planlagt pas";$("#tTrain").style.fontSize="15px";$("#tTrainSub").textContent="planlagt (Søren) · ikke løbet endnu";$("#tTrainSub").style.color="var(--trae)";}
+  else{$("#tTrain").textContent="—";$("#tTrainSub").textContent="intet planlagt · 1 km-gulv";$("#tTrainSub").style.color="var(--muted)";}
   const wl=S.wellness[S.wellness.length-1];
   if(wl){
     const avgHrv=avg(S.wellness.slice(-14).map(w=>w.hrv).filter(x=>x!=null));
@@ -760,35 +764,74 @@ async function toggleMed(day,slot){
 }
 
 function coach(){
-  const s=S.settings,t=todayISO(),M=morning();const h=new Date().getHours();
-  const hi=h<10?"Godmorgen":h<14?"Goddag":h<18?"Hej":"Godaften";
-  let parts=[hi+"."];
+  const s=S.settings, t=todayISO(), M=morning(), h=new Date().getHours();
+  const hi = h<10?"Godmorgen":h<14?"Goddag":h<18?"Hej":"Godaften";
+  const parts=[hi+"."];
+
+  // ---- readiness: vægt søvn, HRV, hvilepuls, alkohol, dagsform, energi sammen ----
   const wl=S.wellness[S.wellness.length-1];
-  if(wl&&wl.sleep_hours!=null){const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));
-    if(wl.sleep_hours<avgS-0.7)parts.push(`Du sov <b>${hhmm(wl.sleep_hours)}</b> — under dit snit på ${hhmm(avgS)}, så kroppen har lidt mindre i tanken i dag.`);
-    else parts.push(`Du sov <b>${hhmm(wl.sleep_hours)}</b> — fint niveau.`);}
+  const avgS=avg(S.wellness.slice(-21).map(w=>w.sleep_hours).filter(x=>x!=null));
+  const avgHrv=avg(S.wellness.slice(-21).map(w=>w.hrv).filter(x=>x!=null));
+  const avgRhr=avg(S.wellness.slice(-21).map(w=>w.resting_hr).filter(x=>x!=null));
+  const yday=addDays(t,-1);
+  const yAlc=+(((S.daily.find(d=>d.log_date===yday)||{}).alcohol_units)||0);
+  const todayLog=S.daily.find(d=>d.log_date===t)||{};
+  const eToday=S.checkins.filter(c=>c.log_date===t).map(c=>c.energy||c.mood).filter(x=>x!=null);
+  const energyToday=eToday.length?avg(eToday):null;
+
+  const flags=[]; const sig=[];
+  if(wl){
+    if(wl.sleep_hours!=null){ if(wl.sleep_hours<Math.min(avgS-0.7,6.5)) flags.push("søvn"); sig.push(`sov ${hhmm(wl.sleep_hours)}`); }
+    if(wl.hrv!=null){ if(avgHrv&&wl.hrv<avgHrv-5) flags.push("hrv"); sig.push(`HRV ${wl.hrv}${avgHrv?` (snit ${Math.round(avgHrv)})`:""}`); }
+    if(wl.resting_hr!=null){ if(avgRhr&&wl.resting_hr>avgRhr+3) flags.push("puls"); sig.push(`hvilepuls ${wl.resting_hr}`); }
+  }
+  if(yAlc>0) flags.push("alkohol");
+  if(todayLog.day_type==="sofa") flags.push("sofa");
+  if(energyToday!=null&&energyToday<=2) flags.push("energi");
+  const level = flags.length>=3?"lav":flags.length>=1?"middel":"frisk";
+
+  if(wl){ const body=sig.length?` (${sig.join(", ")})`:"";
+    if(level==="frisk") parts.push(`Kroppen ser <b>frisk</b> ud i dag${body}.`);
+    else if(level==="middel") parts.push(`Kroppen er <b>lidt lav</b> i dag${body} — ikke rødt, men ikke topdag.`);
+    else parts.push(`Kroppen er <b>lav</b> i dag${body}${yAlc>0?", bl.a. efter gårsdagens alkohol":""}.`);
+  }
+
+  // ---- træning: gennemført / planlagt i dag / næste pas ----
+  const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
+  const planToday=S.planned.filter(p=>p.log_date===t);
+  const nextPlan=S.planned.filter(p=>p.log_date>t).sort((a,b)=>a.log_date<b.log_date?-1:1)[0];
+  if(ranToday){
+    parts.push("Dagens løb er i hus ✓ — kæden lever.");
+  } else if(planToday.length){
+    const nm=esc(planToday[0].name||"et planlagt pas");
+    if(level==="lav") parts.push(`Du har <b>${nm}</b> på fra Søren i dag. Kroppen er lav, så tag opvarmningen roligt og mærk efter — du kender signalerne bedst; gennemfør hvis den føles ok, ellers skru ned.`);
+    else if(level==="middel") parts.push(`Du har <b>${nm}</b> på fra Søren i dag — kør den som lagt, lad kroppen sætte tempoet i opvarmningen.`);
+    else parts.push(`Du har <b>${nm}</b> på fra Søren i dag — god dag til at køre den ordentligt igennem.`);
+  } else {
+    let line="Ingen planlagt træning i dag";
+    if(nextPlan){ const dd=daysBetween(t,nextPlan.log_date); line+=`, og din næste er ${dd===1?"i morgen":"om "+dd+" dage"} (${esc(nextPlan.name||"pas")})`; }
+    line+=". ";
+    if(level==="lav" || (nextPlan&&daysBetween(t,nextPlan.log_date)===1)) line+="Perfekt dag til bare at holde kæden — mindst 1 km og spar krudtet til det.";
+    else if(level==="frisk") line+="Står du frisk, må morgenturen gerne blive lidt længere — ellers er 1 km nok.";
+    else line+="1 km-gulvet holder kæden; mere hvis du har lyst.";
+    parts.push(line);
+  }
+
+  // ---- vægt/linje + vand-kontekst + ration ----
   if(M.length){
     const cur=M[M.length-1].weight_kg, curDate=M[M.length-1].log_date;
-    const target=malvaegt(curDate,+s.kur_basis_weight), diff=target-cur;
-    if(diff>=0.3) parts.push(`På vægten ligger du <b>${fmt(diff,1)} kg foran</b> linjen.`);
-    else if(diff>-0.3) parts.push(`Du ligger stort set <b>på linjen</b> i dag.`);
-    else parts.push(`Du ligger <b>${fmt(-diff,1)} kg bag</b> linjen lige nu — ikke alarmerende.`);
-    // vand-kontekst: alkohol eller stor dag i går løfter typisk morgenvægten (vand, ikke fedt)
-    const yday=addDays(curDate,-1);
-    const yAlc=+(((S.daily.find(d=>d.log_date===yday)||{}).alcohol_units)||0);
+    const diff=malvaegt(curDate,+s.kur_basis_weight)-cur;
+    let w2 = diff>=0.3?`På vægten ligger du ${fmt(diff,1)} kg foran linjen`
+           : diff>-0.3?`På vægten ligger du stort set på linjen`
+           : `På vægten ligger du ${fmt(-diff,1)} kg bag linjen`;
     const yKcal=sumDay(S.nutrition,yday,"calories_in");
     const yMorning=M.find(w=>w.log_date===yday);
-    if((yAlc>0 || yKcal> (+s.calorie_target)+400) && yMorning && cur>yMorning.weight_kg){
-      parts.push(`Gårsdagens ${yAlc>0?"alkohol + salt":"store dag"} giver typisk lidt vand på vægten i dag — det er ikke fedt, og det er væk om et par dage.`);
-    }
-    parts.push(`Din aftenration sættes af før-aften-vejningen — hold øje med gram-budgettet dér.`);
-  }else parts.push("Vej dig i morgen tidlig, så følger jeg kurven herfra.");
-  const wt=S.workouts.filter(w=>w.log_date===t&&w.kind==="loeb");
-  if(!wt.length)parts.push("Intet løb logget i dag endnu.");
+    if((yAlc>0||yKcal>(+s.calorie_target)+400)&&yMorning&&cur>yMorning.weight_kg) w2+=" — men tallet er lidt vand-løftet efter i går, så din reelle position er bedre";
+    parts.push(w2+". Aftenrationen sættes af før-aften-vejningen.");
+  } else parts.push("Vej dig i morgen tidlig, så følger jeg kurven herfra.");
+
   $("#coachText").innerHTML=parts.join(" ");
-  // nudge — hendes egen regel
-  const skip=wl&&wl.hrv!=null&&!wt.length;
-  $("#coachNudge").textContent = (!wt.length) ? "Og hvis du står frisk og tøver ved 17-tiden: sko på, ud ad døren." : "";
+  $("#coachNudge").textContent = (!ranToday) ? "Og hvis du tøver ved sko-hylden: sko på, ud ad døren." : "";
 }
 
 function insights(){
