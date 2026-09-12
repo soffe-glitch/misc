@@ -1086,12 +1086,15 @@ async function saveLab(){
 }
 
 async function doSync(){
+  if(doSync._busy)return; doSync._busy=true;
   const btn=$("#syncBtn");btn.disabled=true;const old=btn.textContent;btn.textContent="synker…";
   const opt={headers:{apikey:KEY,Authorization:"Bearer "+KEY}};
   try{await Promise.all([fetch(FN_INT+"?days=30",opt),fetch(FN_WITH+"?days=30",opt)]);
-    await loadAll();render();btn.textContent="✓ opdateret";
+    await loadAll();render();
+    try{if(frame&&frame.getAttribute("src")&&frame.contentWindow)frame.contentWindow.location.reload();}catch(e){}
+    btn.textContent="✓ opdateret";
   }catch(e){btn.textContent="↻ Synk";alert("Synk-fejl: "+e.message);}
-  finally{setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1500);}
+  finally{doSync._busy=false;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1500);}
 }
 
 // ---------- theme ----------
@@ -1142,24 +1145,22 @@ window.addEventListener("scroll",hideTT,{passive:true});
   document.body.appendChild(ind);
 
   const TRIG=64;let startY=0,pulling=false,damp=0,busy=false;
-  const livActive=()=>{const v=document.getElementById("viewLiv");return v&&!v.hidden;};
+  // atTop bruger den ydre sides scroll — også korrekt når vægt-fanen (iframe) er åben,
+  // for iframen er højde-tilpasset og det er den ydre side der scroller.
   const atTop=()=>(window.scrollY||document.documentElement.scrollTop||0)<=0;
   const reset=()=>{ind.style.transform="translateX(-50%) translateY(-64px)";ind.style.opacity="0";ind.classList.remove("ready");damp=0;};
 
-  window.addEventListener("touchstart",e=>{
-    if(busy||!livActive()||!atTop()){pulling=false;return;}
-    startY=e.touches[0].clientY;pulling=true;damp=0;
-  },{passive:true});
-  window.addEventListener("touchmove",e=>{
+  function onStart(y){ if(busy||!atTop()){pulling=false;return;} startY=y;pulling=true;damp=0; }
+  function onMove(y){
     if(!pulling)return;
-    const dy=e.touches[0].clientY-startY;
+    const dy=y-startY;
     if(dy<=0||!atTop()){reset();return;}
     damp=Math.min(dy*0.5,96);
     ind.style.transform="translateX(-50%) translateY("+(damp-4)+"px)";
     ind.style.opacity=String(Math.min(damp/TRIG,1));
     ind.classList.toggle("ready",damp>=TRIG);
-  },{passive:true});
-  window.addEventListener("touchend",async()=>{
+  }
+  async function onEnd(){
     if(!pulling)return;pulling=false;
     if(damp>=TRIG&&!busy){
       busy=true;ind.classList.remove("ready");ind.classList.add("spinning");
@@ -1168,7 +1169,18 @@ window.addEventListener("scroll",hideTT,{passive:true});
       ind.classList.remove("spinning");busy=false;
     }
     reset();
-  },{passive:true});
+  }
+  // direkte touch (livsstil-fanen + headeren)
+  window.addEventListener("touchstart",e=>onStart(e.touches[0].clientY),{passive:true});
+  window.addEventListener("touchmove",e=>onMove(e.touches[0].clientY),{passive:true});
+  window.addEventListener("touchend",onEnd,{passive:true});
+  // videresendt touch fra vægt-fanens iframe (samme origin)
+  window.addEventListener("message",e=>{
+    const d=e.data; if(!d||d.type!=="ptr-touch")return;
+    if(d.phase==="touchstart")onStart(d.y);
+    else if(d.phase==="touchmove")onMove(d.y);
+    else onEnd();
+  });
 })();
 
 // ---------- hurtig-log swipe-prikker ----------
@@ -1193,7 +1205,7 @@ frame.addEventListener("load",()=>{ // vægt-dashboardet henter data async → m
 function showTab(t){
   $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");
   $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
-  $("#syncBtn").style.display=(t==="liv")?"":"none"; // vægt-fanen har egne knapper
+  $("#syncBtn").style.display=""; // Synk virker nu på begge faner (opdaterer også vægt-iframen)
   if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","vaegt.html");
   if(t==="vaegt")sizeFrame();
   try{localStorage.setItem("liv-tab",t)}catch(e){}
