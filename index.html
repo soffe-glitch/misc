@@ -1005,7 +1005,27 @@ function coach(){
   }
 
   $("#coachText").innerHTML=parts.join(" ");
-  $("#coachNudge").textContent = (!ranToday) ? "Og hvis du tøver ved sko-hylden: sko på, ud ad døren." : "";
+  // roterende, kontekst-tilpasset nudge — skifter dag for dag så den ikke bliver slidt
+  const dayIdx=Math.floor(Date.now()/86400000);
+  const nudgesLav=[
+    "I dag tæller det bare at komme ud — 1 km, ikke mere. Kroppen skal ikke præstere, bare mærke luften.",
+    "Du behøver ikke have det godt for at gøre det godt. De første skridt er det hele — resten kommer.",
+    "Selv en mini-tur holder kæden i live på en tung dag. Skoene, døren, et kvarter.",
+    "Ingen skal imponeres i dag. Ud, træk vejret, hjem — det er rigeligt.",
+    "En kort rolig tur er en sejr på en lav dag, ikke en halv indsats."];
+  const nudgesFrisk=[
+    "Du har overskuddet i dag — lån lidt af det til en tur, så låner den dig energi tilbage.",
+    "Den tur du er mest i tvivl om, er den du aldrig fortryder bagefter. Tag den.",
+    "En løber er ikke den der har lyst hver dag — det er den der går ud alligevel. Det er dig.",
+    "Skoene på nu, så er det overstået — og du kender godt følelsen bagefter.",
+    "Kæden lever af de dage hvor du ikke rigtig gad. Det svære er hylden, ikke turen.",
+    "Fem minutter ude, så er benene i gang. Bare kom forbi entréen."];
+  const nudgesDone=[
+    "Turen er i hus — det er sådan man bygger en løber. Flot.",
+    "Dagens led i kæden er sat. Ikke mere at bevise i dag.",
+    "Løbet er klaret — resten af dagen er ren bonus."];
+  const pick=arr=>arr[dayIdx%arr.length];
+  $("#coachNudge").textContent = ranToday ? pick(nudgesDone) : pick(level==="lav"?nudgesLav:nudgesFrisk);
 }
 
 function insights(){
