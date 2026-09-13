@@ -226,6 +226,7 @@ details[open] summary { color:var(--accent); }
 
   <!-- OVERBLIK -->
   <div class="page active" id="p-overview" style="display:none">
+    <div id="coach-overview"></div>
     <div id="recent-activity-summary"></div>
     <div id="acwr-alert"></div>
     <div class="grid g6" id="summary"></div>
@@ -260,6 +261,8 @@ details[open] summary { color:var(--accent); }
       <p style="font-size:13px;line-height:1.7;margin:0 0 10px;">Du og Søren er enige: målet søndag er at komme godt og behageligt rundt om de <strong>21,1 km</strong>. Sommeren blev ikke regelmæssig nok til at jage sub 1:47, så det tidsmål flytter til et senere, køligt løb. I dag tæller det at krydse stregen — det er et fundament, ikke en dom.</p>
       <div class="help" style="margin-top:8px;"><strong>Racedag:</strong> start bevidst roligt i behageligt samtale-tempo og lad følelsen styre, ikke uret. Gåpauser er en del af planen — du brugte dem selv på 16-km-turen 9. aug. Fyld depoterne op til og undervejs.</div>
     </div>
+
+    <div id="coach-goals"></div>
 
     <!-- Retur-til-form-sæsonmål (sub 1:47) — udskudt forbi 20/9 -->
     <div class="goal-card" id="hm-sub145-card">
@@ -574,6 +577,7 @@ details[open] summary { color:var(--accent); }
 
   <!-- DAGSFORM -->
   <div class="page" id="p-dagsform">
+    <div id="coach-dagsform"></div>
     <div id="df-score"></div>
     <div id="df-workout"></div>
     <div class="grid g6" id="df-metrics"></div>
@@ -666,6 +670,7 @@ details[open] summary { color:var(--accent); }
 
   <!-- L&Oslash;BE-ANALYSE -->
   <div class="page" id="p-rundetail">
+    <div id="coach-rundetail"></div>
     <div class="info">
       <strong>L&oslash;be-analyse</strong> dykker ned i en enkelt tur og forklarer hvad der p&aring;virkede den. V&aelig;lg et l&oslash;b nedenfor &mdash;
       dashboardet kigger p&aring; din s&oslash;vn, HRV, hvilepuls, Body Battery og hviledage og vurderer om det var en <span class="good">god</span>, <span class="warn">OK</span> eller <span class="bad">h&aring;rd</span> dag.
@@ -998,6 +1003,69 @@ function render() {
   if (page === 'p-activities') renderActivities(fa, fw);
   if (page === 'p-ghost') renderGhost();
   if (page === 'p-historik') renderHistorik();
+  renderCoach(page, fr);
+}
+
+// ===== Regelbaseret coach-bund (baseline + fallback; AI-lag kobles på senere) =====
+function coachInWin(r, days){ const cut = Date.now() - days*86400000; return r.filter(a => new Date(a.start_date_local||a.start_date).getTime() >= cut); }
+function coachBetween(r, dNew, dOld){ const now=Date.now(); return r.filter(a=>{ const t=new Date(a.start_date_local||a.start_date).getTime(); return t < now-dNew*86400000 && t >= now-dOld*86400000; }); }
+function coachKm(list){ return list.reduce((s,a)=>s+(a.distance||0)/1000,0); }
+function coachPace(list){ const km=coachKm(list); const t=list.reduce((s,a)=>s+(a.moving_time||0),0); return km>0?(t/60)/km:0; }
+function coachFmtPace(p){ if(!p||!isFinite(p))return '–'; const m=Math.floor(p); let s=Math.round((p-m)*60); let mm=m; if(s===60){s=0;mm++;} return mm+':'+String(s).padStart(2,'0'); }
+function coachEF(list){ const vals=list.map(a=>{ const m=(a.distance||0), min=(a.moving_time||0)/60, hr=a.average_heartrate; if(!m||!min||!hr)return null; return (m/min)/hr; }).filter(x=>x!=null); return vals.length?vals.reduce((s,x)=>s+x,0)/vals.length:null; }
+function coachArrow(cur, prev, betterUp){ if(prev==null||cur==null)return ''; const d=cur-prev; const arr=Math.abs(d)<1e-9?'▬':(d>0?'▲':'▼'); const good = betterUp ? d>0 : d<0; const col=Math.abs(d)<1e-9?'var(--muted)':(good?'var(--green)':'var(--orange)'); return `<span style="color:${col}">${arr}</span>`; }
+function setCoach(id, headline, body){ const el=document.getElementById(id); if(!el)return; el.innerHTML = `<div class="insight" style="margin-bottom:16px"><h3>💬 Coach</h3><div class="finding">${headline}</div><p>${body}</p><p style="font-size:11px;color:var(--muted);margin-top:8px;">Regelbaseret opsummering · en rigtig AI-analyse kobles på senere.</p></div>`; }
+
+function coachOverview(r){
+  const l30=coachInWin(r,30), lPrev=coachBetween(r,30,60);
+  const km30=coachKm(l30), kmPrev=coachKm(lPrev), n30=l30.length;
+  if(n30===0){ setCoach('coach-overview','Ingen løb de sidste 30 dage.','Kæden er kold lige nu — et enkelt løb genstarter den. Alt tæller når man bygger op igen.'); return; }
+  const dir = km30>kmPrev*1.05?'op':(km30<kmPrev*0.95?'ned':'stabilt');
+  const headline=`${n30} løb · ${km30.toFixed(0)} km de sidste 30 dage`;
+  const body=`Volumen er ${coachArrow(km30,kmPrev,true)} ${dir} vs. de foregående 30 dage (${kmPrev.toFixed(0)} km). Gns. tempo ${coachFmtPace(coachPace(l30))}/km. ${dir==='op'?'Motoren bygger — god retning.':dir==='ned'?'Roligere periode; kæden holdes med korte ture.':'Jævnt niveau — konsistensen er der.'}`;
+  setCoach('coach-overview',headline,body);
+}
+function coachGoals(r){
+  const race=new Date('2026-09-20T00:00:00'); const days=Math.ceil((race.getTime()-Date.now())/86400000);
+  const l35=coachInWin(r,35); const longest=l35.reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0);
+  const headline = days>=0?`${days} dage til halvmarathon — plan: gennemfør behageligt`:'Halvmarathon overstået';
+  let body;
+  if(longest>=15) body=`Din længste tur nyligt er ${longest.toFixed(0)} km — basen til at komme rundt om de 21,1 km er der. Sub-1:47 er udskudt som sæsonmål; søndag handler om at krydse stregen i roligt tempo med gåpauser efter behov.`;
+  else if(longest>0) body=`Længste tur nyligt: ${longest.toFixed(0)} km. Distancen bliver et stræk, så læg dig i et bevidst roligt tempo fra start og brug gåpauser — målet er gennemførsel, ikke tid.`;
+  else body=`Ingen lange ture registreret for nylig. Kør søndag ekstra konservativt: rolig start, gåpauser, fyld depoterne. Gennemførsel er sejren.`;
+  setCoach('coach-goals',headline,body);
+}
+function coachDagsform(){
+  const allW=wellness||[]; const today=new Date().toISOString().substring(0,10); const wMap={}; allW.forEach(x=>wMap[x.id]=x);
+  let dw=wMap[today]||[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]||null;
+  const rd = (dw && typeof calcReadiness==='function')?calcReadiness(dw,allW,activities):null;
+  if(!rd){ setCoach('coach-dagsform','Ingen dagsform-data endnu.','Når søvn/HRV/hvilepuls er synket, læser jeg din readiness her.'); return; }
+  const s=rd.score; const state=s>=70?'god':(s>=40?'moderat':'lav');
+  const up=(rd.factors||[]).filter(f=>f.score>=65).map(f=>f.name);
+  const down=(rd.factors||[]).filter(f=>f.score<45).map(f=>f.name);
+  const headline=`Readiness ${s}/100 — ${state} form i dag`;
+  let body=`${down.length?('Trækker ned: '+down.join(', ')+'. '):''}${up.length?('Trækker op: '+up.join(', ')+'. '):''}`;
+  body+= s>=70?'God dag til at køre et pas ordentligt igennem, hvis det passer med Sørens program.':(s>=40?'Hold det moderat — lad kroppen sætte tempoet i opvarmningen.':'Kroppen beder om en let dag eller hvile; du kender signalerne bedst.');
+  setCoach('coach-dagsform',headline,body);
+}
+function coachRundetail(r){
+  const recent=coachInWin(r,28), prev=coachBetween(r,28,56);
+  const efR=coachEF(recent), efP=coachEF(prev);
+  if(efR==null){ setCoach('coach-rundetail','For lidt puls-data til analyse.','Når der er løb med pulsdata, viser jeg effektivitet, tempo og udvikling her.'); return; }
+  const pct = efP? ((efR-efP)/efP*100):null;
+  const headline=`Aerob effektivitet ${efR.toFixed(2)} ${coachArrow(efR,efP,true)}`;
+  let body=`Effektivitet = hvor langt du løber pr. pulsslag; højere = mere økonomisk motor. `;
+  if(pct!=null) body+=`De sidste 4 uger er den ${pct>=0?'steget':'faldet'} ${Math.abs(pct).toFixed(0)}% vs. de forrige 4 (${efP.toFixed(2)}). ${pct>=2?'Klar fremgang — formen bygger.':(pct<=-2?'Lidt tilbagegang; ofte varme, træthed eller mindre volumen.':'Nogenlunde stabilt.')} `;
+  body+=`Gns. tempo ${coachFmtPace(coachPace(recent))}/km over ${recent.length} løb.`;
+  setCoach('coach-rundetail',headline,body);
+}
+function renderCoach(page, fr){
+  try{
+    if(page==='p-overview')coachOverview(fr);
+    else if(page==='p-goals')coachGoals(fr);
+    else if(page==='p-dagsform')coachDagsform();
+    else if(page==='p-rundetail')coachRundetail(fr);
+  }catch(e){ /* coach må aldrig vælte siden */ }
 }
 
 // ---- OVERVIEW ----
