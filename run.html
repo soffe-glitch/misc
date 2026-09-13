@@ -595,6 +595,7 @@ details[open] summary { color:var(--accent); }
 
   <!-- INDSIGTER -->
   <div class="page" id="p-insights">
+    <div id="coach-insights"></div>
     <div class="info">
       <strong>S&aring;dan l&aelig;ser du indsigterne:</strong> Dashboardet beregner korrelationer mellem din wellness-data og l&oslash;beperformance.
       En korrelation n&aelig;r <strong>-1</strong> eller <strong>+1</strong> viser en st&aelig;rk sammenh&aelig;ng. N&aelig;r <strong>0</strong> er der ingen klar sammenh&aelig;ng.
@@ -734,6 +735,7 @@ details[open] summary { color:var(--accent); }
 
   <!-- LØBEØKONOMI -->
   <div class="page" id="p-economy">
+    <div id="coach-economy"></div>
     <div class="info" style="margin-bottom:16px;">
       <strong>Løbeøkonomi</strong> — Analyserer din løbeform over tid: skridtlængde, kadence, efficiency factor og deres sammenhæng med pace og puls. Jo bedre økonomi, jo hurtigere løber du med mindre energi.
     </div>
@@ -1059,12 +1061,43 @@ function coachRundetail(r){
   body+=`Gns. tempo ${coachFmtPace(coachPace(recent))}/km over ${recent.length} løb.`;
   setCoach('coach-rundetail',headline,body);
 }
+function coachAvg(list, sel){ const v=list.map(sel).filter(x=>x!=null&&isFinite(x)); return v.length?v.reduce((s,x)=>s+x,0)/v.length:null; }
+function coachEconomy(r){
+  const recent=coachInWin(r,28), prev=coachBetween(r,28,56);
+  const cadSel=a=>a.average_cadence?a.average_cadence*2:null, strSel=a=>a.average_stride||null;
+  const cadR=coachAvg(recent,cadSel), cadP=coachAvg(prev,cadSel), strR=coachAvg(recent,strSel), strP=coachAvg(prev,strSel);
+  if(cadR==null && strR==null){ setCoach('coach-economy','Ingen kadence-/skridt-data endnu.','Når dit ur sender kadence og skridtlængde med, læser jeg din løbeøkonomi og udvikling her.'); return; }
+  let head=[]; if(cadR!=null)head.push(`kadence ${Math.round(cadR)} spm ${coachArrow(cadR,cadP,true)}`); if(strR!=null)head.push(`skridtlængde ${strR.toFixed(2)} m ${coachArrow(strR,strP,true)}`);
+  let body=`Løbeøkonomi = hvor lidt du bruger ved en given fart; kadence og skridtlængde er de to håndtag. `;
+  if(cadR!=null&&cadP!=null){ const dc=cadR-cadP; body+= Math.abs(dc)<1?'Kadencen er stabil. ':(dc>0?`Kadencen er steget ${dc.toFixed(0)} spm — ofte lettere, mere elastisk fraspark. `:`Kadencen er faldet ${Math.abs(dc).toFixed(0)} spm — hold øje med oversteg på de trætte ture. `); }
+  if(strR!=null&&strP!=null){ const ds=strR-strP; if(Math.abs(ds)>=0.02) body+= ds>0?'Skridtlængden er vokset — typisk mere kraft/bedre form. ':'Skridtlængden er kortere — normalt i rolige/trætte perioder. '; }
+  body+='Styrketræningen du genoptog kan give ekstra økonomi hen over vinteren.';
+  setCoach('coach-economy',head.join(' · '),body);
+}
+function coachInsights(r){
+  const acute=coachKm(coachInWin(r,7));
+  const chronic=coachKm(coachInWin(r,28))/4;
+  const nWk=coachInWin(r,28).length/4;
+  if(coachInWin(r,28).length===0){ setCoach('coach-insights','For lidt data til belastnings-analyse.','Når der er et par ugers løb, viser jeg din akut/kronisk-belastning (skadesrisiko) og udvikling her.'); return; }
+  const acwr = chronic>0 ? acute/chronic : null;
+  let headline = acwr!=null?`Belastning (akut/kronisk) ${acwr.toFixed(2)}`:`~${acute.toFixed(0)} km denne uge`;
+  let body=`Akut (7 dage) vs. kronisk (4-ugers snit) belastning viser om du bygger op i et sikkert tempo — din historiske akilleshæl er afbrydelser, så det her er relevant. `;
+  if(acwr!=null){
+    if(acwr>1.5) body+=`${acwr.toFixed(2)} er et øget spring — pas på med at trappe for hurtigt op; hold næste par uger jævne. `;
+    else if(acwr<0.8) body+=`${acwr.toFixed(2)} er lavt — du bygger base op efter en roligere periode, hvilket er fint; øg gradvist. `;
+    else body+=`${acwr.toFixed(2)} ligger i det trygge område (~0,8–1,3) — fornuftig progression. `;
+  }
+  body+=`Ca. ${nWk.toFixed(1)} løb/uge de sidste 4 uger.`;
+  setCoach('coach-insights',headline,body);
+}
 function renderCoach(page, fr){
   try{
     if(page==='p-overview')coachOverview(fr);
     else if(page==='p-goals')coachGoals(fr);
     else if(page==='p-dagsform')coachDagsform();
     else if(page==='p-rundetail')coachRundetail(fr);
+    else if(page==='p-economy')coachEconomy(fr);
+    else if(page==='p-insights')coachInsights(fr);
   }catch(e){ /* coach må aldrig vælte siden */ }
 }
 
