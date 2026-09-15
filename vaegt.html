@@ -389,10 +389,9 @@ function render(){
   const kcalLow=kcalToday>0&&kcalToday<KCAL_FLOOR;
   const kcalSub=kcalLow?"under 1.200 · spis lidt mere":(kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over");
   const kcalSubCol=kcalLow?"var(--warn)":"";
-  // madration (gram) — dagens ration fra seneste vejning (før-aften når den findes, ellers morgen)
+  // madration (gram) — dagens ration fra MORGENVEJNING (opdaterer ikke efter før-aften-vejning)
   const gramsToday=sumDay(S.nutrition,t,"grams");
-  const wRation=aToday||mToday;
-  const ration=wRation?withFloor((targetToday-wRation.weight_kg)*1000):null;
+  const ration=mToday?withFloor((targetToday-mToday.weight_kg)*1000):null;
   const gramsRem=ration!=null?ration-gramsToday:null;
   const gramsPct=(ration&&ration>0)?Math.min(100,gramsToday/ration*100):(gramsToday>0?100:0);
   // balance: gram-rationen slår kun rød når du OGSÅ er over kaloriemålet.
