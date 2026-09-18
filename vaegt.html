@@ -367,9 +367,10 @@ function render(){
   // hero action
   let big,sub;
   if(aToday){
-    const raw=(targetToday-aToday.weight_kg)*1000, v=withFloor(raw);
+    // gulvet (FLOOR) er en DAGS-guardrail og gælder IKKE aftensmåltidet alene
+    const raw=(targetToday-aToday.weight_kg)*1000, v=Math.max(0,Math.round(raw));
     big=gram(v);
-    sub=(raw<FLOOR?`minimum ${FLOOR} g · `:`plads til aftensmad · `)+`vejet ${num(aToday.weight_kg,1)} kg før aftensmad`;
+    sub=(raw<=0?`på linjen · spis let `:`plads til aftensmad · `)+`vejet ${num(aToday.weight_kg,1)} kg før aftensmad`;
   } else if(mToday){
     const raw=(targetToday-mToday.weight_kg)*1000, v=withFloor(raw);
     big=gram(v);
@@ -572,10 +573,13 @@ function updateLiveBudget(){
   const dt=$("#w_date").value, mom=$("#w_moment").value, kgv=parseFloat(($("#w_kg").value||"").replace(",","."));
   if(!kgv||mom==="sengetid"){el.innerHTML="";return;}
   const target=malvaegt(dt,S.settings.kur_basis_weight); const raw=(target-kgv)*1000;
-  const FLOOR=S.settings.ration_floor_g||600; const v=Math.max(FLOOR,Math.round(raw));
-  const label=mom==="foraften"?"Til aftensmad":"Dagens madbudget";
+  const FLOOR=S.settings.ration_floor_g||600;
+  // gulvet gælder kun DAGENS ration (morgenvejning), ikke aftensmåltidet alene
+  const isEve=mom==="foraften";
+  const v=isEve?Math.max(0,Math.round(raw)):Math.max(FLOOR,Math.round(raw));
+  const label=isEve?"Til aftensmad":"Dagens madbudget";
   el.className="budget-live";
-  el.innerHTML = `${label}: ${gram(v)}${raw<FLOOR?" (minimum)":""} (målvægt ${num(target,1)} kg)`;
+  el.innerHTML = `${label}: ${gram(v)}${(!isEve&&raw<FLOOR)?" (minimum)":""} (målvægt ${num(target,1)} kg)`;
   el.style.background="var(--accent-soft)"; el.style.color="var(--accent-ink)";
 }
 function wireForms(){
