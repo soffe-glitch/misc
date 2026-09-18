@@ -681,7 +681,9 @@ function render(){
   const wNow=foraften||morg||(M.length?M[M.length-1]:null);
   if(wNow){
     const target=malvaegt(t,+s.kur_basis_weight);const raw=(target-wNow.weight_kg)*1000;
-    const ration=Math.max(s.ration_floor_g||600,Math.round(raw));
+    // 600 g-gulvet er en DAGS-guardrail: det gaelder kun dagens ration (morgenvejning),
+    // ikke aftensmaaltidet alene (efter foer-aften-vejning).
+    const ration=foraften?Math.max(0,Math.round(raw)):Math.max(s.ration_floor_g||600,Math.round(raw));
     $("#tRation").innerHTML=ration+'<small> g</small>';
     $("#tRationSub").textContent=(foraften?"før-aften ":(morg?"morgen ":"seneste "))+fmt(wNow.weight_kg,1)+" kg";
   }
