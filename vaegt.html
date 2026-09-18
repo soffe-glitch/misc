@@ -245,7 +245,7 @@ function malvaegt(iso,endW){
   return s.start_weight-((s.start_weight-endW)/totalDays)*dayNum;
 }
 const MOMENTS={morgen:"Morgen",foraften:"Før aftensmad",sengetid:"Sengetid"};
-function morningSeries(){return S.weighins.filter(w=>w.moment==="morgen").sort((a,b)=>a.log_date<b.log_date?-1:1);}
+function morningSeries(){const ks=S.settings.kur_start_date;return S.weighins.filter(w=>w.moment==="morgen"&&w.log_date>=ks).sort((a,b)=>a.log_date<b.log_date?-1:1);}
 function weighToday(moment){const t=todayISO();return S.weighins.find(w=>w.log_date===t&&w.moment===moment);}
 function sumDay(arr,iso,key){return arr.filter(x=>x.log_date===iso).reduce((a,x)=>a+(x[key]||0),0);}
 
@@ -260,7 +260,15 @@ function stats(){
   const span=s.start_weight-s.kur_basis_weight;
   const pct=Math.max(0,Math.min(100,(lost/span)*100));
   let rate=null;
-  if(M.length>=2){const d=daysBetween(M[0].log_date,latest.log_date); if(d>0) rate=(M[0].weight_kg-cur)/d*7;}
+  if(M.length>=2){
+    // tempo = regressionslinjens haeldning over kurens morgenvejninger (robust mod enkelte stoejdage)
+    const d0=parseD(M[0].log_date).getTime();
+    const xs=M.map(w=>(parseD(w.log_date).getTime()-d0)/86400000), ys=M.map(w=>w.weight_kg);
+    const n=xs.length, sx=xs.reduce((a,b)=>a+b,0), sy=ys.reduce((a,b)=>a+b,0);
+    const sxy=xs.reduce((a,x,i)=>a+x*ys[i],0), sxx=xs.reduce((a,x)=>a+x*x,0);
+    const den=n*sxx-sx*sx;
+    if(den>0) rate=-((n*sxy-sx*sy)/den)*7; // + = vaegttab pr uge
+  }
   let projReal=null,projGoal=null;
   if(rate&&rate>0.02){
     projReal=addDays(latest.log_date,Math.round((cur-s.kur_basis_weight)/rate*7));
