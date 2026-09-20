@@ -332,6 +332,25 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     <div class="legend"><span style="--x:var(--trae)">løb</span><span style="--x:var(--surface-3)">fri</span><span style="--x:var(--accent)">i dag</span></div>
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
+  <div class="card" id="vaneCard" style="margin-bottom:14px">
+    <div class="ch"><h2>Vane-modning 🌱</h2><span class="hint">hvornår løbet kører af sig selv</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 6px">
+      <span id="vaneDays" style="font-weight:600">—</span>
+      <span class="hint" id="vanePct">—</span>
+    </div>
+    <div style="height:10px;border-radius:6px;background:var(--surface-3);overflow:hidden">
+      <div id="vaneBar" style="height:100%;width:0;background:var(--trae);border-radius:6px;transition:width .4s"></div>
+    </div>
+    <p class="hint" id="vaneWindow" style="margin:6px 0 0"></p>
+    <div class="streakrow" style="margin-top:16px">
+      <div class="streaknum"><div class="v tnum" id="vaneAdh" style="font-size:34px">—</div><div class="sub">træfprocent</div></div>
+      <div class="streakmeta">
+        <div><span id="vaneComeback">—</span> <span class="hint">comeback-hastighed</span></div>
+        <div><span id="vaneMiss">—</span> <span class="hint">afbrydelser</span></div>
+      </div>
+    </div>
+    <p class="hint" id="vaneNote" style="margin-top:10px"></p>
+  </div>
   <div class="grid lead">
     <div class="card">
       <div class="ch"><h2>Seneste løb</h2><span class="hint">fra intervals.icu</span></div>
@@ -681,9 +700,7 @@ function render(){
   const wNow=foraften||morg||(M.length?M[M.length-1]:null);
   if(wNow){
     const target=malvaegt(t,+s.kur_basis_weight);const raw=(target-wNow.weight_kg)*1000;
-    // 600 g-gulvet er en DAGS-guardrail: det gaelder kun dagens ration (morgenvejning),
-    // ikke aftensmaaltidet alene (efter foer-aften-vejning).
-    const ration=foraften?Math.max(0,Math.round(raw)):Math.max(s.ration_floor_g||600,Math.round(raw));
+    const ration=Math.max(s.ration_floor_g||600,Math.round(raw));
     $("#tRation").innerHTML=ration+'<small> g</small>';
     $("#tRationSub").textContent=(foraften?"før-aften ":(morg?"morgen ":"seneste "))+fmt(wNow.weight_kg,1)+" kg";
   }
@@ -766,6 +783,7 @@ function render(){
   const wkStr=S.workouts.filter(w=>w.kind==="styrke"&&w.log_date>=wkStart).length;
   $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
   streak();
+  vane();
   renderMedQuick();
   renderChores();
   praktiskSpark();
@@ -830,6 +848,47 @@ function streak(){
   else if(!activeToday) note=`${cur} dage i træk — et løb i dag holder kæden i live.`;
   else note=`${cur} dage i træk ✓ — bliv ved, én morgen ad gangen.`;
   $("#streakNote").textContent=note;
+}
+const VANE_START="2026-09-12"; // nuværende rutine-genopbygning (fundet som mest sammenhængende startpunkt)
+const VANE_WINDOW=66;          // median dage til automatik (Lally m.fl.)
+function vane(){
+  const card=$("#vaneCard"); if(!card) return;
+  const days=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
+  const t=todayISO();
+  if(t<VANE_START){ card.style.display="none"; return; }
+  // modningsmåler: kalenderdage siden start (inkl. i dag) vs vinduet
+  const spanDays=daysBetween(VANE_START,t)+1;
+  const matPct=Math.min(100,Math.round(spanDays/VANE_WINDOW*100));
+  $("#vaneDays").textContent=`Dag ${spanDays} af ${VANE_WINDOW}`;
+  $("#vanePct").textContent=`${matPct}% inde i modningsvinduet`;
+  $("#vaneBar").style.width=matPct+"%";
+  $("#vaneWindow").textContent=`Genopbygning startet ${daLabel(VANE_START)} · automatik tager typisk omkring ${VANE_WINDOW} dage (median)`;
+  // rullende træfprocent — afsluttede dage (i dag tælles kun med hvis der er løbet)
+  let done=0,total=0;
+  for(let d=VANE_START; d<=t; d=addDays(d,1)){
+    if(d===t && !days.has(d)) break;
+    total++; if(days.has(d)) done++;
+  }
+  const adh=total?Math.round(done/total*100):0;
+  $("#vaneAdh").textContent=adh+"%";
+  // afbrydelser + comeback-hastighed (gaps til og med i går)
+  let miss=0, gaps=[], curGap=0;
+  for(let d=VANE_START; d<t; d=addDays(d,1)){
+    if(days.has(d)){ if(curGap>0)gaps.push(curGap); curGap=0; }
+    else { miss++; curGap++; }
+  }
+  if(curGap>0) gaps.push(curGap);
+  $("#vaneMiss").textContent = miss===0 ? "ingen endnu" : miss+(miss===1?" dag":" dage");
+  const avgGap = gaps.length ? gaps.reduce((a,b)=>a+b,0)/gaps.length : 0;
+  $("#vaneComeback").textContent = gaps.length ? fmt(avgGap,1)+(avgGap===1?" dag":" dage") : "—";
+  // fortolkende note
+  let note;
+  if(spanDays<14) note=`Tidligt endnu — ${spanDays} dage inde. Bare mød op; modningen kommer med gentagelserne.`;
+  else if(matPct<100) note = miss===0
+    ? `Stærkt: ${adh}% og ingen afbrydelser. Comeback-hastigheden bliver dit nøgletal, når den første fri dag kommer.`
+    : `${adh}% træf. Det afgørende er at afbrydelser bliver på ${fmt(avgGap,1)} dage — ikke uger. Hold det tal lavt, så gror vanen fast.`;
+  else note=`Du er forbi det typiske modningsvindue. Kører turen af sig selv nu, er vanen groet fast.`;
+  $("#vaneNote").textContent=note;
 }
 function medgrid(){
   const t=todayISO();const ws=weekStart(t);const days=["ma","ti","on","to","fr","lø","sø"];
