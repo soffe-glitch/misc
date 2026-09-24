@@ -1004,12 +1004,19 @@ function coach(){
   const flags=[]; const sig=[];
   if(wl){
     if(wl.sleep_hours!=null){ if(wl.sleep_hours<Math.min(avgS-0.7,6.5)) flags.push("søvn"); sig.push(`sov ${hhmm(wl.sleep_hours)}`); }
-    if(wl.hrv!=null){ if(avgHrv&&wl.hrv<avgHrv-5) flags.push("hrv"); sig.push(`HRV ${wl.hrv}${avgHrv?` (snit ${Math.round(avgHrv)})`:""}`); }
+    if(wl.hrv!=null){ if(avgHrv&&wl.hrv<avgHrv-4) flags.push("hrv"); sig.push(`HRV ${wl.hrv}${avgHrv?` (snit ${Math.round(avgHrv)})`:""}`); }
     if(wl.resting_hr!=null){ if(avgRhr&&wl.resting_hr>avgRhr+3) flags.push("puls"); sig.push(`hvilepuls ${wl.resting_hr}`); }
   }
   if(yAlc>0) flags.push("alkohol");
   if(todayLog.day_type==="sofa") flags.push("sofa");
   if(energyToday!=null&&energyToday<=2) flags.push("energi");
+  // søvngæld over flere nætter — mod et FAST gulv (6,5 t), ikke mod dit eget snit.
+  // Ellers normaliserer et kronisk lavt snit underskuddet væk, og en uge med 6 t/nat
+  // ender med at se "frisk" ud. Fanger det du selv fangede.
+  const recentSleep=S.wellness.slice(-4).map(w=>w.sleep_hours).filter(x=>x!=null);
+  const debtAvg=recentSleep.length>=3?avg(recentSleep):null;
+  const sleepDebt=debtAvg!=null&&debtAvg<6.5;
+  if(sleepDebt) flags.push("søvngæld");
   const level = flags.length>=3?"lav":flags.length>=1?"middel":"frisk";
 
   if(wl){ const body=sig.length?` (${sig.join(", ")})`:"";
@@ -1017,6 +1024,7 @@ function coach(){
     else if(level==="middel") parts.push(`Kroppen er <b>lidt lav</b> i dag${body} — ikke rødt, men ikke topdag.`);
     else parts.push(`Kroppen er <b>lav</b> i dag${body}${yAlc>0?", bl.a. efter gårsdagens alkohol":""}.`);
   }
+  if(sleepDebt) parts.push(`Du har sovet ~${hhmm(debtAvg)} i snit de sidste ${recentSleep.length} nætter — det er reel søvngæld, ikke bare én kort nat. Derfor kalder jeg dig ikke frisk, selv når HRV-tallet i dag ser ok ud: gulvet holder kæden, men lad morgenturen blive kort.`);
 
   // ---- træning: gennemført / planlagt i dag / næste pas ----
   const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
