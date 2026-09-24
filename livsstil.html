@@ -275,6 +275,16 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
 
     <div class="logcard card">
+      <div class="ch"><h3>Løbe-forhandling</h3><span class="hint">kun når du mærkede modstanden</span></div>
+      <p class="hint" style="margin:0 0 10px;line-height:1.5">Skulle du tale dig selv ud ad døren i dag? Registrér hvordan den endte — så kan vi se, hvornår forhandlingen holder op af sig selv.</p>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="pbtn" id="negRan" style="flex:1;background:var(--good)">Løb alligevel ✓</button>
+        <button type="button" class="pbtn" id="negHome" style="flex:1;background:var(--bad)">Blev hjemme</button>
+      </div>
+      <div class="note" id="noteNeg"></div>
+    </div>
+
+    <div class="logcard card">
       <div class="ch"><h3>Hændelser</h3><span class="hint">sjældnere</span></div>
       <button type="button" class="pbtn" id="migraineBtn" style="background:var(--warn);width:100%">+ Migræne-anfald</button>
       <button type="button" class="btn" id="labBtn2" style="width:100%;margin-top:10px">+ Blodprøve</button>
@@ -362,6 +372,21 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
       </div>
     </div>
     <p class="hint" id="vaneNote" style="margin-top:10px"></p>
+    <div id="vaneNegWrap" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none">
+      <div class="ch" style="margin-bottom:8px"><h3>Forhandlingen</h3><span class="hint">modstanden mod at komme ud</span></div>
+      <div class="streakrow">
+        <div class="streaknum"><div class="v tnum" id="vaneNegWin" style="font-size:34px">—</div><div class="sub">vundet</div></div>
+        <div class="streakmeta">
+          <div><span id="vaneNeg14">—</span> <span class="hint">forhandlinger (14 d)</span></div>
+          <div><span id="vaneNegLast">—</span> <span class="hint">siden sidste</span></div>
+        </div>
+      </div>
+      <p class="hint" id="vaneNegNote" style="margin-top:8px"></p>
+    </div>
+    <div id="vaneFloor" style="display:none;margin-top:14px;border-radius:14px;padding:13px 15px;background:var(--accent-soft);border:1px solid var(--good)">
+      <div style="font-weight:700;font-size:14.5px" id="vaneFloorTitle">—</div>
+      <div class="hint" id="vaneFloorBody" style="margin-top:3px;line-height:1.5">—</div>
+    </div>
   </div>
   <div class="grid lead">
     <div class="card">
@@ -529,7 +554,7 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
@@ -548,6 +573,7 @@ async function loadAll(){
   ]);
   S.planned=planned;
   try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc&limit=2000")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
+  try{ S.negotiations=await get("run_negotiations","?select=*&order=ts.asc"); }catch(e){ S.negotiations=[]; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -902,6 +928,47 @@ function vane(){
     : `${adh}% træf. Det afgørende er at afbrydelser bliver på ${fmt(avgGap,1)} dage — ikke uger. Hold det tal lavt, så gror vanen fast.`;
   else note=`Du er forbi det typiske modningsvindue. Kører turen af sig selv nu, er vanen groet fast.`;
   $("#vaneNote").textContent=note;
+
+  // ---- forhandlingen: hyppighed + vinderprocent (automatik-signal) ----
+  const negWrap=$("#vaneNegWrap"), floor=$("#vaneFloor");
+  const negs=S.negotiations.filter(n=>n.log_date>=VANE_START).slice().sort((a,b)=>a.log_date<b.log_date?-1:1);
+  if(!negs.length){ if(negWrap)negWrap.style.display="none"; if(floor)floor.style.display="none"; return; }
+  if(negWrap)negWrap.style.display="block";
+  const won=negs.filter(n=>n.outcome==="loeb").length;
+  $("#vaneNegWin").textContent=Math.round(won/negs.length*100)+"%";
+  const d14=addDays(t,-13), d28=addDays(t,-27);
+  const last14=negs.filter(n=>n.log_date>=d14).length;
+  const prev14=negs.filter(n=>n.log_date>=d28&&n.log_date<d14).length;
+  $("#vaneNeg14").textContent=last14+(last14===1?" gang":" gange");
+  const sinceLast=daysBetween(negs[negs.length-1].log_date,t);
+  $("#vaneNegLast").textContent=sinceLast===0?"i dag":sinceLast===1?"1 dag":sinceLast+" dage";
+  let tnote;
+  if(negs.length<3) tnote=`${won} af ${negs.length} vundet. Mønsteret tegner sig, når der er lidt flere.`;
+  else if(last14<prev14) tnote=`Forhandlingen dukker sjældnere op end for to uger siden (${last14} mod ${prev14}) — præcis vejen mod automatik.`;
+  else if(last14>prev14) tnote=`Forhandlingen fylder mere end for to uger siden (${last14} mod ${prev14}). Det er oftest søvn eller travlhed, ikke vilje — hold gulvet lavt.`;
+  else tnote=`Stabilt på ${last14} de sidste to uger. Når tallet falder mod nul, er vanen ved at være groet fast.`;
+  $("#vaneNegNote").textContent=tnote;
+
+  // ---- gulv-signal: klar til at hæve minimummet? ----
+  if(!floor) return;
+  const rs=S.wellness.filter(w=>w.sleep_hours!=null).slice(-4);
+  const debt = rs.length>=3 && avg(rs.map(w=>w.sleep_hours))<6.5;
+  const rare = last14<=1 && sinceLast>=7;
+  if(spanDays<VANE_WINDOW){ floor.style.display="none"; return; }
+  floor.style.display="block";
+  if(rare && !debt && adh>=90){
+    floor.style.borderColor="var(--good)"; floor.style.background="var(--accent-soft)";
+    $("#vaneFloorTitle").textContent="🌱 Klar til at kigge på gulvet";
+    $("#vaneFloorBody").textContent=`Vanen er moden, forhandlingen er stort set holdt op (${last14} på 14 dage), og søvnen er ok. Nu giver det mening at flytte minimummet fra 1 til 2 km — kun hvis du har lyst. Sig til, så justerer vi det.`;
+  } else {
+    floor.style.borderColor="var(--warn)"; floor.style.background="var(--kost-soft)";
+    const mangler=[];
+    if(!rare) mangler.push("forhandlingen dukker stadig op");
+    if(debt) mangler.push("der er søvngæld lige nu");
+    if(adh<90) mangler.push("kæden har huller");
+    $("#vaneFloorTitle").textContent="Modningsvinduet er nået";
+    $("#vaneFloorBody").textContent=`Dag ${spanDays} — men vi venter med at hæve gulvet, til det sidder helt roligt: ${mangler.join(", ")}. Gulvet bliver på 1 km så længe.`;
+  }
 }
 function medgrid(){
   const t=todayISO();const ws=weekStart(t);const days=["ma","ti","on","to","fr","lø","sø"];
@@ -1205,6 +1272,16 @@ async function submitDaily(){
     setNote("#noteDaily","Gemt ✓","ok");render();
   }catch(e){setNote("#noteDaily","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
+async function saveNegotiation(outcome){
+  const id=outcome==="loeb"?"#negRan":"#negHome";
+  const b1=$("#negRan"),b2=$("#negHome");b1.disabled=true;b2.disabled=true;setNote("#noteNeg","Gemmer…");
+  try{const row=(await insert("run_negotiations",{log_date:todayISO(),outcome}))[0];
+    S.negotiations.push(row);
+    setNote("#noteNeg",outcome==="loeb"?"Registreret — og du vandt den ✓":"Registreret. Den tæller også; i morgen er en ny chance.","ok");
+    render();
+    setTimeout(()=>setNote("#noteNeg",""),2600);
+  }catch(e){setNote("#noteNeg","Fejl: "+e.message,"err");}finally{b1.disabled=false;b2.disabled=false;}
+}
 async function saveMigraine(){
   const intv=segVal("mIntSeg"),tr=segVal("mTrigSeg"),note=$("#mNote").value.trim();
   const btn=$("#mSave");btn.disabled=true;setNote("#noteM","Gemmer…");
@@ -1246,6 +1323,8 @@ async function doSync(){
 ["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg"].forEach(seg);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
+$("#negRan").onclick=()=>saveNegotiation("loeb");
+$("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
 $("#mSave").onclick=saveMigraine;
