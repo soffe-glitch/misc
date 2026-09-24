@@ -192,6 +192,18 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
   </div>
 
+  <!-- SØVNGÆLD-ADVARSEL (vises kun når snit over flere nætter falder) -->
+  <div id="sleepDebtBanner" style="display:none;margin:0 0 14px;border-radius:16px;padding:14px 16px;border:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="sdIcon" style="font-size:22px">😴</span>
+      <div style="flex:1">
+        <div id="sdTitle" style="font-weight:700;font-size:15px">—</div>
+        <div id="sdBody" class="hint" style="margin-top:3px;line-height:1.5">—</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0"><div id="sdAvg" class="tnum" style="font-weight:700;font-size:22px">—</div><div class="hint">nætter-snit</div></div>
+    </div>
+  </div>
+
   <!-- HURTIG-LOG (swipe) -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Hurtig-log<span class="hint" style="margin-left:auto;text-transform:none;letter-spacing:0">swipe for felter →</span></div>
   <div class="logwrap" id="logwrap">
@@ -784,6 +796,7 @@ function render(){
   $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
   streak();
   vane();
+  sleepDebtWarn();
   renderMedQuick();
   renderChores();
   praktiskSpark();
@@ -984,6 +997,31 @@ function praktiskSpark(){
   const pts=Object.keys(map).sort().map(d=>({d,v:map[d]}));
   if(pts.some(p=>p.v>0))spark("praktiskSpark",pts,"var(--arb)","var(--arb-soft)");
   else el.innerHTML='<div class="empty">Log praktiske ting, så tegnes aktiviteten her.</div>';
+}
+// Søvngæld-advarsel: to trin. Måler snit over de seneste nætter mod FASTE grænser,
+// ikke mod dit eget (evt. lave) snit — så kronisk underskud ikke normaliseres væk.
+function sleepDebtWarn(){
+  const el=$("#sleepDebtBanner"); if(!el) return;
+  const nights=S.wellness.filter(w=>w.sleep_hours!=null).slice(-4);
+  if(nights.length<2){ el.style.display="none"; return; }
+  const a=avg(nights.map(w=>w.sleep_hours)), n=nights.length;
+  const TARGET=7.0, FLOOR=6.5;   // sundt sigte / gælds-grænse
+  let tier=null;
+  if(a<FLOOR) tier="gaeld";
+  else if(a<TARGET) tier="opbygning";
+  if(!tier){ el.style.display="none"; return; }
+  el.style.display="block";
+  $("#sdAvg").textContent=hhmm(a);
+  const ic=$("#sdIcon"), ti=$("#sdTitle"), bo=$("#sdBody");
+  if(tier==="gaeld"){
+    el.style.background="var(--kost-soft)"; el.style.borderColor="var(--warn)";
+    ic.textContent="🛌"; ti.textContent="Du har samlet søvngæld";
+    bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} nætter — under gulvet på 6:30. Sigt efter én nat på 7,5-8 t; den vender mere end to middelmådige. Hold morgenløbet på 1 km, til den er betalt.`;
+  } else {
+    el.style.background="var(--rest-soft)"; el.style.borderColor="var(--rest)";
+    ic.textContent="😴"; ti.textContent="Søvnen er på vej ned";
+    bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} nætter — stadig over gælds-grænsen (6:30), men faldende. En tidlig aften nu stopper den, før den bliver til rigtig gæld.`;
+  }
 }
 function coach(){
   const s=S.settings, t=todayISO(), M=morning(), h=new Date().getHours();
