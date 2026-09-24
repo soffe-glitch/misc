@@ -944,6 +944,7 @@ function vane(){
   $("#vaneNegLast").textContent=sinceLast===0?"i dag":sinceLast===1?"1 dag":sinceLast+" dage";
   let tnote;
   if(negs.length<3) tnote=`${won} af ${negs.length} vundet. Mønsteret tegner sig, når der er lidt flere.`;
+  else if(spanDays<28) tnote=`${won} af ${negs.length} vundet indtil nu. Om et par uger kan jeg vise, om forhandlingen bliver sjældnere.`;
   else if(last14<prev14) tnote=`Forhandlingen dukker sjældnere op end for to uger siden (${last14} mod ${prev14}) — præcis vejen mod automatik.`;
   else if(last14>prev14) tnote=`Forhandlingen fylder mere end for to uger siden (${last14} mod ${prev14}). Det er oftest søvn eller travlhed, ikke vilje — hold gulvet lavt.`;
   else tnote=`Stabilt på ${last14} de sidste to uger. Når tallet falder mod nul, er vanen ved at være groet fast.`;
