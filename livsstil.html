@@ -204,6 +204,18 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
   </div>
 
+  <!-- ENERGI-CHECK-IN (ét tryk, anker: lige efter morgenløbet) -->
+  <div class="card" id="energiCheckCard" style="display:none;margin-bottom:14px">
+    <div class="ch"><h3 id="energiCheckTitle">Hvordan er energien?</h3><span class="hint" id="energiCheckSince"></span></div>
+    <p class="hint" id="energiCheckLead" style="margin:0 0 10px;line-height:1.5">Du har løbet ✓ — ét tryk, så er du tjekket ind.</p>
+    <div class="seg" id="energiQuickSeg" data-val="">
+      <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
+      <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
+      <button type="button" data-v="5">5</button>
+    </div>
+    <p class="hint" id="energiCheckMsg" style="margin-top:10px"></p>
+  </div>
+
   <!-- HURTIG-LOG (swipe) -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Hurtig-log<span class="hint" style="margin-left:auto;text-transform:none;letter-spacing:0">swipe for felter →</span></div>
   <div class="logwrap" id="logwrap">
@@ -823,6 +835,7 @@ function render(){
   streak();
   vane();
   sleepDebtWarn();
+  energiCheck();
   renderMedQuick();
   renderChores();
   praktiskSpark();
@@ -1091,6 +1104,53 @@ function sleepDebtWarn(){
     bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} nætter — stadig over gælds-grænsen (6:30), men faldende. En tidlig aften nu stopper den, før den bliver til rigtig gæld.`;
   }
 }
+// Energi-check-in: ét tryk, anker = lige efter morgenløbet. Blød "sidst tjekket ind"
+// i stedet for en hård streak (undgår alt-eller-intet-guilt), og en coach-reaktion
+// med det samme, så trykket giver noget tilbage.
+function energiReaction(e){
+  if(e<=2) return "Lav energi — så var det ekstra stærkt, at du kom ud. Resten af dagen må gerne være rolig; du skylder ikke mere i dag.";
+  if(e===3) return "Middel dag. Løbet er i hus, så resten er ren bonus.";
+  return "Frisk! Godt fundament lagt — dagen er din.";
+}
+function energiCheck(){
+  const card=$("#energiCheckCard"); if(!card) return;
+  const t=todayISO();
+  const withVal=S.checkins.filter(c=>c.energy!=null||c.mood!=null);
+  const todayCheck=withVal.filter(c=>c.log_date===t);
+  const seg=$("#energiQuickSeg");
+  if(todayCheck.length){
+    const e=todayCheck[todayCheck.length-1].energy ?? todayCheck[todayCheck.length-1].mood;
+    card.style.display="block"; seg.style.display="none";
+    $("#energiCheckTitle").textContent="Tjekket ind i dag ✓";
+    $("#energiCheckSince").textContent="";
+    $("#energiCheckLead").innerHTML=`Energi <b>${e}/5</b> registreret. Vi ses i morgen efter løbet.`;
+    $("#energiCheckMsg").textContent=energiReaction(e);
+    return;
+  }
+  seg.style.display="";
+  const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
+  if(!ranToday){ card.style.display="none"; return; }   // anker: først efter løbet
+  card.style.display="block";
+  seg.querySelectorAll("button").forEach(b=>{b.disabled=false;b.classList.remove("sel");});
+  $("#energiCheckTitle").textContent="Hvordan er energien?";
+  $("#energiCheckLead").innerHTML="Du har løbet ✓ — ét tryk, så er du tjekket ind.";
+  $("#energiCheckMsg").textContent="";
+  const dates=[...new Set(withVal.map(c=>c.log_date))].sort();
+  const last=dates.length?dates[dates.length-1]:null;
+  const gap=last?daysBetween(last,t):null;
+  $("#energiCheckSince").textContent = (gap!=null&&gap>=2)?`sidst for ${gap} dage siden`:"";
+}
+async function logEnergiQuick(v){
+  const seg=$("#energiQuickSeg"); if(!seg) return;
+  seg.querySelectorAll("button").forEach(b=>{b.disabled=true;b.classList.toggle("sel",b.dataset.v===String(v));});
+  try{
+    const row=(await insert("checkins",{log_date:todayISO(),energy:v,mood:v,note:null}))[0];
+    S.checkins.push(row); render();
+  }catch(e){
+    $("#energiCheckMsg").textContent="Kunne ikke gemme: "+e.message;
+    seg.querySelectorAll("button").forEach(b=>b.disabled=false);
+  }
+}
 function coach(){
   const s=S.settings, t=todayISO(), M=morning(), h=new Date().getHours();
   const hi = h<10?"Godmorgen":h<14?"Goddag":h<18?"Hej":"Godaften";
@@ -1324,6 +1384,7 @@ async function doSync(){
 ["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg"].forEach(seg);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
+$("#energiQuickSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>logEnergiQuick(+b.dataset.v));
 $("#negRan").onclick=()=>saveNegotiation("loeb");
 $("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
