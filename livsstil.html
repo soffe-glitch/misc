@@ -287,6 +287,17 @@ footer{margin-top:34px; text-align:center; color:var(--faint); font-size:12px; l
     </div>
 
     <div class="logcard card">
+      <div class="ch"><h3>Lur i dag</h3><span class="hint">tælles med i søvnen</span></div>
+      <p class="hint" style="margin:0 0 10px;line-height:1.5">Sovet til middag? Tryk længden — den lægges oveni nattesøvnen, så søvngælden ikke tæller den som manglende.</p>
+      <div class="seg" id="napSeg" data-val="">
+        <button type="button" data-v="20">20 min</button><button type="button" data-v="30">30</button>
+        <button type="button" data-v="45">45</button><button type="button" data-v="60">60</button>
+        <button type="button" data-v="90">90</button>
+      </div>
+      <div class="note" id="noteNap"></div>
+    </div>
+
+    <div class="logcard card">
       <div class="ch"><h3>Løbe-forhandling</h3><span class="hint">kun når du mærkede modstanden</span></div>
       <p class="hint" style="margin:0 0 10px;line-height:1.5">Skulle du tale dig selv ud ad døren i dag? Registrér hvordan den endte — så kan vi se, hvornår forhandlingen holder op af sig selv.</p>
       <div style="display:flex;gap:8px">
@@ -566,7 +577,7 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
@@ -586,6 +597,7 @@ async function loadAll(){
   S.planned=planned;
   try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc&limit=2000")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
   try{ S.negotiations=await get("run_negotiations","?select=*&order=ts.asc"); }catch(e){ S.negotiations=[]; }
+  try{ S.naps=await get("naps","?select=*&order=ts.asc"); }catch(e){ S.naps=[]; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -842,7 +854,7 @@ function render(){
 
   // --- restitution ---
   if(wl){
-    if(wl.sleep_hours!=null){$("#tSleep").textContent=hhmm(wl.sleep_hours);const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));$("#tSleepSub").textContent="snit "+hhmm(avgS);if(wl.sleep_hours<avgS-0.5)$("#tSleepSub").style.color="var(--warn)";}
+    if(wl.sleep_hours!=null){const np=napH(wl.log_date);$("#tSleep").textContent=hhmm(wl.sleep_hours);const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));$("#tSleepSub").textContent="snit "+hhmm(avgS)+(np>0?" · +"+Math.round(np*60)+" min lur":"");const tot=wl.sleep_hours+np;$("#tSleepSub").style.color=(tot<avgS-0.5)?"var(--warn)":"";}
     if(wl.hrv!=null){$("#tHrv").innerHTML=wl.hrv+'<small> ms</small>';}
     if(wl.resting_hr!=null){$("#tRhr").textContent=wl.resting_hr;}
   }
@@ -966,7 +978,7 @@ function vane(){
   // ---- gulv-signal: klar til at hæve minimummet? ----
   if(!floor) return;
   const rs=S.wellness.filter(w=>w.sleep_hours!=null).slice(-4);
-  const debt = rs.length>=3 && avg(rs.map(w=>w.sleep_hours))<6.5;
+  const debt = rs.length>=3 && avg(rs.map(w=>w.sleep_hours+napH(w.log_date)))<6.5;
   const rare = last14<=1 && sinceLast>=7;
   if(spanDays<VANE_WINDOW){ floor.style.display="none"; return; }
   floor.style.display="block";
@@ -1081,11 +1093,17 @@ function praktiskSpark(){
 }
 // Søvngæld-advarsel: to trin. Måler snit over de seneste nætter mod FASTE grænser,
 // ikke mod dit eget (evt. lave) snit — så kronisk underskud ikke normaliseres væk.
+// samlet lur (timer) på en given dag — uret fanger kun nattesøvn, så luren logges manuelt
+function napH(d){ let m=0; for(const x of S.naps) if(x.log_date===d) m+=(x.minutes||0); return m/60; }
 function sleepDebtWarn(){
   const el=$("#sleepDebtBanner"); if(!el) return;
   const nights=S.wellness.filter(w=>w.sleep_hours!=null).slice(-4);
   if(nights.length<2){ el.style.display="none"; return; }
-  const a=avg(nights.map(w=>w.sleep_hours)), n=nights.length;
+  // dagens samlede søvn = nattesøvn + evt. lur samme dag
+  const totals=nights.map(w=>w.sleep_hours+napH(w.log_date));
+  const napSum=nights.reduce((s,w)=>s+napH(w.log_date),0);
+  const a=avg(totals), n=totals.length;
+  const napTxt=napSum>0?" (lur talt med)":"";
   const TARGET=7.0, FLOOR=6.5;   // sundt sigte / gælds-grænse
   let tier=null;
   if(a<FLOOR) tier="gaeld";
@@ -1097,11 +1115,11 @@ function sleepDebtWarn(){
   if(tier==="gaeld"){
     el.style.background="var(--kost-soft)"; el.style.borderColor="var(--warn)";
     ic.textContent="🛌"; ti.textContent="Du har samlet søvngæld";
-    bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} nætter — under gulvet på 6:30. Sigt efter én nat på 7,5-8 t; den vender mere end to middelmådige. Hold morgenløbet på 1 km, til den er betalt.`;
+    bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} døgn${napTxt} — under gulvet på 6:30. Sigt efter én nat på 7,5-8 t; den vender mere end to middelmådige. Hold morgenløbet på 1 km, til den er betalt.`;
   } else {
     el.style.background="var(--rest-soft)"; el.style.borderColor="var(--rest)";
     ic.textContent="😴"; ti.textContent="Søvnen er på vej ned";
-    bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} nætter — stadig over gælds-grænsen (6:30), men faldende. En tidlig aften nu stopper den, før den bliver til rigtig gæld.`;
+    bo.innerHTML=`~${hhmm(a)} i snit de sidste ${n} døgn${napTxt} — stadig over gælds-grænsen (6:30), men faldende. En tidlig aften (eller en lur) stopper den, før den bliver til rigtig gæld.`;
   }
 }
 // Energi-check-in: ét tryk, anker = lige efter morgenløbet. Blød "sidst tjekket ind"
@@ -1169,7 +1187,7 @@ function coach(){
 
   const flags=[]; const sig=[];
   if(wl){
-    if(wl.sleep_hours!=null){ if(wl.sleep_hours<Math.min(avgS-0.7,6.5)) flags.push("søvn"); sig.push(`sov ${hhmm(wl.sleep_hours)}`); }
+    if(wl.sleep_hours!=null){ const npT=napH(wl.log_date); const slTot=wl.sleep_hours+npT; if(slTot<Math.min(avgS-0.7,6.5)) flags.push("søvn"); sig.push(`sov ${hhmm(wl.sleep_hours)}${npT>0?` +${Math.round(npT*60)} min lur`:""}`); }
     if(wl.hrv!=null){ if(avgHrv&&wl.hrv<avgHrv-4) flags.push("hrv"); sig.push(`HRV ${wl.hrv}${avgHrv?` (snit ${Math.round(avgHrv)})`:""}`); }
     if(wl.resting_hr!=null){ if(avgRhr&&wl.resting_hr>avgRhr+3) flags.push("puls"); sig.push(`hvilepuls ${wl.resting_hr}`); }
   }
@@ -1333,6 +1351,19 @@ async function submitDaily(){
     setNote("#noteDaily","Gemt ✓","ok");render();
   }catch(e){setNote("#noteDaily","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
+async function saveNap(min){
+  const seg=$("#napSeg"); if(!seg) return;
+  seg.querySelectorAll("button").forEach(b=>b.disabled=true);
+  setNote("#noteNap","Gemmer…");
+  try{
+    const row=(await insert("naps",{log_date:todayISO(),minutes:min}))[0];
+    S.naps.push(row);
+    const tot=Math.round(napH(todayISO())*60);
+    setNote("#noteNap",`Lur logget ✓ — ${tot} min i dag, talt med i søvnen.`,"ok");
+    render();
+    setTimeout(()=>{setNote("#noteNap","");seg.querySelectorAll("button").forEach(b=>{b.disabled=false;b.classList.remove("sel");});},2600);
+  }catch(e){ setNote("#noteNap","Fejl: "+e.message,"err"); seg.querySelectorAll("button").forEach(b=>b.disabled=false); }
+}
 async function saveNegotiation(outcome){
   const id=outcome==="loeb"?"#negRan":"#negHome";
   const b1=$("#negRan"),b2=$("#negHome");b1.disabled=true;b2.disabled=true;setNote("#noteNeg","Gemmer…");
@@ -1385,6 +1416,7 @@ async function doSync(){
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
 $("#energiQuickSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>logEnergiQuick(+b.dataset.v));
+$("#napSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>saveNap(+b.dataset.v));
 $("#negRan").onclick=()=>saveNegotiation("loeb");
 $("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
