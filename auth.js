@@ -5,6 +5,7 @@
 (function () {
   "use strict";
   var SB = "https://kphfvznawqcslkubdsyy.supabase.co";
+  var BOOKS_FN = "https://fhlotfddxcpczokbvzdq.supabase.co/functions/v1/books-read";
   var KEY = "sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
   var LS = "liv-auth-v1";
   var origFetch = window.fetch.bind(window);
@@ -64,25 +65,25 @@
     if (document.getElementById("liv-auth-css")) return;
     var st = document.createElement("style"); st.id = "liv-auth-css";
     st.textContent =
-      "#liv-auth{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:20px;background:#F5F0E8;color:#1F2B26;font-family:'Hanken Grotesk',system-ui,-apple-system,sans-serif}" +
-      "@media(prefers-color-scheme:dark){#liv-auth{background:#0E1411;color:#EEF1EA}}" +
-      "#liv-auth .box{width:100%;max-width:360px}" +
-      "#liv-auth h1{font-family:'Fraunces',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 6px}" +
-      "#liv-auth p{margin:0 0 20px;color:#66726B;font-size:14px;line-height:1.5}" +
-      "@media(prefers-color-scheme:dark){#liv-auth p{color:#98A89F}}" +
-      "#liv-auth label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#66726B;margin:14px 0 6px}" +
-      "#liv-auth input{width:100%;box-sizing:border-box;padding:14px;border-radius:14px;border:1.5px solid #E6DED0;background:#FFFDF9;color:inherit;font:inherit;font-size:16px}" +
-      "@media(prefers-color-scheme:dark){#liv-auth input{background:#161D19;border-color:#25302A}}" +
-      "#liv-auth input:focus{outline:0;border-color:#2F7A62}" +
-      "#liv-auth button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:14px;background:#2F7A62;color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer}" +
-      "#liv-auth button:disabled{opacity:.6}" +
-      "#liv-auth .err{min-height:20px;margin-top:12px;font-size:13px;color:#C4483B}" +
-      "#liv-auth .hint{margin-top:16px;font-size:12px;color:#9AA39C}";
+      ".liv-ov{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:20px;background:#F5F0E8;color:#1F2B26;font-family:'Hanken Grotesk',system-ui,-apple-system,sans-serif}" +
+      "@media(prefers-color-scheme:dark){.liv-ov{background:#0E1411;color:#EEF1EA}}" +
+      ".liv-ov .box{width:100%;max-width:360px}" +
+      ".liv-ov h1{font-family:'Fraunces',Georgia,serif;font-weight:400;font-size:34px;line-height:1.05;margin:0 0 6px}" +
+      ".liv-ov p{margin:0 0 20px;color:#66726B;font-size:14px;line-height:1.5}" +
+      "@media(prefers-color-scheme:dark){.liv-ov p{color:#98A89F}}" +
+      ".liv-ov label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#66726B;margin:14px 0 6px}" +
+      ".liv-ov input{width:100%;box-sizing:border-box;padding:14px;border-radius:14px;border:1.5px solid #E6DED0;background:#FFFDF9;color:inherit;font:inherit;font-size:16px}" +
+      "@media(prefers-color-scheme:dark){.liv-ov input{background:#161D19;border-color:#25302A}}" +
+      ".liv-ov input:focus{outline:0;border-color:#2F7A62}" +
+      ".liv-ov button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:14px;background:#2F7A62;color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer}" +
+      ".liv-ov button:disabled{opacity:.6}" +
+      ".liv-ov .err{min-height:20px;margin-top:12px;font-size:13px;color:#C4483B}" +
+      ".liv-ov .hint{margin-top:16px;font-size:12px;color:#9AA39C}";
     document.head.appendChild(st);
   }
   function mount(html) {
     css();
-    if (!overlay) { overlay = document.createElement("div"); overlay.id = "liv-auth"; (document.body || document.documentElement).appendChild(overlay); }
+    if (!overlay) { overlay = document.createElement("div"); overlay.id = "liv-auth"; overlay.className = "liv-ov"; (document.body || document.documentElement).appendChild(overlay); }
     overlay.innerHTML = '<div class="box">' + html + "</div>";
     return overlay;
   }
@@ -139,7 +140,7 @@
         reread();
         // en anden fane kan allerede være logget ind
         if (session && session.access_token && !(session.user && session.user.user_metadata && session.user.user_metadata.must_change_password)) { resolve(); return; }
-        var finish = function () { unmount(); resolve(); };
+        var finish = function () { unmount(); touch(); resolve(); };
         if (session && session.access_token) showChange(finish); else showLogin(finish);
       }
       if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
@@ -150,13 +151,14 @@
   // ---------- patch fetch: tilføj login-token til databasen og funktionerne ----------
   window.fetch = async function (input, init) {
     var url = typeof input === "string" ? input : (input && input.url) || "";
-    if (url.indexOf(SB + "/rest/v1/") === 0 || url.indexOf(SB + "/functions/v1/") === 0) {
+    var isBooks = url.indexOf(BOOKS_FN) === 0;
+    if (isBooks || url.indexOf(SB + "/rest/v1/") === 0 || url.indexOf(SB + "/functions/v1/") === 0) {
       var send = async function () {
         var tok = await getToken();
         var i = Object.assign({}, init || {});
         var h = new Headers(i.headers || (input && input.headers) || {});
         h.set("Authorization", "Bearer " + tok);
-        if (!h.has("apikey")) h.set("apikey", KEY);
+        if (!isBooks && !h.has("apikey")) h.set("apikey", KEY);
         i.headers = h;
         return origFetch(input, i);
       };
@@ -175,12 +177,78 @@
   // bed browseren om ikke at rydde sessionen
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 
+
+  // ---------- Face ID-lås ----------
+  // Lokal lås på enheden: appen kræver Face ID/Touch ID, når den åbnes igen. (Selve datasikkerheden er login + databasereglerne.)
+  var LOCK_LS = "liv-lock-v1", ACTIVE_SS = "liv-active", LOCK_AFTER_MS = 60000;
+  var isFrame = window.self !== window.top;   // vægt-fanen (iframe) følger forsidens lås
+  var lockEl = null;
+  function b64u(buf) { var s = ""; new Uint8Array(buf).forEach(function (b) { s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function unb64u(t) { t = t.replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "="; var s = atob(t), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  function lockCred() { try { return JSON.parse(localStorage.getItem(LOCK_LS) || "null"); } catch (e) { return null; } }
+  function touch() { try { sessionStorage.setItem(ACTIVE_SS, String(Date.now())); } catch (e) {} }
+  async function lockSupported() {
+    try { return !!(window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
+  }
+  async function enableLock() {
+    var email = (session && session.user && session.user.email) || "sofie";
+    var cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: "Sofies livsstil" },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: email, displayName: "Sofie" },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+      timeout: 60000, attestation: "none"
+    } });
+    localStorage.setItem(LOCK_LS, JSON.stringify({ id: b64u(cred.rawId) }));
+    touch();
+  }
+  function verifyLock() {
+    var c = lockCred();
+    return navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ type: "public-key", id: unb64u(c.id), transports: ["internal"] }],
+      userVerification: "required", timeout: 60000
+    } });
+  }
+  function needLock() {
+    if (isFrame || !lockCred()) return false;
+    var t = 0; try { t = +sessionStorage.getItem(ACTIVE_SS) || 0; } catch (e) {}
+    return Date.now() - t > LOCK_AFTER_MS;
+  }
+  function showLock() {
+    if (lockEl) return;
+    css();
+    lockEl = document.createElement("div"); lockEl.id = "liv-lock"; lockEl.className = "liv-ov";
+    lockEl.innerHTML = '<div class="box"><h1>Låst</h1><p>Lås op med Face ID for at se dine data.</p>' +
+      '<button type="button" id="liv-unlock">Lås op med Face ID</button><div class="err" role="alert"></div>' +
+      '<div class="hint"><a href="#" id="liv-lock-out" style="color:inherit">Virker Face ID ikke? Log ud og ind igen</a></div></div>';
+    (document.body || document.documentElement).appendChild(lockEl);
+    var err = lockEl.querySelector(".err");
+    function attempt() {
+      err.textContent = "";
+      verifyLock().then(function () { lockEl.remove(); lockEl = null; touch(); })
+        .catch(function (e) { err.textContent = e && e.name === "NotAllowedError" ? "Tryk på knappen for at låse op." : "Kunne ikke låse op med Face ID."; });
+    }
+    lockEl.querySelector("#liv-unlock").addEventListener("click", attempt);
+    lockEl.querySelector("#liv-lock-out").addEventListener("click", function (e) { e.preventDefault(); window.LivAuth.logout(); });
+    attempt(); // forsøg automatisk; på iPhone kræver det nogle gange et tryk
+  }
+  function checkLock() {
+    if (needLock()) { if (document.body) showLock(); else document.addEventListener("DOMContentLoaded", showLock); }
+    else if (!lockEl) touch();
+  }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") { if (!lockEl) touch(); } else checkLock(); });
+  window.addEventListener("pagehide", function () { if (!lockEl) touch(); });
+  setInterval(function () { if (document.visibilityState === "visible" && !lockEl) touch(); }, 15000);
+
   window.LivAuth = {
-    logout: function () { save(null); location.reload(); },
+    logout: function () { save(null); try { localStorage.removeItem(LOCK_LS); } catch (e) {} location.reload(); },
+    lock: { supported: lockSupported, enabled: function () { return !!lockCred(); }, enable: enableLock, disable: function () { try { localStorage.removeItem(LOCK_LS); } catch (e) {} } },
     user: function () { return session && session.user; },
     ready: function () { return getToken(); }
   };
 
-  // vis login med det samme, hvis der ikke er en session (før siden når at hente data)
-  if (!session || !session.refresh_token) { login(); }
+  // vis login med det samme, hvis der ikke er en session (før siden når at hente data); ellers evt. Face ID-lås
+  if (!session || !session.refresh_token) { login(); } else { checkLock(); }
 })();
