@@ -142,6 +142,16 @@ tr:hover td { background:var(--card2); }
 .goal-achieved-banner h3 { color:var(--green); margin:0 0 4px; font-size:19px; }
 .goal-achieved-banner p { color:var(--muted); margin:0; font-size:13px; }
 
+
+/* Sammenfoldelige sektioner på Mål-siden */
+.goal-card.collapsible > h3.gc-head { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; margin:0 !important; min-height:32px; user-select:none; }
+.goal-card.collapsible > h3.gc-head::after { content:""; flex:none; width:9px; height:9px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(45deg) translateY(-2px); transition:transform .2s; }
+.goal-card.collapsible.collapsed > h3.gc-head::after { transform:rotate(-45deg); }
+.goal-card.collapsible > .gc-body { margin-top:14px; }
+.goal-card.collapsible.collapsed > .gc-body { display:none; }
+.goal-card.collapsible.collapsed { padding-top:14px; padding-bottom:14px; }
+.goal-card .gc-sub { font-size:12px; color:var(--muted); font-weight:400; font-family:"Hanken Grotesk",sans-serif; display:block; margin-top:2px; }
+
 /* Ordliste / details */
 .glossary-item { padding:12px 4px; border-bottom:1px solid var(--border); }
 .glossary-item:last-child { border-bottom:none; }
@@ -4269,6 +4279,32 @@ function renderGhost() {
   document.getElementById('gr-vsub').innerHTML = vs;
   document.getElementById('gr-foot').innerHTML = `Spøgelse = faste benchmarks fra din peak-blok okt–nov 2024 (1:47 HM). Opdateres live ved hver genindlæsning. Sidst hentet: ${new Date().toLocaleString('da-DK')}.`;
 }
+
+// ---- Mål-siden: gør sektioner sammenfoldelige (første er åben) ----
+(function(){
+  const cards = document.querySelectorAll('#p-goals > .goal-card');
+  cards.forEach((card, i) => {
+    const h = card.querySelector(':scope > h3');
+    if (!h) return;
+    const body = document.createElement('div');
+    body.className = 'gc-body';
+    while (h.nextSibling) body.appendChild(h.nextSibling);
+    card.appendChild(body);
+    h.classList.add('gc-head');
+    h.removeAttribute('style');
+    h.setAttribute('role','button'); h.setAttribute('tabindex','0');
+    card.classList.add('collapsible');
+    if (i > 0) card.classList.add('collapsed');
+    const toggle = () => {
+      const c = card.classList.toggle('collapsed');
+      h.setAttribute('aria-expanded', String(!c));
+      if (!c) window.dispatchEvent(new Event('resize')); // få grafer til at tegne i ny størrelse
+    };
+    h.setAttribute('aria-expanded', String(i === 0));
+    h.addEventListener('click', toggle);
+    h.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); toggle(); } });
+  });
+})();
 
 init();
 </script>
