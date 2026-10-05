@@ -183,6 +183,22 @@ img,svg,canvas { max-width:100%; }
 .card.hashelp.chartcard .chpane .help { display:none; }
 .card.hashelp.chartcard.help-on .chpane.on .help { display:block; }
 
+/* Løbevane */
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; background:var(--x); }
+.hb-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.hb-day { font-family:"Fraunces",Georgia,serif; font-size:34px; font-weight:400; letter-spacing:-.02em; line-height:1; }
+.hb-day small { font-family:"Hanken Grotesk",sans-serif; font-size:14px; color:var(--muted); font-weight:500; letter-spacing:0; }
+.hb-bar { height:10px; border-radius:99px; background:var(--card2); overflow:hidden; margin:12px 0 4px; }
+.hb-bar > i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+.hb-strip { display:flex; gap:4px; flex-wrap:wrap; margin-top:12px; }
+.hb-strip i { width:18px; height:18px; border-radius:6px; background:var(--card2); display:grid; place-items:center; font-size:10px; font-style:normal; }
+.hb-strip i.run { background:var(--accent); } .hb-strip i.sick { background:var(--orange); } .hb-strip i.today { outline:2px solid var(--accent2); outline-offset:1px; }
+.hb-msg { font-size:13.5px; color:var(--muted); line-height:1.6; margin-top:10px; }
+.hb-msg b { color:var(--text); }
+#habit-mini { margin-bottom:14px; }
+#habit-mini .card { border-left:4px solid var(--accent); }
+
 /* Sammenfoldelige sektioner */
 details.sec { margin:0 0 12px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); }
 details.sec > summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 18px; min-height:56px; cursor:pointer; font-family:"Fraunces",Georgia,serif; font-size:18px; font-weight:400; color:var(--text); user-select:none; }
@@ -304,6 +320,7 @@ body[data-page="goals"] .controls { display:none; }
       <div id="coach-overview"></div>
       <div id="recent-activity-summary"></div>
     </div>
+    <div id="habit-mini"></div>
     <div id="acwr-alert"></div>
     <div class="grid g6 statstrip" id="summary"></div>
     <div class="card chartcard">
@@ -333,6 +350,12 @@ body[data-page="goals"] .controls { display:none; }
 
   <!-- MÅL -->
   <div class="page" id="p-goals">
+    <!-- LØBEVANE (aktuelt mål) -->
+    <div class="goal-card" id="habit-card" style="border-left:4px solid var(--accent);">
+      <h3>Løbevane: 66 dage</h3>
+      <div id="hb-full"></div>
+    </div>
+
     <!-- RACEDAG 20/9: gennemførsel (besluttet 13/9, Sofie + Søren) -->
     <div class="goal-card" id="hm-completion-card" style="border-left:4px solid var(--green);">
       <h3 style="margin-bottom:6px;">20. september: gennemfør behageligt — ikke PB</h3>
@@ -907,7 +930,7 @@ const GARMIN_DATA = {"vo2max":[{"date":"2019-04-01","vo2max":45.0},{"date":"2019
 const ATHLETE = 'i225063';
 const KEY = ''; // fjernet: live-kald går nu gennem Supabase icu-proxy
 const BASE = 'https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/icu-proxy';
-let activities = [], wellness = [], events = [], months = 3, charts = {};
+let activities = [], wellness = [], events = [], months = 3, charts = {}, sickDays = [];
 // Garmin data will be injected below
 let garminData = null;
 
@@ -919,7 +942,7 @@ async function init() {
   setupTabs();
   setupPeriod();
   try {
-    [activities, wellness, events] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents()]);
+    [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick()]);
     if (typeof GARMIN_DATA !== 'undefined') garminData = GARMIN_DATA;
     updateTimestamp();
     document.getElementById('loader').style.display = 'none';
@@ -1007,6 +1030,15 @@ async function fetchActs() {
   return merged;
 }
 
+// sygedage ligger i samme Supabase-projekt som livsstil-dashboardet (markeres dér)
+async function fetchSick() {
+  try {
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/sick_days?select=log_date&order=log_date.asc', { headers: hdr() });
+    if (!r.ok) return [];
+    return (await r.json()).map(x => x.log_date);
+  } catch(e) { return []; }
+}
+
 async function fetchWellness() {
   const newest = new Date().toISOString().substring(0,10);
   const r = await fetch(`${BASE}/athlete/${ATHLETE}/wellness?oldest=2020-01-01&newest=${newest}`, { headers: hdr() });
@@ -1039,11 +1071,71 @@ function render() {
   const fw = fil(wellness, 'id');
   const page = document.querySelector('.page.active')?.id;
 
-  if (page === 'p-overview') renderOverview(fr);
-  if (page === 'p-goals') { renderGoals(fr, fw); renderGhost(); }
+  if (page === 'p-overview') { renderOverview(fr); renderHabit(); }
+  if (page === 'p-goals') { renderGoals(fr, fw); renderGhost(); renderHabit(); }
   if (page === 'p-form') { renderDagsform(fr, fw); renderWellness(fw); renderInsights(fr, fw); }
   if (page === 'p-run') { renderRunDetailPage(fr, fw); renderEconomy(fr); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
+}
+
+// ===== Løbevane (samme definition som livsstil-dashboardet) =====
+const HABIT_START = '2026-09-12', HABIT_WINDOW = 66;
+function hIso(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function hAdd(iso, n){ const [y,m,d] = iso.split('-').map(Number); return hIso(new Date(y, m-1, d+n)); }
+function hDiff(a, b){ const pa = a.split('-').map(Number), pb = b.split('-').map(Number); return Math.round((new Date(pb[0],pb[1]-1,pb[2]) - new Date(pa[0],pa[1]-1,pa[2])) / 86400000); }
+function habitStats() {
+  const t = hIso(new Date());
+  const days = new Set(runs(activities).filter(a => (a.distance||0) >= 950).map(a => (a.start_date_local || a.start_date || '').substring(0,10)));
+  const sick = new Set(sickDays);
+  const span = Math.max(1, hDiff(HABIT_START, t) + 1);
+  let done = 0, total = 0, miss = 0, gaps = [], gap = 0, sickN = 0;
+  for (let d = HABIT_START; d <= t; d = hAdd(d, 1)) {
+    const ran = days.has(d);
+    if (d === t && !ran) break;
+    if (!ran && sick.has(d)) { sickN++; continue; }
+    total++; if (ran) done++;
+    if (ran) { if (gap > 0) gaps.push(gap); gap = 0; } else { miss++; gap++; }
+  }
+  if (gap > 0) gaps.push(gap);
+  let cur = 0, cursor = days.has(t) ? t : hAdd(t, -1);
+  for (let i = 0; i < 4000; i++) { if (days.has(cursor)) cur++; else if (!sick.has(cursor)) break; cursor = hAdd(cursor, -1); }
+  const last7 = [...days].filter(d => d > hAdd(t, -7) && d <= t).length;
+  const comeback = gaps.length ? gaps.reduce((a,b) => a+b, 0) / gaps.length : 0;
+  return { t, days, sick, span, done, total, miss, sickN, cur, last7, comeback, adh: total ? Math.round(done/total*100) : 0, ranToday: days.has(t), sickToday: sick.has(t) };
+}
+function habitMsg(h) {
+  if (h.sickToday) return `Syg i dag — <b>hvil</b>. Kæden på ${h.cur} dage står og venter; sygedage bryder den ikke.`;
+  if (h.ranToday) return `Løbet i dag ✓ — <b>${h.cur} dage i træk</b>. Én dag ad gangen.`;
+  if (h.cur > 0) return `<b>${h.cur} dage i træk</b>${h.sickN ? ` (sygedage tæller ikke som huller)` : ''} — et løb i dag holder kæden i live. 1 km tæller.`;
+  return `Ny start i dag — <b>1 km tæller</b>. Det vigtige er, hvor hurtigt du kommer tilbage.`;
+}
+function habitStrip(h, n) {
+  let out = '';
+  for (let i = n - 1; i >= 0; i--) {
+    const d = hAdd(h.t, -i), ran = h.days.has(d), ill = !ran && h.sick.has(d);
+    out += `<i class="${ran ? 'run' : ill ? 'sick' : ''}${d === h.t ? ' today' : ''}" title="${d}${ran ? ': løb' : ill ? ': syg' : ''}">${ill ? '🤒' : ''}</i>`;
+  }
+  return `<div class="hb-strip">${out}</div>`;
+}
+function renderHabit() {
+  const h = habitStats();
+  const pct = Math.min(100, Math.round(h.span / HABIT_WINDOW * 100));
+  const head = `<div class="hb-head"><div class="hb-day">Dag ${h.span}<small> af ${HABIT_WINDOW}</small></div><span class="hint" style="font-size:12px;color:var(--muted)">${pct}% af modningsvinduet</span></div><div class="hb-bar"><i style="width:${pct}%"></i></div>`;
+  const mini = document.getElementById('habit-mini');
+  if (mini) mini.innerHTML = `<div class="card"><div class="lbl">Løbevane</div>${head}${habitStrip(h, 21)}<div class="hb-msg">${habitMsg(h)}</div></div>`;
+  const full = document.getElementById('hb-full');
+  if (full) full.innerHTML = `
+    <p style="font-size:13.5px;color:var(--muted);line-height:1.65;margin-bottom:12px">Målet er at løbe <b style="color:var(--text)">dagligt — mindst 1 km</b> på dage uden program. Sygedage tæller ikke som afbrydelser. Markér dem i Livsstil-dashboardet.</p>
+    ${head}
+    <div class="tri" style="margin-top:14px">
+      <div><div class="lbl">I træk</div><div class="val">${h.cur}</div><div class="sub">dage</div></div>
+      <div><div class="lbl">Træf</div><div class="val">${h.adh}%</div><div class="sub">${h.done} af ${h.total} dage</div></div>
+      <div><div class="lbl">Seneste 7 d</div><div class="val">${h.last7}</div><div class="sub">løbet</div></div>
+    </div>
+    ${habitStrip(h, 28)}
+    <div class="legend" style="margin-top:10px"><span style="--x:var(--accent)">løb</span><span style="--x:var(--orange)">syg</span><span style="--x:var(--card2)">fri</span></div>
+    <div class="hb-msg">${habitMsg(h)}</div>
+    <div class="hb-msg">${h.miss === 0 ? 'Ingen afbrydelser endnu' : `${h.miss} afbrydelse${h.miss === 1 ? '' : 'r'} (gns. ${h.comeback.toFixed(1)} dage)`}${h.sickN ? ` · ${h.sickN} sygedag${h.sickN === 1 ? '' : 'e'} (tæller ikke)` : ''}. Hold afbrydelserne på dage — ikke uger.</div>`;
 }
 
 // ===== Regelbaseret coach-bund (baseline + fallback; AI-lag kobles på senere) =====
@@ -1158,7 +1250,11 @@ function renderRecentSummary(allRuns) {
 
   // On track status for 7 days
   let statusColor, statusText;
-  if (s7.count >= 3 && s7.km >= 20) {
+  const sickLast7 = sickDays.filter(d => d > hAdd(hIso(new Date()), -7)).length;
+  if (sickLast7 >= 1 && !(s7.count >= 3 && s7.km >= 20)) {
+    // sygdom er hvile, ikke et nederlag
+    statusColor = 'var(--muted)'; statusText = 'Hvile (syg)';
+  } else if (s7.count >= 3 && s7.km >= 20) {
     statusColor = 'var(--green)'; statusText = 'On track';
   } else if (s7.count >= 2 && s7.km >= 12) {
     statusColor = 'var(--orange)'; statusText = 'N\u00e6sten';
@@ -3095,6 +3191,7 @@ function renderACWRAlert(r) {
   let cls = 'neutral', icon = '\u2705', msg = 'Din tr\u00e6ningsbelastning er i balance.';
   if (ratio > 1.5) { cls = 'bad'; icon = '\ud83d\udea8'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 h\u00f8j risiko for skade! Du har \u00f8get tr\u00e6ningen for hurtigt. Overvej at sk\u00e6re ned.`; }
   else if (ratio > 1.3) { cls = 'ok'; icon = '\u26a0\ufe0f'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 moderat risiko. Vær forsigtig med at \u00f8ge mere.`; }
+  else if (ratio < 0.8 && ratio > 0 && sickDays.some(d => d > hAdd(hIso(new Date()), -10))) { cls = 'ok'; icon = '\ud83e\udd12'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 lavt, fordi du har v\u00e6ret syg. Det er det rigtige at hvile. Start blidt igen (1 km t\u00e6ller) og byg op, n\u00e5r kroppen er med.`; }
   else if (ratio < 0.8 && ratio > 0) { cls = 'ok'; icon = '\ud83d\udca4'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 du tr\u00e6ner mindre end normalt. Det er fint som restitution, men pas p\u00e5 med at miste fitness.`; }
   else { msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 sund balance mellem ny og kronisk belastning.`; }
   el.innerHTML = `<div class="verdict ${cls}" style="margin-bottom:20px"><h2>${icon} Skadesrisiko (ACWR)</h2><div class="explain"><p>${msg}</p><p style="margin-top:8px;font-size:12px;color:var(--muted)">Akut (7d): ${acwr.acute.toFixed(1)} km &middot; Kronisk (28d gns./uge): ${acwr.chronic.toFixed(1)} km</p></div></div>`;
