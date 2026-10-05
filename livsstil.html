@@ -197,6 +197,7 @@ footer{margin-top:44px; text-align:center; color:var(--faint); font-size:12px; l
       <a class="btn" href="run.html" style="text-decoration:none;color:var(--trae);border-color:var(--trae-soft)" title="Åbn run-dashboard">🏃 Run</a>
       <button class="btn" id="syncBtn" title="Hent nyeste fra Withings + intervals.icu">↻ Synk</button>
       <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
+      <button class="btn" id="lockBtn" title="Face ID-lås på denne enhed" style="display:none">🔓</button>
       <button class="btn" id="logoutBtn" title="Log ud af denne enhed">Log ud</button>
     </div>
   </header>
@@ -590,8 +591,7 @@ const REST=SB+"/rest/v1/";
 const HEAD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
 const FN_INT=SB+"/functions/v1/sync-intervals";
 const FN_WITH=SB+"/functions/v1/sync-withings";
-const BOOKS_URL="https://fhlotfddxcpczokbvzdq.supabase.co/rest/v1/";
-const BOOKS_KEY="sb_publishable_j5HwrulwEUxT9WVKjTsRsg_bYyaRa9r";
+const BOOKS_FN="https://fhlotfddxcpczokbvzdq.supabase.co/functions/v1/books-read"; // tabellen er låst; funktionen svarer kun til dig (login-token følger med via auth.js)
 
 const $=s=>document.querySelector(s);
 const MONTHS=["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
@@ -608,7 +608,7 @@ function daLabel(iso){const d=parseD(iso);return d.getDate()+". "+MONTHS[d.getMo
 async function get(t,qs=""){const r=await fetch(REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 async function insert(t,body){const r=await fetch(REST+t,{method:"POST",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="+oc):""),{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
-async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
+async function booksGet(){const r=await fetch(BOOKS_FN);if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
 let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[],sickDays:[]};
@@ -641,7 +641,7 @@ async function loadAll(){
   S.wellness=wellness.map(w=>({...w,sleep_hours:w.sleep_hours==null?null:+w.sleep_hours,hrv:w.hrv==null?null:+w.hrv}));
   S.daily=daily; S.checkins=checkins; S.migraines=migraines; S.meds=meds;
   S.labs=labs.map(l=>({...l,tsh:l.tsh==null?null:+l.tsh}));
-  try{ S.books=await booksGet("?select=title,pages,word_count,started_at,finished_at,paused_days,status&limit=500"); }catch(e){ S.books=[]; }
+  try{ S.books=await booksGet(); }catch(e){ S.books=[]; }
 }
 
 // ---------- Matematikkur math ----------
@@ -1477,6 +1477,9 @@ $("#negRan").onclick=()=>saveNegotiation("loeb");
 $("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
 $("#sickBtn").onclick=()=>toggleSick(todayISO());
+(async()=>{const b=$("#lockBtn"); if(!b||!window.LivAuth) return; if(!(await LivAuth.lock.supported())) return; b.style.display="";
+  const paint=()=>{const on=LivAuth.lock.enabled(); b.textContent=on?"🔒":"🔓"; b.title=on?"Face ID-lås er til (tryk for at slå fra)":"Slå Face ID-lås til på denne enhed";}; paint();
+  b.onclick=async()=>{try{ if(LivAuth.lock.enabled()){ if(confirm("Slå Face ID-lås fra på denne enhed?")) LivAuth.lock.disable(); } else { await LivAuth.lock.enable(); alert("Face ID-lås er slået til. Appen låser, når du åbner den igen."); } }catch(e){ alert("Kunne ikke slå Face ID til: "+((e&&e.message)||e)); } paint();};})();
 $("#logoutBtn").onclick=()=>{ if(window.LivAuth && confirm("Log ud på denne enhed?")) LivAuth.logout(); };
 $("#streakStrip").addEventListener("click",e=>{const c=e.target.closest("[data-d]"); if(c) toggleSick(c.dataset.d);});
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
