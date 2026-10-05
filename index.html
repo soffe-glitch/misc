@@ -339,6 +339,7 @@ footer{margin-top:44px; text-align:center; color:var(--faint); font-size:12px; l
 
     <div class="logcard card">
       <div class="ch"><h3>Hændelser</h3><span class="hint">sjældnere</span></div>
+      <button type="button" class="pbtn" id="sickBtn" style="background:var(--kost);width:100%;margin-bottom:10px">🤒 Syg i dag</button>
       <button type="button" class="pbtn" id="migraineBtn" style="background:var(--warn);width:100%">+ Migræne-anfald</button>
       <button type="button" class="btn" id="labBtn2" style="width:100%;margin-top:10px">+ Blodprøve</button>
       <p class="hint" style="margin-top:12px">Vejning og mad logges i <b>Vægttab &amp; log</b>-fanen.</p>
@@ -404,7 +405,8 @@ footer{margin-top:44px; text-align:center; color:var(--faint); font-size:12px; l
       </div>
     </div>
     <div class="formstrip" id="streakStrip" style="margin-top:14px"></div>
-    <div class="legend"><span style="--x:var(--trae)">løb</span><span style="--x:var(--surface-3)">fri</span><span style="--x:var(--accent)">i dag</span></div>
+    <div class="legend"><span style="--x:var(--trae)">løb</span><span style="--x:var(--kost)">syg</span><span style="--x:var(--surface-3)">fri</span><span style="--x:var(--accent)">i dag</span></div>
+    <p class="hint" style="margin-top:6px">Syg? Tryk på dagen ovenfor — sygedage bryder ikke kæden og tæller ikke som afbrydelser.</p>
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
   <div class="card" id="vaneCard" style="margin-bottom:14px">
@@ -607,7 +609,7 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(qs){const r=await fetch(BOOKS_URL+"books"+qs,{headers:{apikey:BOOKS_KEY,Authorization:"Bearer "+BOOKS_KEY}});if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[],sickDays:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
@@ -628,6 +630,7 @@ async function loadAll(){
   try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc&limit=2000")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
   try{ S.negotiations=await get("run_negotiations","?select=*&order=ts.asc"); }catch(e){ S.negotiations=[]; }
   try{ S.naps=await get("naps","?select=*&order=ts.asc"); }catch(e){ S.naps=[]; }
+  try{ S.sickDays=await get("sick_days","?select=*&order=log_date.asc"); }catch(e){ S.sickDays=[]; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -917,16 +920,27 @@ function render(){
   $("#foot").textContent="Sidst opdateret "+now.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
 }
 
+// sygedage: bryder hverken kæden eller tæller som afbrydelse (hvile er en del af vanen)
+function sickSet(){ return new Set((S.sickDays||[]).map(x=>x.log_date)); }
+async function toggleSick(d){
+  const has=S.sickDays.some(x=>x.log_date===d);
+  try{
+    if(has){ await fetch(REST+"sick_days?log_date=eq."+d,{method:"DELETE",headers:HEAD}); S.sickDays=S.sickDays.filter(x=>x.log_date!==d); }
+    else { const row=(await upsert("sick_days",{log_date:d},"log_date"))[0]; S.sickDays.push(row); }
+    render();
+  }catch(e){ const n=$("#streakNote"); if(n) n.textContent="Kunne ikke gemme sygedag: "+e.message; }
+}
 function streak(){
   const days=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
+  const sick=sickSet();
   const t=todayISO();
-  // aktuel streak: tæl sammenhængende dage bagud fra seneste løbedag (i dag eller i går = stadig i live)
+  // aktuel streak: tæl sammenhængende løbedage bagud (i dag eller i går = stadig i live); sygedage springes over uden at bryde kæden
   let cur=0, cursor = days.has(t) ? t : addDays(t,-1);
-  while(days.has(cursor)){ cur++; cursor=addDays(cursor,-1); }
+  for(let i=0;i<4000;i++){ if(days.has(cursor)) cur++; else if(!sick.has(cursor)) break; cursor=addDays(cursor,-1); }
   const activeToday=days.has(t);
   // rekord i seneste 90 dage
   let longest=0, run=0;
-  for(let i=90;i>=0;i--){ if(days.has(addDays(t,-i))){ run++; longest=Math.max(longest,run); } else run=0; }
+  for(let i=90;i>=0;i--){ const d=addDays(t,-i); if(days.has(d)){ run++; longest=Math.max(longest,run); } else if(!sick.has(d)) run=0; }
   // løb denne uge (fra mandag)
   const ws=weekStart(t); const week=[...days].filter(d=>d>=ws&&d<=t).length;
   $("#streakCur").textContent=cur;
@@ -934,20 +948,26 @@ function streak(){
   $("#streakWeek").textContent=week;
   // 21-dages strip
   let strip="";
-  for(let i=20;i>=0;i--){const d=addDays(t,-i);const ran=days.has(d);const today=d===t;
-    strip+=`<span class="fp${today?' today':''}" style="background:${ran?'var(--trae)':'var(--surface-3)'}" title="${daLabel(d)}${ran?': løb ✓':''}"></span>`;}
+  for(let i=20;i>=0;i--){const d=addDays(t,-i);const ran=days.has(d);const ill=!ran&&sick.has(d);const today=d===t;
+    strip+=`<span class="fp${today?' today':''}" data-d="${d}" style="cursor:pointer;background:${ran?'var(--trae)':ill?'var(--kost)':'var(--surface-3)'}" title="${daLabel(d)}${ran?': løb ✓':ill?': syg':''} — tryk for at markere syg">${ill?'🤒':''}</span>`;}
   $("#streakStrip").innerHTML=strip;
   let note;
-  if(cur===0) note="Ny start — løb i morgen tidlig, så begynder kæden. 1 km tæller.";
+  const sickToday=sick.has(t);
+  const sickRecent=[...sick].filter(d=>d>=addDays(t,-14)&&d<=t).length;
+  if(sickToday) note=`Syg i dag — hvil. Kæden (${cur} dage) står og venter; sygedage bryder den ikke.`;
+  else if(cur===0) note="Ny start — løb i morgen tidlig, så begynder kæden. 1 km tæller.";
   else if(!activeToday) note=`${cur} dage i træk — et løb i dag holder kæden i live.`;
   else note=`${cur} dage i træk ✓ — bliv ved, én morgen ad gangen.`;
+  if(sickRecent&&!sickToday) note+=` (${sickRecent} sygedage de seneste 14 dage bryder ikke kæden.)`;
   $("#streakNote").textContent=note;
+  const sb=$("#sickBtn"); if(sb) sb.textContent=sickToday?"🤒 Syg i dag ✓ (tryk for at fjerne)":"🤒 Syg i dag";
 }
 const VANE_START="2026-09-12"; // nuværende rutine-genopbygning (fundet som mest sammenhængende startpunkt)
 const VANE_WINDOW=66;          // median dage til automatik (Lally m.fl.)
 function vane(){
   const card=$("#vaneCard"); if(!card) return;
   const days=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
+  const sick=sickSet();
   const t=todayISO();
   if(t<VANE_START){ card.style.display="none"; return; }
   // modningsmåler: kalenderdage siden start (inkl. i dag) vs vinduet
@@ -961,6 +981,7 @@ function vane(){
   let done=0,total=0;
   for(let d=VANE_START; d<=t; d=addDays(d,1)){
     if(d===t && !days.has(d)) break;
+    if(!days.has(d) && sick.has(d)) continue; // sygedag: hverken hit eller miss
     total++; if(days.has(d)) done++;
   }
   const adh=total?Math.round(done/total*100):0;
@@ -969,6 +990,7 @@ function vane(){
   let miss=0, gaps=[], curGap=0;
   for(let d=VANE_START; d<t; d=addDays(d,1)){
     if(days.has(d)){ if(curGap>0)gaps.push(curGap); curGap=0; }
+    else if(sick.has(d)){ /* sygedag: ingen afbrydelse */ }
     else { miss++; curGap++; }
   }
   if(curGap>0) gaps.push(curGap);
@@ -982,6 +1004,8 @@ function vane(){
     ? `Stærkt: ${adh}% og ingen afbrydelser. Comeback-hastigheden bliver dit nøgletal, når den første fri dag kommer.`
     : `${adh}% træf. Det afgørende er at afbrydelser bliver på ${fmt(avgGap,1)} dage — ikke uger. Hold det tal lavt, så gror vanen fast.`;
   else note=`Du er forbi det typiske modningsvindue. Kører turen af sig selv nu, er vanen groet fast.`;
+  const sickN=[...sick].filter(d=>d>=VANE_START&&d<=t).length;
+  if(sickN) note+=` ${sickN} sygedag${sickN===1?'':'e'} tæller ikke som afbrydelse.`;
   $("#vaneNote").textContent=note;
 
   // ---- forhandlingen: hyppighed + vinderprocent (automatik-signal) ----
@@ -1450,6 +1474,8 @@ $("#napSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>saveNap(+b.data
 $("#negRan").onclick=()=>saveNegotiation("loeb");
 $("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
+$("#sickBtn").onclick=()=>toggleSick(todayISO());
+$("#streakStrip").addEventListener("click",e=>{const c=e.target.closest("[data-d]"); if(c) toggleSick(c.dataset.d);});
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
 $("#mSave").onclick=saveMigraine;
 const openLab=()=>{$("#lDate").value=todayISO();$("#lDialog").classList.add("open");};
