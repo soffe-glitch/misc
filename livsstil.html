@@ -2,6 +2,7 @@
 <html lang="da">
 <head>
 <meta charset="utf-8">
+<script src="auth.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sofies Livsstil</title>
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -196,6 +197,7 @@ footer{margin-top:44px; text-align:center; color:var(--faint); font-size:12px; l
       <a class="btn" href="run.html" style="text-decoration:none;color:var(--trae);border-color:var(--trae-soft)" title="Åbn run-dashboard">🏃 Run</a>
       <button class="btn" id="syncBtn" title="Hent nyeste fra Withings + intervals.icu">↻ Synk</button>
       <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
+      <button class="btn" id="logoutBtn" title="Log ud af denne enhed">Log ud</button>
     </div>
   </header>
 
@@ -1475,6 +1477,7 @@ $("#negRan").onclick=()=>saveNegotiation("loeb");
 $("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
 $("#sickBtn").onclick=()=>toggleSick(todayISO());
+$("#logoutBtn").onclick=()=>{ if(window.LivAuth && confirm("Log ud på denne enhed?")) LivAuth.logout(); };
 $("#streakStrip").addEventListener("click",e=>{const c=e.target.closest("[data-d]"); if(c) toggleSick(c.dataset.d);});
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
 $("#mSave").onclick=saveMigraine;
