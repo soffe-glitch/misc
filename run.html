@@ -27,7 +27,7 @@ body { font-family:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,'Segoe UI',
 h1,h2,h3 { font-family:"Fraunces",Georgia,serif; font-weight:500; letter-spacing:-.01em; }
 
 /* ---- Topbar ---- */
-.header { position:sticky; top:0; z-index:900; padding:calc(10px + env(safe-area-inset-top)) 16px 10px; background:color-mix(in srgb,var(--bg) 84%,transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
+.header { position:relative; z-index:900; padding:calc(10px + env(safe-area-inset-top)) 16px 10px; background:color-mix(in srgb,var(--bg) 84%,transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
 .header .toprow { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .header h1 { font-size:24px; font-weight:400; line-height:1.1; }
 .header h1 span { color:var(--accent); font-size:14px; vertical-align:middle; }
@@ -42,18 +42,8 @@ h1,h2,h3 { font-family:"Fraunces",Georgia,serif; font-weight:500; letter-spacing
 /* ---- Bundmenu ---- */
 .bottomnav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:1000; display:flex; height:var(--nav-h); padding:6px; gap:2px; background:color-mix(in srgb,var(--card) 90%,transparent); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:26px; box-shadow:var(--shadow); }
 .navbtn { flex:1; background:none; border:none; color:var(--muted); cursor:pointer; font:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:10.5px; font-weight:600; border-radius:20px; transition:background .15s,color .15s; }
-.navbtn .ic { font-size:20px; line-height:1; }
+.navbtn svg { width:22px; height:22px; }
 .navbtn.active { color:var(--accent2); background:color-mix(in srgb,var(--accent) 16%,transparent); }
-.moreoverlay { position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); z-index:1001; opacity:0; pointer-events:none; transition:opacity .2s; }
-.moreoverlay.open { opacity:1; pointer-events:auto; }
-.moresheet { position:fixed; left:0; right:0; bottom:0; z-index:1002; background:var(--card); border-top:1px solid var(--border); border-radius:26px 26px 0 0; padding:8px 14px calc(22px + env(safe-area-inset-bottom)); transform:translateY(110%); visibility:hidden; transition:transform .26s ease,visibility 0s .26s; box-shadow:0 -12px 36px rgba(0,0,0,.5); }
-.moresheet.open { transform:translateY(0); visibility:visible; transition:transform .26s ease; }
-.moresheet .grip { width:38px; height:4px; border-radius:2px; background:var(--border); margin:8px auto 6px; }
-.moresheet h4 { margin:8px 6px 12px; color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; }
-.moregrid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.moreitem { background:var(--card2); border:1px solid var(--border); border-radius:18px; color:var(--text); cursor:pointer; font:inherit; display:flex; flex-direction:column; align-items:center; gap:7px; padding:16px 6px; font-size:12.5px; font-weight:600; }
-.moreitem .ic { font-size:24px; line-height:1; }
-.moreitem.sel { border-color:var(--accent); color:var(--accent2); }
 
 /* ---- Layout ---- */
 .main { padding:16px 14px; max-width:1100px; margin:0 auto; }
@@ -163,44 +153,108 @@ details[open] summary { color:var(--accent); }
 .expand-btn { display:inline-block; margin-right:8px; }
 img,svg,canvas { max-width:100%; }
 
+
+/* ---- Overhaul: overblik, sektioner, info-ikoner ---- */
+.ov-top { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:14px; }
+.ov-top > div > .grid { margin-bottom:0; }
+#coach-overview .insight { margin:0; height:100%; background:radial-gradient(120% 140% at 0% 0%,#24493B 0%,#173126 62%); border:1px solid rgba(255,255,255,.08); border-radius:26px; padding:22px; position:relative; overflow:hidden; box-shadow:var(--shadow); }
+#coach-overview .insight::after { content:""; position:absolute; right:-60px; top:-60px; width:190px; height:190px; border-radius:50%; background:rgba(255,255,255,.05); }
+#coach-overview .insight h3 { color:#9DB8AA; font-family:"Hanken Grotesk",sans-serif; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+#coach-overview .insight .finding { font-family:"Fraunces",Georgia,serif; font-weight:400; font-size:24px; line-height:1.25; color:#F1F4EC; margin:10px 0; }
+#coach-overview .insight p { color:#B5C7BD; position:relative; }
+.statstrip { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x proximity; padding:2px 2px 6px; margin:0 -14px 8px; padding-left:14px; padding-right:14px; scrollbar-width:none; scroll-padding-left:14px; }
+.statstrip::-webkit-scrollbar { display:none; }
+.statstrip > .card { flex:0 0 138px; scroll-snap-align:start; padding:14px; box-shadow:none; }
+.statstrip > .card .val { font-size:26px; }
+.statstrip > .card .sub { display:none; }
+.chartcard .ch-head, .card > h3.hasinfo { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.chartcard .ch-head { flex-wrap:wrap; margin-bottom:14px; }
+.chartcard .ch-head h3 { margin:0; }
+.segctl { display:flex; gap:4px; background:var(--card2); padding:3px; border-radius:99px; overflow-x:auto; max-width:100%; scrollbar-width:none; }
+.segctl::-webkit-scrollbar { display:none; }
+.segctl button { flex:none; border:0; background:none; color:var(--muted); font:inherit; font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:99px; cursor:pointer; white-space:nowrap; }
+.segctl button.on { background:var(--accent); color:var(--on-accent); }
+.chpane { display:none; }
+.chpane.on { display:block; }
+.infobtn { flex:none; width:24px; height:24px; border-radius:50%; border:1px solid var(--border); background:var(--card2); color:var(--muted); font:italic 600 13px "Fraunces",Georgia,serif; cursor:pointer; line-height:1; }
+.card.help-on > h3 .infobtn, .card.help-on > .ch-head .infobtn { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.card.hashelp .help { display:none; }
+.card.hashelp.help-on .help { display:block; }
+.card.hashelp.chartcard .chpane .help { display:none; }
+.card.hashelp.chartcard.help-on .chpane.on .help { display:block; }
+
+/* Sammenfoldelige sektioner */
+details.sec { margin:0 0 12px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow); }
+details.sec > summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 18px; min-height:56px; cursor:pointer; font-family:"Fraunces",Georgia,serif; font-size:18px; font-weight:400; color:var(--text); user-select:none; }
+details.sec > summary::-webkit-details-marker { display:none; }
+details.sec > summary::after { content:""; flex:none; width:9px; height:9px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(-45deg); transition:transform .2s; }
+details.sec[open] > summary::after { transform:rotate(45deg) translateY(-2px); }
+details.sec[open] > summary { color:var(--accent2); padding-bottom:12px; }
+details.sec > .secbody { padding:0 14px 16px; }
+details.sec .card, details.sec .goal-card { background:var(--card2); box-shadow:none; }
+details.sec .secbody.card { background:transparent; border:0; padding:0 14px 16px; }
+details.sec .tile, details.sec .factor { background:var(--card2); }
+#ghost-card .gr-standfirst, #ghost-card .gr-duel, #ghost-card .gr-target { background:var(--card2); }
+.page > .grid, .page > .run-selector, .page > .factor-grid, .secbody > .grid, .secbody > .trend-row { margin-bottom:12px; }
+.card .ch { margin-top:2px; }
+
+/* ---- Desktop: sidebjælke i stedet for bundmenu ---- */
+@media(min-width:1000px) {
+  body { padding-left:92px; padding-bottom:40px; }
+  .bottomnav { left:14px; right:auto; top:14px; bottom:14px; width:72px; height:auto; transform:none; flex-direction:column; justify-content:flex-start; gap:6px; padding:10px 6px; border-radius:26px; }
+  .navbtn { flex:none; height:64px; }
+  .header { position:sticky; top:0; flex-direction:row; align-items:center; justify-content:space-between; padding:14px 28px; }
+  .header .toprow { gap:18px; }
+  .main { padding:24px 28px 40px; }
+  .ov-top { grid-template-columns:1.35fr 1fr; align-items:stretch; }
+  #recent-activity-summary > .grid { grid-template-columns:1fr; height:100%; }
+  .statstrip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); overflow:visible; margin:0 0 14px; padding:0; }
+  .statstrip > .card { flex:none; }
+  .statstrip > .card .sub { display:block; }
+  .chartcard .ch { height:320px; }
+  details.sec > .secbody { padding:0 18px 20px; }
+}
+body[data-page="goals"] .controls { display:none; }
+@media(min-width:700px) and (max-width:999px) { .bottomnav { left:50%; right:auto; width:520px; transform:translateX(-50%); } }
+
 /* ---- Spøgelse (ghost race) fane ---- */
-#p-ghost .gr-standfirst { background:linear-gradient(135deg,var(--card) 0%,var(--card2) 100%); border:1px solid var(--border); border-radius:var(--r); padding:20px; margin-bottom:18px; }
-#p-ghost .gr-verdict { font-family:"Fraunces",Georgia,serif; font-size:21px; font-weight:400; line-height:1.4; }
-#p-ghost .gr-verdict b { color:var(--accent2); font-weight:500; }
-#p-ghost .gr-vsub { color:var(--muted); font-size:13.5px; margin-top:10px; line-height:1.65; }
-#p-ghost .gr-lbl { font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin:26px 4px 12px; font-weight:700; }
-#p-ghost .gr-duels { display:grid; grid-template-columns:1fr; gap:12px; }
-#p-ghost .gr-duel { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:18px; }
-#p-ghost .gr-duel .gr-t { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:14px; }
-#p-ghost .gr-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
-#p-ghost .gr-who { font-size:12px; color:var(--muted); }
-#p-ghost .gr-who.you { color:var(--accent2); } #p-ghost .gr-who.gh { color:var(--purple); }
-#p-ghost .gr-val { font-family:"Fraunces",Georgia,serif; font-size:28px; font-weight:400; font-variant-numeric:tabular-nums; }
-#p-ghost .gr-val.you { color:var(--accent2); }
-#p-ghost .gr-val.gh { color:var(--purple); font-size:19px; }
-#p-ghost .gr-val small { font-family:"Hanken Grotesk",sans-serif; font-size:13px; font-weight:500; color:var(--muted); }
-#p-ghost .gr-bar { height:10px; background:var(--card2); border-radius:99px; margin:14px 0 8px; position:relative; }
-#p-ghost .gr-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .6s; }
-#p-ghost .gr-mark { position:absolute; top:-4px; right:0; width:3px; height:18px; background:var(--purple); border-radius:2px; }
-#p-ghost .gr-gap { font-size:12.5px; color:var(--muted); margin-top:10px; }
-#p-ghost .gr-gap b { color:var(--text); }
-#p-ghost .gr-desc { font-size:12px; color:var(--muted); margin-top:2px; }
-#p-ghost .gr-zt { width:100%; display:table; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
-#p-ghost .gr-zt th { text-align:left; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding:12px 10px; border-bottom:1px solid var(--border); }
-#p-ghost .gr-zt td { padding:12px 10px; font-size:13.5px; border-bottom:1px solid var(--border); }
-#p-ghost .gr-zt tr:last-child td { border-bottom:none; }
-#p-ghost .gr-zt .num { text-align:right; font-variant-numeric:tabular-nums; }
-#p-ghost .gr-zt .you-c { color:var(--accent2); font-weight:700; }
-#p-ghost .gr-zt .gh-c { color:var(--purple); font-weight:700; }
-#p-ghost .gr-zt .pos { color:var(--orange); font-weight:700; }
-#p-ghost .gr-zt .win { color:var(--green); font-weight:700; }
-#p-ghost .gr-zt .zd { color:var(--muted); font-size:11px; }
-#p-ghost .gr-targets { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-#p-ghost .gr-target { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; }
-#p-ghost .gr-target .tl { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; }
-#p-ghost .gr-target .tv { font-family:"Fraunces",Georgia,serif; font-size:24px; color:var(--purple); margin:6px 0 2px; }
-#p-ghost .gr-target .ts { font-size:11.5px; color:var(--muted); }
-#p-ghost .gr-foot { color:var(--muted); font-size:11.5px; margin-top:26px; line-height:1.6; }
+#ghost-card .gr-standfirst { background:linear-gradient(135deg,var(--card) 0%,var(--card2) 100%); border:1px solid var(--border); border-radius:var(--r); padding:20px; margin-bottom:18px; }
+#ghost-card .gr-verdict { font-family:"Fraunces",Georgia,serif; font-size:21px; font-weight:400; line-height:1.4; }
+#ghost-card .gr-verdict b { color:var(--accent2); font-weight:500; }
+#ghost-card .gr-vsub { color:var(--muted); font-size:13.5px; margin-top:10px; line-height:1.65; }
+#ghost-card .gr-lbl { font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin:26px 4px 12px; font-weight:700; }
+#ghost-card .gr-duels { display:grid; grid-template-columns:1fr; gap:12px; }
+#ghost-card .gr-duel { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:18px; }
+#ghost-card .gr-duel .gr-t { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:14px; }
+#ghost-card .gr-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+#ghost-card .gr-who { font-size:12px; color:var(--muted); }
+#ghost-card .gr-who.you { color:var(--accent2); } #ghost-card .gr-who.gh { color:var(--purple); }
+#ghost-card .gr-val { font-family:"Fraunces",Georgia,serif; font-size:28px; font-weight:400; font-variant-numeric:tabular-nums; }
+#ghost-card .gr-val.you { color:var(--accent2); }
+#ghost-card .gr-val.gh { color:var(--purple); font-size:19px; }
+#ghost-card .gr-val small { font-family:"Hanken Grotesk",sans-serif; font-size:13px; font-weight:500; color:var(--muted); }
+#ghost-card .gr-bar { height:10px; background:var(--card2); border-radius:99px; margin:14px 0 8px; position:relative; }
+#ghost-card .gr-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .6s; }
+#ghost-card .gr-mark { position:absolute; top:-4px; right:0; width:3px; height:18px; background:var(--purple); border-radius:2px; }
+#ghost-card .gr-gap { font-size:12.5px; color:var(--muted); margin-top:10px; }
+#ghost-card .gr-gap b { color:var(--text); }
+#ghost-card .gr-desc { font-size:12px; color:var(--muted); margin-top:2px; }
+#ghost-card .gr-zt { width:100%; display:table; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+#ghost-card .gr-zt th { text-align:left; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding:12px 10px; border-bottom:1px solid var(--border); }
+#ghost-card .gr-zt td { padding:12px 10px; font-size:13.5px; border-bottom:1px solid var(--border); }
+#ghost-card .gr-zt tr:last-child td { border-bottom:none; }
+#ghost-card .gr-zt .num { text-align:right; font-variant-numeric:tabular-nums; }
+#ghost-card .gr-zt .you-c { color:var(--accent2); font-weight:700; }
+#ghost-card .gr-zt .gh-c { color:var(--purple); font-weight:700; }
+#ghost-card .gr-zt .pos { color:var(--orange); font-weight:700; }
+#ghost-card .gr-zt .win { color:var(--green); font-weight:700; }
+#ghost-card .gr-zt .zd { color:var(--muted); font-size:11px; }
+#ghost-card .gr-targets { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+#ghost-card .gr-target { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; }
+#ghost-card .gr-target .tl { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; }
+#ghost-card .gr-target .tv { font-family:"Fraunces",Georgia,serif; font-size:24px; color:var(--purple); margin:6px 0 2px; }
+#ghost-card .gr-target .ts { font-size:11.5px; color:var(--muted); }
+#ghost-card .gr-foot { color:var(--muted); font-size:11.5px; margin-top:26px; line-height:1.6; }
 
 /* ---- Større skærme (tablet/desktop) ---- */
 @media(min-width:700px) {
@@ -213,9 +267,8 @@ img,svg,canvas { max-width:100%; }
   .trend-row { grid-template-columns:1fr 1fr; }
   .factor-grid { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
   .ch { height:260px; } .ch.tall { height:320px; }
-  .bottomnav { left:50%; right:auto; width:520px; transform:translateX(-50%); }
-  #p-ghost .gr-duels { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
-  #p-ghost .gr-targets { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+  #ghost-card .gr-duels { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  #ghost-card .gr-targets { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
 }
 </style>
 </head>
@@ -247,31 +300,35 @@ img,svg,canvas { max-width:100%; }
 
   <!-- OVERBLIK -->
   <div class="page active" id="p-overview" style="display:none">
-    <div id="coach-overview"></div>
-    <div id="recent-activity-summary"></div>
+    <div class="ov-top">
+      <div id="coach-overview"></div>
+      <div id="recent-activity-summary"></div>
+    </div>
     <div id="acwr-alert"></div>
-    <div class="grid g6" id="summary"></div>
-    <div class="grid g2">
-      <div class="card full"><h3>Ugentlig distance (km)</h3><div class="ch tall"><canvas id="cWeekly"></canvas></div>
+    <div class="grid g6 statstrip" id="summary"></div>
+    <div class="card chartcard">
+      <div class="ch-head"><h3>Udvikling</h3><div class="segctl" id="ovSeg"><button type="button" class="on" data-pane="cWeekly">Distance</button><button type="button" class="" data-pane="cPace">Pace</button><button type="button" class="" data-pane="cHR">Puls</button><button type="button" class="" data-pane="cEF">Effektivitet</button><button type="button" class="" data-pane="cZones">Zoner</button></div></div>
+      <div class="chpane on" data-pane="cWeekly"><div class="ch tall"><canvas id="cWeekly"></canvas></div>
         <div class="help">Viser din samlede distance pr. uge. <span class="good">J&aelig;vn stigning</span> er ideelt &mdash; store pludselige hop &oslash;ger skadesrisiko.</div>
       </div>
-      <div class="card"><h3>Efficiency Factor (pace &divide; puls)</h3><div class="ch"><canvas id="cEF"></canvas></div>
-        <div class="help"><span class="good">H&oslash;jere = bedre.</span> EF viser hvor hurtigt du l&oslash;ber pr. hjerteslag. Stiger den over tid, er din form p&aring; vej op. Falder den pludseligt p&aring; et enkelt l&oslash;b, var du nok tr&aelig;t eller d&aring;rligt restitueret.</div>
-      </div>
-      <div class="card"><h3>Pace-udvikling (min/km)</h3><div class="ch"><canvas id="cPace"></canvas></div>
+<div class="chpane" data-pane="cPace"><div class="ch"><canvas id="cPace"></canvas></div>
         <div class="help"><span class="good">Lavere = hurtigere.</span> En faldende kurve betyder du bliver hurtigere. Husk at pace varierer med distance, terr&aelig;n og vejr.</div>
       </div>
-      <div class="card"><h3>Puls pr. l&oslash;b (bpm)</h3><div class="ch"><canvas id="cHR"></canvas></div>
+<div class="chpane" data-pane="cHR"><div class="ch"><canvas id="cHR"></canvas></div>
         <div class="help">Din gennemsnitspuls pr. l&oslash;b. <span class="good">Faldende puls ved samme pace = bedre form.</span> Stigende puls kan betyde overtr&aelig;ning eller d&aring;rlig restitution.</div>
       </div>
-      <div class="card"><h3>Pulszoner</h3><div class="ch"><canvas id="cZones"></canvas></div>
+<div class="chpane" data-pane="cEF"><div class="ch"><canvas id="cEF"></canvas></div>
+        <div class="help"><span class="good">H&oslash;jere = bedre.</span> EF viser hvor hurtigt du l&oslash;ber pr. hjerteslag. Stiger den over tid, er din form p&aring; vej op. Falder den pludseligt p&aring; et enkelt l&oslash;b, var du nok tr&aelig;t eller d&aring;rligt restitueret.</div>
+      </div>
+<div class="chpane" data-pane="cZones"><div class="ch"><canvas id="cZones"></canvas></div>
         <div class="help"><strong>Zone 1-2</strong> (bl&aring;/gr&oslash;n) = let/moderat, bygger grundform. <strong>Zone 3</strong> (gul) = t&aelig;rskel. <strong>Zone 4-5</strong> (orange/r&oslash;d) = h&aring;rdt/max. De fleste l&oslash;b b&oslash;r v&aelig;re i zone 1-2 (80/20 reglen).</div>
       </div>
+
     </div>
-    <div class="card" style="margin-bottom:20px"><h3>Personlige rekorder</h3>
+    <details class="sec"><summary>Personlige rekorder</summary><div class="secbody card">
       <div class="help" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:10px">Dine bedste tider p&aring; standarddistancer. Nye PRs er tegn p&aring; fremgang!</div>
       <div id="pr-table"></div>
-    </div>
+    </div></details>
   </div>
 
   <!-- MÅL -->
@@ -540,6 +597,24 @@ img,svg,canvas { max-width:100%; }
       </div>
     </div>
 
+    <div class="goal-card" id="ghost-card">
+      <h3>Spøgelset: dig vs. din 2024-form</h3>
+    <div class="gr-standfirst">
+      <div class="gr-verdict" id="gr-verdict"></div>
+      <div class="gr-vsub" id="gr-vsub"></div>
+    </div>
+    <div class="gr-lbl">Stillingen</div>
+    <div class="gr-duels" id="gr-duels"></div>
+    <div class="gr-lbl">Pace ved pulszone &mdash; sekunder/km</div>
+    <table class="gr-zt">
+      <thead><tr><th>Pulszone</th><th class="num">Dig nu</th><th class="num">Sp&oslash;gelset</th><th class="num">Gab</th></tr></thead>
+      <tbody id="gr-zone-body"></tbody>
+    </table>
+    <div class="gr-lbl">Stregerne du jagter (2024-peak)</div>
+    <div class="gr-targets" id="gr-targets"></div>
+    <div class="gr-foot" id="gr-foot"></div>
+    </div>
+
     <!-- DRØMMEMÅL: Sub-20 5K (kollapset, ikke aktiv træningsfokus) -->
     <details class="goal-card" id="dreamgoal-wrap" style="margin-top:24px;">
       <summary>Drømmemål: Sub-20 5K (langsigtet — ikke aktiv træningsfokus)</summary>
@@ -596,59 +671,61 @@ img,svg,canvas { max-width:100%; }
     </details>
   </div>
 
-  <!-- DAGSFORM -->
-  <div class="page" id="p-dagsform">
+  <!-- FORM -->
+  <div class="page" id="p-form">
     <div id="coach-dagsform"></div>
     <div id="df-score"></div>
     <div id="df-workout"></div>
-    <div class="grid g6" id="df-metrics"></div>
+    <div class="grid g6 statstrip" id="df-metrics"></div>
     <div id="df-factors"></div>
-    <div class="grid g2" style="margin-top:16px">
-      <div class="card"><h3>Readiness de seneste 14 dage</h3><div class="ch"><canvas id="cDf14"></canvas></div>
+
+    <details class="sec" open><summary>Seneste 14 dage</summary><div class="secbody">
+      <div class="grid g2">
+              <div class="card"><h3>Readiness de seneste 14 dage</h3><div class="ch"><canvas id="cDf14"></canvas></div>
         <div class="help"><span class="good">Gr&oslash;n = klar til at pr&aelig;stere (70+).</span> <span class="warn">Gul = moderat (40-70).</span> <span class="bad">R&oslash;d = hvil (&lt;40).</span></div>
       </div>
-      <div class="card"><h3>Wellness-trend (7 dage)</h3><div class="ch"><canvas id="cDf7"></canvas></div>
+              <div class="card"><h3>Wellness-trend (7 dage)</h3><div class="ch"><canvas id="cDf7"></canvas></div>
         <div class="help">Viser udviklingen i HRV, hvilepuls og s&oslash;vnscore den seneste uge. <span class="good">Stigende HRV + faldende hvilepuls = god tendens.</span></div>
       </div>
-    </div>
-    <div class="card" style="margin-top:16px"><h3>Tr&aelig;ningshistorik (seneste 7 dage)</h3><div id="df-recent"></div></div>
-  </div>
+      </div>
+          <div class="card" style="margin-top:16px"><h3>Tr&aelig;ningshistorik (seneste 7 dage)</h3><div id="df-recent"></div></div>
+    </div></details>
 
-  <!-- INDSIGTER -->
-  <div class="page" id="p-insights">
-    <div id="coach-insights"></div>
-    <div class="info">
-      <strong>S&aring;dan l&aelig;ser du indsigterne:</strong> Dashboardet beregner korrelationer mellem din wellness-data og l&oslash;beperformance.
-      En korrelation n&aelig;r <strong>-1</strong> eller <strong>+1</strong> viser en st&aelig;rk sammenh&aelig;ng. N&aelig;r <strong>0</strong> er der ingen klar sammenh&aelig;ng.
-      Husk at korrelation ikke beviser &aring;rsag &mdash; men det kan pege p&aring; m&oslash;nstre der er v&aelig;rd at v&aelig;re opm&aelig;rksom p&aring;.
+    <details class="sec"><summary>Søvn, HRV &amp; puls</summary><div class="secbody">
+      <div class="grid g6 statstrip" id="wellness-summary"></div>
+      <div class="grid g2">
+              <div class="card"><h3>Hvilepuls &amp; HRV over tid</h3><div class="ch tall"><canvas id="cWellness"></canvas></div>
+        <div class="help"><strong>Hvilepuls (pink):</strong> <span class="good">Lavere = bedre restitueret.</span> <span class="bad">Pludselig stigning kan indikere stress, sygdom eller overtr&aelig;ning.</span>
+          <br><strong>HRV (cyan):</strong> <span class="good">H&oslash;jere = bedre.</span> HRV m&aring;ler variationen mellem hjerteslag. H&oslash;j HRV = kroppen er klar til at yde. Lav HRV = kroppen har brug for restitution.</div>
+      </div>
+              <div class="card"><h3>S&oslash;vn (timer pr. nat)</h3><div class="ch"><canvas id="cSleep"></canvas></div>
+        <div class="help"><span class="good">7-9 timer er optimalt for l&oslash;bere.</span> <span class="bad">Under 6 timer p&aring;virker restitution og performance negativt.</span> S&oslash;vnkvalitet betyder ogs&aring; meget &mdash; urolig s&oslash;vn t&aelig;ller ikke lige s&aring; godt.</div>
+      </div>
+              <div class="card"><h3>V&aelig;gt</h3><div class="ch"><canvas id="cWeight"></canvas></div>
+        <div class="help">Sm&aring; daglige udsving er helt normalt (v&aelig;ske, mad). Kig p&aring; den overordnede tendens over uger, ikke enkeltdage.</div>
+      </div>
+            <div class="card" style="margin-top:16px">
+      <h3>Readiness Score over tid</h3>
+      <div class="help" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:10px">
+        Vores beregnede &ldquo;Body Battery&rdquo; baseret p&aring; dine data. Scoren (0-100) kombinerer HRV, hvilepuls, s&oslash;vn og tr&aelig;ningsbelastning.
+        <span class="good">Over 70 = klar til at pr&aelig;stere.</span> <span class="warn">40-70 = moderat.</span> <span class="bad">Under 40 = kroppen har brug for hvile.</span>
+      </div>
+      <div class="ch tall"><canvas id="cReadiness"></canvas></div>
     </div>
-    <div class="grid g2" id="insight-cards"></div>
-    <div class="card full" style="margin-bottom:16px">
-      <h3>Hvordan din restitution forudsiger dine l&oslash;b</h3>
-      <div class="ch tall"><canvas id="cReadinessVsEF"></canvas></div>
-      <div class="help">Hvert punkt = et l&oslash;b. X-akse = composite readiness-score (HRV + hvilepuls + s&oslash;vn, normaliseret 0-100). Y-akse = Efficiency Factor (hastighed &divide; puls). <span class="good">Punkter op til h&oslash;jre = god restitution gav effektive l&oslash;b.</span></div>
-    </div>
-    <div class="card full" style="margin-bottom:16px">
-      <h3>VO2max-udvikling (Garmin)</h3>
-      <div class="ch tall"><canvas id="ch-vo2"></canvas></div>
-      <div class="help">VO2max er det bedste m&aring;l for aerob kapacitet. H&oslash;jere = bedre kondition. Kvinder: 35-40 godt, 40-45 fremragende, 45+ elite.</div>
-    </div>
-    <div class="card full" style="margin-top:16px">
+      </div>
+      <div id="readiness-today" style="margin-top:14px"></div>
+      <details id="wellness-fields" class="card" style="margin-top:14px"></details>
+    </div></details>
+
+    <details class="sec"><summary>Belastning &amp; skadesrisiko</summary><div class="secbody grid g2">
+          <div class="card" style="margin-top:16px">
       <h3>Tr&aelig;ningsbelastning: Fitness (CTL) vs. Tr&aelig;thed (ATL)</h3>
       <div class="ch tall"><canvas id="cLoad"></canvas></div>
       <div class="help"><strong>CTL (gr&oslash;n)</strong> = din langsigtede fitness (42-dages snit). <strong>ATL (r&oslash;d)</strong> = akut tr&aelig;thed (7-dages snit).
         <span class="good">N&aring;r CTL stiger, er du i bedre form.</span> <span class="bad">N&aring;r ATL er langt over CTL, er du overr&aelig;kt og b&oslash;r hvile.</span>
         Ideelt stiger begge gradvist med ATL tæt p&aring; CTL.</div>
     </div>
-    <div class="grid g2" style="margin-top:16px">
-      <div class="card"><h3>Tidspunkt p&aring; dagen vs. Pace</h3><div class="ch"><canvas id="cTimeOfDay"></canvas></div>
-        <div class="help"><span class="good">Gr&oslash;n s&oslash;jle = dit bedste tidspunkt.</span> Mange l&oslash;bere er hurtigere sen eftermiddag/aften pga. h&oslash;jere kropstemperatur. Tallet i parentes = antal l&oslash;b i den periode.</div>
-      </div>
-      <div class="card"><h3>Tr&aelig;ningskonsistens (l&oslash;b/uge) vs. Pace n&aelig;ste uge</h3><div class="ch"><canvas id="cConsistency"></canvas></div>
-        <div class="help">Viser om flere l&oslash;b pr. uge f&oslash;rer til bedre pace den f&oslash;lgende uge. <span class="good">Lavere s&oslash;jle = hurtigere pace.</span> Find den balance der virker for dig.</div>
-      </div>
-    </div>
-    <div class="card full" style="margin-top:16px">
+          <div class="card" style="margin-top:16px">
       <h3>ACWR &mdash; Skadesrisiko over tid</h3>
       <div class="ch tall"><canvas id="cACWR"></canvas></div>
       <div class="help">
@@ -658,55 +735,45 @@ img,svg,canvas { max-width:100%; }
         <span class="warn">Under 0.8 = du tr&aelig;ner markant mindre</span> &mdash; ok som restitution, men pas p&aring; med at miste fitness.
       </div>
     </div>
+    </div></details>
+
+    <details class="sec"><summary>Indsigter &amp; sammenhænge</summary><div class="secbody">
+      <div id="coach-insights"></div>
+      <div class="grid g2" id="insight-cards"></div>
+      <div class="grid g2">
+            <div class="card" style="margin-bottom:16px">
+      <h3>Hvordan din restitution forudsiger dine l&oslash;b</h3>
+      <div class="ch tall"><canvas id="cReadinessVsEF"></canvas></div>
+      <div class="help">Hvert punkt = et l&oslash;b. X-akse = composite readiness-score (HRV + hvilepuls + s&oslash;vn, normaliseret 0-100). Y-akse = Efficiency Factor (hastighed &divide; puls). <span class="good">Punkter op til h&oslash;jre = god restitution gav effektive l&oslash;b.</span></div>
+    </div>
+            <div class="card" style="margin-bottom:16px">
+      <h3>VO2max-udvikling (Garmin)</h3>
+      <div class="ch tall"><canvas id="ch-vo2"></canvas></div>
+      <div class="help">VO2max er det bedste m&aring;l for aerob kapacitet. H&oslash;jere = bedre kondition. Kvinder: 35-40 godt, 40-45 fremragende, 45+ elite.</div>
+    </div>
+              <div class="card"><h3>Tidspunkt p&aring; dagen vs. Pace</h3><div class="ch"><canvas id="cTimeOfDay"></canvas></div>
+        <div class="help"><span class="good">Gr&oslash;n s&oslash;jle = dit bedste tidspunkt.</span> Mange l&oslash;bere er hurtigere sen eftermiddag/aften pga. h&oslash;jere kropstemperatur. Tallet i parentes = antal l&oslash;b i den periode.</div>
+      </div>
+              <div class="card"><h3>Tr&aelig;ningskonsistens (l&oslash;b/uge) vs. Pace n&aelig;ste uge</h3><div class="ch"><canvas id="cConsistency"></canvas></div>
+        <div class="help">Viser om flere l&oslash;b pr. uge f&oslash;rer til bedre pace den f&oslash;lgende uge. <span class="good">Lavere s&oslash;jle = hurtigere pace.</span> Find den balance der virker for dig.</div>
+      </div>
+      </div>
+    </div></details>
   </div>
 
-  <!-- WELLNESS -->
-  <div class="page" id="p-wellness">
-    <div class="info">
-      <strong>Wellness-data</strong> viser din krops daglige tilstand. Disse tal p&aring;virker din l&oslash;beperformance &mdash; brug dem til at vurdere om det er en god dag at presse p&aring;, eller en dag til let tr&aelig;ning.
-    </div>
-    <div class="grid g6" id="wellness-summary"></div>
-    <div class="grid g2">
-      <div class="card full"><h3>Hvilepuls &amp; HRV over tid</h3><div class="ch tall"><canvas id="cWellness"></canvas></div>
-        <div class="help"><strong>Hvilepuls (pink):</strong> <span class="good">Lavere = bedre restitueret.</span> <span class="bad">Pludselig stigning kan indikere stress, sygdom eller overtr&aelig;ning.</span>
-          <br><strong>HRV (cyan):</strong> <span class="good">H&oslash;jere = bedre.</span> HRV m&aring;ler variationen mellem hjerteslag. H&oslash;j HRV = kroppen er klar til at yde. Lav HRV = kroppen har brug for restitution.</div>
-      </div>
-      <div class="card"><h3>S&oslash;vn (timer pr. nat)</h3><div class="ch"><canvas id="cSleep"></canvas></div>
-        <div class="help"><span class="good">7-9 timer er optimalt for l&oslash;bere.</span> <span class="bad">Under 6 timer p&aring;virker restitution og performance negativt.</span> S&oslash;vnkvalitet betyder ogs&aring; meget &mdash; urolig s&oslash;vn t&aelig;ller ikke lige s&aring; godt.</div>
-      </div>
-      <div class="card"><h3>V&aelig;gt</h3><div class="ch"><canvas id="cWeight"></canvas></div>
-        <div class="help">Sm&aring; daglige udsving er helt normalt (v&aelig;ske, mad). Kig p&aring; den overordnede tendens over uger, ikke enkeltdage.</div>
-      </div>
-    </div>
-    <div class="card full" style="margin-top:16px">
-      <h3>Readiness Score over tid</h3>
-      <div class="help" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:10px">
-        Vores beregnede &ldquo;Body Battery&rdquo; baseret p&aring; dine data. Scoren (0-100) kombinerer HRV, hvilepuls, s&oslash;vn og tr&aelig;ningsbelastning.
-        <span class="good">Over 70 = klar til at pr&aelig;stere.</span> <span class="warn">40-70 = moderat.</span> <span class="bad">Under 40 = kroppen har brug for hvile.</span>
-      </div>
-      <div class="ch tall"><canvas id="cReadiness"></canvas></div>
-    </div>
-    <div id="readiness-today" style="margin-top:16px"></div>
-    <details id="wellness-fields" class="card" style="margin-top:16px"></details>
-  </div>
-
-  <!-- L&Oslash;BE-ANALYSE -->
-  <div class="page" id="p-rundetail">
+  <!-- LØB -->
+  <div class="page" id="p-run">
     <div id="coach-rundetail"></div>
-    <div class="info">
-      <strong>L&oslash;be-analyse</strong> dykker ned i en enkelt tur og forklarer hvad der p&aring;virkede den. V&aelig;lg et l&oslash;b nedenfor &mdash;
-      dashboardet kigger p&aring; din s&oslash;vn, HRV, hvilepuls, Body Battery og hviledage og vurderer om det var en <span class="good">god</span>, <span class="warn">OK</span> eller <span class="bad">h&aring;rd</span> dag.
-      Alle tal sammenlignes med dine personlige gennemsnit, s&aring; vurderingen er tilpasset dig.
-    </div>
     <div class="run-selector">
       <button class="nav-btn" onclick="navRun(-1)">&larr;</button>
       <select id="runSelect" onchange="renderRunDetail()"></select>
       <button class="nav-btn" onclick="navRun(1)">&rarr;</button>
     </div>
     <div class="factor-grid" id="run-factors"></div>
-    <div class="grid g6" id="run-metrics"></div>
-    <!-- INTERVAL BREAKDOWN -->
-    <div class="card" style="margin-bottom:20px" id="interval-section">
+    <div class="grid g6 statstrip" id="run-metrics"></div>
+
+    <details class="sec"><summary>Intervaller, zoner &amp; dynamik</summary><div class="secbody">
+          <div class="card" style="margin-bottom:20px" id="interval-section">
       <h3>Interval-breakdown</h3>
       <div id="interval-loading" style="color:var(--muted);font-size:13px;padding:12px 0;">Henter intervaller...</div>
       <div id="interval-table-wrap" style="display:none;"></div>
@@ -716,9 +783,7 @@ img,svg,canvas { max-width:100%; }
         <div class="help">Viser pace-udviklingen i dine hurtige intervaller (strides/tempo) inden for dette løb. <span class="good">Faldende linje = du accelererede.</span></div>
       </div>
     </div>
-
-    <!-- HR & PACE ZONE DISTRIBUTION -->
-    <div class="trend-row" id="zone-section">
+          <div class="trend-row" id="zone-section">
       <div class="card">
         <h3>Pulszone-fordeling</h3>
         <div class="ch"><canvas id="cHRZones"></canvas></div>
@@ -730,9 +795,7 @@ img,svg,canvas { max-width:100%; }
         <div class="help">Tid brugt i hver pace-zone baseret på din threshold pace.</div>
       </div>
     </div>
-
-    <!-- RUNNING DYNAMICS PER INTERVAL -->
-    <div class="card" style="margin-bottom:20px" id="dynamics-section">
+          <div class="card" style="margin-bottom:20px" id="dynamics-section">
       <h3>Running dynamics per interval</h3>
       <div id="dynamics-wrap" style="display:none;">
         <div class="ch tall"><canvas id="cDynamics"></canvas></div>
@@ -740,66 +803,60 @@ img,svg,canvas { max-width:100%; }
       </div>
       <div id="dynamics-empty" style="color:var(--muted);font-size:13px;padding:12px 0;">Henter data...</div>
     </div>
+    </div></details>
 
-    <div class="trend-row">
-      <div class="card"><h3>Wellness-trend (5 dage f&oslash;r l&oslash;bet)</h3><div class="ch"><canvas id="cPreWellness"></canvas></div>
+    <details class="sec"><summary>Dagen før &amp; sammenligning</summary><div class="secbody">
+      <div class="trend-row">
+              <div class="card"><h3>Wellness-trend (5 dage f&oslash;r l&oslash;bet)</h3><div class="ch"><canvas id="cPreWellness"></canvas></div>
         <div class="help">Viser hvordan din HRV, hvilepuls og s&oslash;vn udviklede sig i dagene op til l&oslash;bet. <span class="good">Stigende HRV + faldende hvilepuls = god form.</span> <span class="bad">Faldende HRV + stigende hvilepuls = tr&aelig;thed.</span></div>
       </div>
-      <div class="card"><h3>Sammenligning med lignende l&oslash;b</h3><div class="ch"><canvas id="cCompare"></canvas></div>
+              <div class="card"><h3>Sammenligning med lignende l&oslash;b</h3><div class="ch"><canvas id="cCompare"></canvas></div>
         <div class="help">Sammenligner dette l&oslash;bs pace med andre l&oslash;b p&aring; ca. samme distance. <span class="good">Gr&oslash;n = bedre end gns.</span> <span class="bad">R&oslash;d = langsommere end gns.</span></div>
       </div>
-    </div>
-    <div class="card" style="margin-bottom:20px"><h3>Dine seneste l&oslash;b &mdash; farvekodet efter dag-kvalitet</h3><div class="ch tall"><canvas id="cTimeline"></canvas></div>
+      </div>
+          <div class="card" style="margin-bottom:20px"><h3>Dine seneste l&oslash;b &mdash; farvekodet efter dag-kvalitet</h3><div class="ch tall"><canvas id="cTimeline"></canvas></div>
       <div class="help">Hvert l&oslash;b farvet efter wellness den dag: <span class="good">gr&oslash;n = god dag</span> (h&oslash;j HRV, lav hvilepuls, god s&oslash;vn), <span class="warn">gul = OK</span>, <span class="bad">r&oslash;d = h&aring;rd dag</span>. Lilla = ingen wellness-data. S&oslash;jleh&oslash;jden viser pace (lavere = hurtigere).</div>
     </div>
-  </div>
+    </div></details>
 
-  <!-- LØBEØKONOMI -->
-  <div class="page" id="p-economy">
-    <div id="coach-economy"></div>
-    <div class="info" style="margin-bottom:16px;">
-      <strong>Løbeøkonomi</strong> — Analyserer din løbeform over tid: skridtlængde, kadence, efficiency factor og deres sammenhæng med pace og puls. Jo bedre økonomi, jo hurtigere løber du med mindre energi.
-    </div>
-
-    <div class="grid g2" style="margin-bottom:20px;">
-      <div class="card">
+    <details class="sec"><summary>Løbeøkonomi</summary><div class="secbody">
+      <div id="coach-economy"></div>
+      <div class="grid g2">
+              <div class="card">
         <h3>Nøgletal (seneste 30 dage)</h3>
         <div id="economy-stats"></div>
       </div>
-      <div class="card">
+              <div class="card">
         <h3>Udvikling</h3>
         <div id="economy-progress"></div>
       </div>
-    </div>
-
-    <div class="card" style="margin-bottom:20px;">
+      </div>
+      <div class="grid g2">
+            <div class="card" style="margin-bottom:20px;">
       <h3>Skridtlængde over tid</h3>
       <div class="ch"><canvas id="cStride"></canvas></div>
       <div class="help"><span class="good">Grøn = skridtlængde (m)</span>, <span class="bad">rød stiplet = trend</span>. Stigende skridtlængde over tid tyder på bedre løbeøkonomi og styrke. Typisk 0.8-1.2m afhængig af tempo.</div>
     </div>
-
-    <div class="card" style="margin-bottom:20px;">
+            <div class="card" style="margin-bottom:20px;">
       <h3>Kadence over tid</h3>
       <div class="ch"><canvas id="cCadence"></canvas></div>
       <div class="help"><span class="good">Grøn zone = optimalt interval (170-185 spm).</span> Højere kadence reducerer belastning per skridt og mindsker skadesrisiko. Kadence stiger naturligt med tempoet.</div>
     </div>
-
-    <div class="card" style="margin-bottom:20px;">
+            <div class="card" style="margin-bottom:20px;">
       <h3>Hvad gør dig hurtigere? Skridtlængde vs. Kadence</h3>
       <div class="ch"><canvas id="cStrideVsCadence"></canvas></div>
       <div class="help">Scatter-plot: hvert punkt er et løb. <strong>X-akse</strong> = kadence, <strong>Y-akse</strong> = skridtlængde, <strong>farve</strong> = pace (grøn = hurtig, rød = langsom). Viser om du primært bliver hurtigere via længere skridt eller højere kadence.</div>
     </div>
-
-    <div class="card" style="margin-bottom:20px;">
+            <div class="card" style="margin-bottom:20px;">
       <h3>Efficiency Factor (EF) over tid</h3>
       <div class="ch"><canvas id="cEFTrend"></canvas></div>
       <div class="help">EF = hastighed / puls. <span class="good">Stigende EF = bedre løbeøkonomi</span> — du løber hurtigere med samme puls, eller samme tempo med lavere puls. <span class="bad">Rød stiplet = trend.</span></div>
     </div>
-  </div>
+      </div>
+    </div></details>
 
-  <!-- AKTIVITETER -->
-  <div class="page" id="p-activities">
-    <div class="card">
+    <details class="sec"><summary>Alle løb</summary><div class="secbody">
+          <div class="card">
       <h3>Alle l&oslash;b</h3>
       <div style="overflow-x:auto">
       <table>
@@ -810,10 +867,9 @@ img,svg,canvas { max-width:100%; }
       </table>
       </div>
     </div>
-  </div>
+    </div></details>
 
-  <!-- SPØGELSE (ghost race) -->
-  <div class="page" id="p-historik">
+    <details class="sec"><summary>Historik — 9 år</summary><div class="secbody">
     <div class="grid g6" id="hStats"></div>
     <div class="card full"><h3>Kalender-heatmap &mdash; 9 &aring;r</h3><div id="hHeat" style="overflow-x:auto"></div>
       <div style="font-size:12px;color:#8b8fa3;margin-top:8px">Gr&aring; = ingen l&oslash;b &middot; m&oslash;rk&rarr;lys gr&oslash;n = kort&rarr;langt l&oslash;b</div></div>
@@ -829,45 +885,16 @@ img,svg,canvas { max-width:100%; }
       <div class="card"><h3>Hvor l&oslash;ber jeg?</h3><div class="ch"><canvas id="hLoc"></canvas></div></div>
     </div>
     <div class="card full"><h3>PR-udvikling (pace pr. distance)</h3><div id="hPRcards" class="grid g6" style="margin-bottom:12px"></div><div class="ch"><canvas id="hPR"></canvas></div></div>
-  </div>
-  <div class="page" id="p-ghost">
-    <div class="gr-standfirst">
-      <div class="gr-verdict" id="gr-verdict"></div>
-      <div class="gr-vsub" id="gr-vsub"></div>
-    </div>
-    <div class="gr-lbl">Stillingen</div>
-    <div class="gr-duels" id="gr-duels"></div>
-    <div class="gr-lbl">Pace ved pulszone &mdash; sekunder/km</div>
-    <table class="gr-zt">
-      <thead><tr><th>Pulszone</th><th class="num">Dig nu</th><th class="num">Sp&oslash;gelset</th><th class="num">Gab</th></tr></thead>
-      <tbody id="gr-zone-body"></tbody>
-    </table>
-    <div class="gr-lbl">Stregerne du jagter (2024-peak)</div>
-    <div class="gr-targets" id="gr-targets"></div>
-    <div class="gr-foot" id="gr-foot"></div>
+    </div></details>
   </div>
 </div>
 
-<!-- BUNDMENU -->
-<div class="moreoverlay" id="moreOverlay"></div>
-<div class="moresheet" id="moreSheet">
-  <div class="grip"></div>
-  <h4>Flere sektioner</h4>
-  <div class="moregrid">
-    <button class="moreitem" data-page="insights"><span class="ic">&#128161;</span>Indsigter</button>
-    <button class="moreitem" data-page="wellness"><span class="ic">&#127769;</span>Wellness</button>
-    <button class="moreitem" data-page="economy"><span class="ic">&#10084;&#65039;</span>L&oslash;be&oslash;konomi</button>
-    <button class="moreitem" data-page="activities"><span class="ic">&#128203;</span>Aktiviteter</button>
-    <button class="moreitem" data-page="historik"><span class="ic">&#128336;</span>Historik</button>
-    <button class="moreitem" data-page="ghost"><span class="ic">&#128123;</span>Sp&oslash;gelse</button>
-  </div>
-</div>
-<nav class="bottomnav">
-  <button class="navbtn active" data-page="overview"><span class="ic">&#127968;</span>Overblik</button>
-  <button class="navbtn" data-page="goals"><span class="ic">&#127919;</span>M&aring;l</button>
-  <button class="navbtn" data-page="dagsform"><span class="ic">&#9889;</span>Dagsform</button>
-  <button class="navbtn" data-page="rundetail"><span class="ic">&#128200;</span>Analyse</button>
-  <button class="navbtn" id="moreBtn"><span class="ic">&#9776;</span>Mere</button>
+<!-- NAVIGATION: bundmenu på mobil, sidebjælke på desktop -->
+<nav class="bottomnav" aria-label="Hovedmenu">
+  <button class="navbtn active" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="2"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg><span>Overblik</span></button>
+  <button class="navbtn" data-page="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg><span>Mål</span></button>
+  <button class="navbtn" data-page="form"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg><span>Form</span></button>
+  <button class="navbtn" data-page="run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16"/></svg><span>Løb</span></button>
 </nav>
 
 <script>
@@ -897,7 +924,7 @@ async function init() {
     updateTimestamp();
     document.getElementById('loader').style.display = 'none';
     // Restore tab from hash, or default to overview
-    const hash = location.hash.replace('#', '');
+    const hash = pageAlias(location.hash.replace('#', ''));
     if (hash && document.getElementById('p-' + hash)) {
       activateTab(hash);
     } else {
@@ -937,17 +964,16 @@ async function refreshData() {
 function setupTabs() {
   document.querySelectorAll('.navbtn[data-page], .moreitem[data-page]').forEach(b =>
     b.addEventListener('click', () => activateTab(b.dataset.page)));
-  const mb = document.getElementById('moreBtn');
-  if (mb) mb.addEventListener('click', e => { e.stopPropagation(); toggleMoreSheet(); });
-  const ov = document.getElementById('moreOverlay');
-  if (ov) ov.addEventListener('click', closeMoreSheet);
   // Tab restore happens in init() after data is loaded
 }
-function openMoreSheet(){ const s=document.getElementById('moreSheet'), o=document.getElementById('moreOverlay'); if(s)s.classList.add('open'); if(o)o.classList.add('open'); }
-function closeMoreSheet(){ const s=document.getElementById('moreSheet'), o=document.getElementById('moreOverlay'); if(s)s.classList.remove('open'); if(o)o.classList.remove('open'); }
-function toggleMoreSheet(){ const s=document.getElementById('moreSheet'); if(s&&s.classList.contains('open')) closeMoreSheet(); else openMoreSheet(); }
 
+// gamle faner → nye (bevarer gamle links/bogmærker)
+const PAGE_ALIAS = {dagsform:'form', insights:'form', wellness:'form', rundetail:'run', economy:'run', activities:'run', historik:'run', ghost:'goals'};
+function pageAlias(p){ return PAGE_ALIAS[p] || p; }
 function activateTab(page) {
+  page = pageAlias(page);
+  document.body.dataset.page = page;
+  window.scrollTo(0, 0);
   document.querySelectorAll('.page').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
   const pg = document.getElementById('p-' + page);
   if (pg) { pg.style.display = 'block'; pg.classList.add('active'); }
@@ -955,18 +981,15 @@ function activateTab(page) {
   document.querySelectorAll('.navbtn').forEach(b => b.classList.remove('active'));
   const primary = document.querySelector(`.navbtn[data-page="${page}"]`);
   if (primary) primary.classList.add('active');
-  else { const mb = document.getElementById('moreBtn'); if (mb) mb.classList.add('active'); }
-  document.querySelectorAll('.moreitem').forEach(m => m.classList.toggle('sel', m.dataset.page === page));
-  closeMoreSheet();
+
   location.hash = page;
   render();
 }
 
 function setupPeriod() {
   document.querySelectorAll('.pbtn').forEach(b => b.addEventListener('click', () => {
-    document.querySelectorAll('.pbtn').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
     months = parseInt(b.dataset.m);
+    document.querySelectorAll('.pbtn').forEach(x => x.classList.toggle('active', x.dataset.m === b.dataset.m));
     render();
   }));
 }
@@ -1017,15 +1040,9 @@ function render() {
   const page = document.querySelector('.page.active')?.id;
 
   if (page === 'p-overview') renderOverview(fr);
-  if (page === 'p-goals') renderGoals(fr, fw);
-  if (page === 'p-dagsform') renderDagsform(fr, fw);
-  if (page === 'p-insights') renderInsights(fr, fw);
-  if (page === 'p-wellness') renderWellness(fw);
-  if (page === 'p-rundetail') renderRunDetailPage(fr, fw);
-  if (page === 'p-economy') renderEconomy(fr);
-  if (page === 'p-activities') renderActivities(fa, fw);
-  if (page === 'p-ghost') renderGhost();
-  if (page === 'p-historik') renderHistorik();
+  if (page === 'p-goals') { renderGoals(fr, fw); renderGhost(); }
+  if (page === 'p-form') { renderDagsform(fr, fw); renderWellness(fw); renderInsights(fr, fw); }
+  if (page === 'p-run') { renderRunDetailPage(fr, fw); renderEconomy(fr); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
 }
 
@@ -1115,10 +1132,8 @@ function renderCoach(page, fr){
   try{
     if(page==='p-overview')coachOverview(fr);
     else if(page==='p-goals')coachGoals(fr);
-    else if(page==='p-dagsform')coachDagsform();
-    else if(page==='p-rundetail')coachRundetail(fr);
-    else if(page==='p-economy')coachEconomy(fr);
-    else if(page==='p-insights')coachInsights(fr);
+    else if(page==='p-form'){ coachDagsform(); coachInsights(fr); }
+    else if(page==='p-run'){ coachRundetail(fr); coachEconomy(fr); }
   }catch(e){ /* coach må aldrig vælte siden */ }
 }
 
@@ -4303,6 +4318,32 @@ function renderGhost() {
     h.setAttribute('aria-expanded', String(i === 0));
     h.addEventListener('click', toggle);
     h.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); toggle(); } });
+  });
+})();
+
+// ---- UI: sektioner, info-ikoner, graf-vælger ----
+function resizeCharts(){ requestAnimationFrame(() => Object.values(charts).forEach(c => { try { c.resize(); } catch(e){} })); }
+document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('sec') && e.target.open) resizeCharts(); }, true);
+(function(){
+  // forklaringstekster bag et lille (i)-ikon i stedet for altid synlige
+  document.querySelectorAll('.card').forEach(card => {
+    if (card.closest('.goal-card') && !card.querySelector(':scope > .help, :scope > .chpane .help, :scope > div > .help')) return;
+    const help = card.querySelector('.help'); if (!help) return;
+    const head = card.querySelector(':scope > h3, :scope > .ch-head');
+    if (!head) return;
+    card.classList.add('hashelp');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'infobtn'; btn.setAttribute('aria-label', 'Vis forklaring'); btn.textContent = 'i';
+    btn.addEventListener('click', ev => { ev.stopPropagation(); card.classList.toggle('help-on'); });
+    head.classList.add('hasinfo'); head.appendChild(btn);
+  });
+  // graf-vælger på Overblik
+  const seg = document.getElementById('ovSeg');
+  if (seg) seg.addEventListener('click', e => {
+    const b = e.target.closest('button[data-pane]'); if (!b) return;
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.chartcard .chpane').forEach(pn => pn.classList.toggle('on', pn.dataset.pane === b.dataset.pane));
+    resizeCharts();
   });
 })();
 
