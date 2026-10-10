@@ -3946,13 +3946,7 @@ function renderRunDetail() {
   // Timeline chart
   renderTimeline(rdRuns);
 
-  // NEW: HR & Pace zone distribution
-  renderZoneCharts(a);
-
-  // NEW: Interval breakdown + progression + dynamics
-  renderIntervalSection(a);
-
-  // ---- AI-analyse af DETTE løb (erstatter effektivitets-trenden på kortet) ----
+  // ---- AI-analyse af DETTE løb (sat før graferne, så sparsomme løb stadig får analysen) ----
   try{
     const nm=(a.name||'Løb').replace(/[<>&]/g,' ');
     const rdHead=`${day} · ${nm} · ${km.toFixed(2)} km`;
@@ -3973,6 +3967,12 @@ function renderRunDetail() {
     };
     aiRunDetail(a, rdHead, rdData);
   }catch(e){}
+
+  // NEW: HR & Pace zone distribution
+  renderZoneCharts(a);
+
+  // NEW: Interval breakdown + progression + dynamics
+  renderIntervalSection(a);
 }
 
 // ---- ZONE CHARTS (HR + Pace) ----
