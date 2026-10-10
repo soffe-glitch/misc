@@ -1223,6 +1223,20 @@ async function aiCoachCard(cardId, tab, headline, data){
   }catch(e){ /* behold regelbaseret */ }
   finally{ aiCoachCard._busy[tab]=false; }
 }
+// ---- AI-analyse af ét konkret løb (Løb-fanen): cache pr. løb-id, ingen dags-udløb ----
+async function aiRunDetail(a, headline, data){
+  const el=document.getElementById('coach-rundetail'); if(!el||!a) return;
+  const LSK='liv-rundetail-'+a.id;
+  try{ const c=localStorage.getItem(LSK); if(c){ setCoachAI('coach-rundetail',headline,c); return; } }catch(e){}
+  aiRunDetail._pending=a.id;
+  setTimeout(async()=>{
+    if(aiRunDetail._pending!==a.id) return;   // brugeren skiftede løb imens
+    try{
+      const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({surface:'run',tab:'rundetail',trigger:'run-detail',data})});
+      if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ if(aiRunDetail._pending!==a.id) return; setCoachAI('coach-rundetail',headline,j.content); try{localStorage.setItem(LSK,j.content);}catch(e){} } }
+    }catch(e){ /* behold interim */ }
+  },450);
+}
 function coachGoals(r){
   const race=new Date('2026-09-20T00:00:00'); const days=Math.ceil((race.getTime()-Date.now())/86400000);
   const l35=coachInWin(r,35); const longest=l35.reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0);
@@ -1296,7 +1310,7 @@ function renderCoach(page, fr){
     if(page==='p-overview')coachOverview(fr);
     else if(page==='p-goals')coachGoals(fr);
     else if(page==='p-form'){ coachDagsform(); coachInsights(fr); }
-    else if(page==='p-run'){ coachRundetail(fr); coachEconomy(fr); }
+    else if(page==='p-run'){ coachEconomy(fr); }
   }catch(e){ /* coach må aldrig vælte siden */ }
 }
 
@@ -3937,6 +3951,28 @@ function renderRunDetail() {
 
   // NEW: Interval breakdown + progression + dynamics
   renderIntervalSection(a);
+
+  // ---- AI-analyse af DETTE løb (erstatter effektivitets-trenden på kortet) ----
+  try{
+    const nm=(a.name||'Løb').replace(/[<>&]/g,' ');
+    const rdHead=`${day} · ${nm} · ${km.toFixed(2)} km`;
+    const rdFallback=`${km.toFixed(2)} km på ${a.moving_time?Math.round(a.moving_time/60):'–'} min${p?' ('+coachFmtPace(p)+'/km)':''}${a.average_heartrate?', snitpuls '+a.average_heartrate:''}.`;
+    setCoachAI('coach-rundetail', rdHead, rdFallback);
+    const rdData={
+      fokus:'Analysér netop DETTE ene løb ud fra alle dets data: hvad kendetegnede turen, hvordan gik den, og hvad fortæller puls, pulszoner, belastning, kadence, højdemeter og dagsformen den dag. Skriv IKKE om en trend over flere uger, og nævn IKKE aerob effektivitet.',
+      kontekst:RUNCTX,
+      dato:day, navn:a.name||null, loebetype:runTypeLabel,
+      distance_km:+km.toFixed(2), varighed_min:a.moving_time?Math.round(a.moving_time/60):null, tempo_min_km:p?coachFmtPace(p):null,
+      puls_snit:a.average_heartrate||null, puls_max:a.max_heartrate||null,
+      kadence:a.average_cadence||null, hoejdemeter:a.total_elevation_gain||null, kalorier:a.calories||null,
+      traeningsbelastning:a.icu_training_load||null, hr_zoner_sekunder:a.icu_hr_zone_times||null,
+      foelelse:a.feel||null, anstrengelse:a.perceived_exertion||a.icu_rpe||null,
+      hvile_dage_foer:restDays,
+      vs_snit:{tempo_min_km:avgP?coachFmtPace(avgP):null, puls:avgHRv?Math.round(avgHRv):null},
+      dagsform:{soevn_timer:wl.sleepSecs?+(wl.sleepSecs/3600).toFixed(1):null, soevn_score:wl.sleepScore||null, hrv:wl.hrv||null, hvilepuls:wl.restingHR||null}
+    };
+    aiRunDetail(a, rdHead, rdData);
+  }catch(e){}
 }
 
 // ---- ZONE CHARTS (HR + Pace) ----
