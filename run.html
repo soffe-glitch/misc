@@ -1169,6 +1169,43 @@ function coachOverview(r){
   const headline=`${n30} løb · ${km30.toFixed(0)} km de sidste 30 dage`;
   const body=`Volumen er ${coachArrow(km30,kmPrev,true)} ${dir} vs. de foregående 30 dage (${kmPrev.toFixed(0)} km). Gns. tempo ${coachFmtPace(coachPace(l30))}/km. ${dir==='op'?'Motoren bygger — god retning.':dir==='ned'?'Roligere periode; kæden holdes med korte ture.':'Jævnt niveau — konsistensen er der.'}`;
   setCoach('coach-overview',headline,body);
+  aiCoachRun(r, headline);  // henter AI-brief (løbe-data) og erstatter den regelbaserede tekst
+}
+// ===== AI-coach på løbe-overblikket (samme funktion som livsstil, egen cache) =====
+function setCoachAI(id, headline, body){
+  const el=document.getElementById(id); if(!el)return;
+  const E=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  el.innerHTML = `<div class="insight" style="margin-bottom:16px"><h3>💬 Coach</h3><div class="finding">${headline}</div><p>${E(body)}</p></div>`;
+}
+async function aiCoachRun(fr, headline){
+  const el=document.getElementById('coach-overview'); if(!el) return;
+  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach';
+  try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
+  if(aiCoachRun._busy) return; aiCoachRun._busy=true;
+  try{
+    const l30=coachInWin(fr,30), lPrev=coachBetween(fr,30,60), l7=coachInWin(fr,7);
+    const rec=coachInWin(fr,28), prev=coachBetween(fr,28,56);
+    const longest=coachInWin(fr,35).reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0);
+    const efR=coachEF(rec), efP=coachEF(prev);
+    const lastRuns=fr.slice().sort((a,b)=>new Date(b.start_date_local||b.start_date)-new Date(a.start_date_local||a.start_date)).slice(0,6)
+      .map(a=>[(a.start_date_local||a.start_date||'').substring(0,10), +((a.distance||0)/1000).toFixed(2), coachFmtPace(((a.moving_time||0)/60)/Math.max(0.001,(a.distance||0)/1000))]);
+    let readiness=null; try{ const allW=wellness||[]; const dw=[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]; if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); if(rd) readiness=rd.score; } }catch(e){}
+    const sickRecent=(typeof sickDays!=='undefined'&&sickDays)?sickDays.filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)):[];
+    const data={
+      dato:t,
+      kontekst:'Genopbygning af daglig løbevane (1 km-gulv på hårde dage); netop oven på et par sygedage.',
+      sidste_30_dage:{loeb:l30.length, km:+coachKm(l30).toFixed(1), tempo_min_km:coachFmtPace(coachPace(l30)), km_forrige_30:+coachKm(lPrev).toFixed(1)},
+      sidste_7_dage:{loeb:l7.length, km:+coachKm(l7).toFixed(1), tempo_min_km:coachFmtPace(coachPace(l7))},
+      laengste_tur_35d_km:+longest.toFixed(1),
+      aerob_effektivitet:{nu:efR?+efR.toFixed(3):null, foer:efP?+efP.toFixed(3):null},
+      readiness_i_dag:readiness,
+      sygedage_sidste_14:sickRecent.length,
+      seneste_loeb:lastRuns
+    };
+    const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({surface:'run',tab:'overview',trigger:'run-dashboard',data})});
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI('coach-overview',headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
+  }catch(e){ /* offline / fejl → behold regelbaseret */ }
+  finally{ aiCoachRun._busy=false; }
 }
 function coachGoals(r){
   const race=new Date('2026-09-20T00:00:00'); const days=Math.ceil((race.getTime()-Date.now())/86400000);
