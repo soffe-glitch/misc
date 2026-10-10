@@ -1360,15 +1360,16 @@ function coachPayload(){
     kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null
   };
 }
+function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief";
-  try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; return; } }catch(e){}
+  const t=todayISO(), LSK="liv-coachbrief2";
+  try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
     const r=await fetch(FN_COACH,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},
       body:JSON.stringify({surface:"livsstil",tab:"overview",trigger:"dashboard",data:coachPayload()})});
-    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
   }catch(e){ /* offline / fejl → behold skabelonen */ }
   finally{ aiCoach._busy=false; }
 }
@@ -1483,6 +1484,7 @@ function coach(){
     "Løbet er klaret — resten af dagen er ren bonus."];
   const pick=arr=>arr[dayIdx%arr.length];
   $("#coachNudge").textContent = ranToday ? pick(nudgesDone) : pick(level==="lav"?nudgesLav:nudgesFrisk);
+  $("#coachNudge").style.display="";  // vises ved skabelon-reserve; skjules når AI-briefen er på
 }
 
 function insights(){
