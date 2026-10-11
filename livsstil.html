@@ -1358,13 +1358,33 @@ function coachPayload(){
     hrv_i_dag:(wl.hrv??null), hrv_snit:Math.round(avg(S.wellness.slice(-21).map(w=>w.hrv).filter(x=>x!=null)))||null,
     hvilepuls:(wl.resting_hr??null),
     loeb_seneste_6_aeldst_foerst:runs, sidste_loebedag:sidsteLoeb, loebet_i_dag:ranToday, dage_i_traek_MED_loeb_til_og_med_i_gaar_eller_i_dag:streak,
-    kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null
+    kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null,
+    rygestop:smokePayload(t)
   };
+}
+function smokePayload(t){
+  try{
+    const st=smokeStats(); if(!st.started) return null;
+    const hhmm=x=>new Date(x).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Copenhagen"});
+    const cr=st.cravings, y=addDays(t,-1);
+    const perDag={}; cr.forEach(x=>{perDag[x.log_date]=(perDag[x.log_date]||0)+1;});
+    const sit={}, instead={}; cr.forEach(x=>{ if(x.situation) sit[x.situation]=(sit[x.situation]||0)+1; (x.did_instead||[]).forEach(d=>{instead[d]=(instead[d]||0)+1;}); });
+    const ints=cr.map(x=>x.intensity).filter(x=>x!=null);
+    return {
+      stopdato:isoOf(st.q), dage_roegfri:+(st.ms/864e5).toFixed(1),
+      cigaretter_ikke_roeget:st.notSmoked, sparet_kr:Math.round(st.saved),
+      udskridninger_antal:st.slipN, sidste_udskridning:st.lastSlip?isoOf(st.lastSlip):null,
+      trang_pr_dag:perDag, trang_i_dag:perDag[t]||0, trang_i_gaar:perDag[y]||0,
+      trang_intensitet_snit_1til5:ints.length?+avg(ints).toFixed(1):null,
+      trang_situationer:sit, gjorde_i_stedet:instead,
+      trang_seneste:cr.slice(-6).map(x=>({dato:x.log_date,kl:hhmm(x.ts),situation:x.situation,intensitet:x.intensity,roeg:!!x.smoked,i_stedet:x.did_instead||[],note:x.note?String(x.note).slice(0,140):null}))
+    };
+  }catch(e){ return null; }
 }
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief3";
+  const t=todayISO(), LSK="liv-coachbrief4";
   try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
