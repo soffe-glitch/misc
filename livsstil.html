@@ -1376,15 +1376,14 @@ function smokePayload(t){
       udskridninger_antal:st.slipN, sidste_udskridning:st.lastSlip?isoOf(st.lastSlip):null,
       trang_pr_dag:perDag, trang_i_dag:perDag[t]||0, trang_i_gaar:perDag[y]||0,
       trang_intensitet_snit_1til5:ints.length?+avg(ints).toFixed(1):null,
-      trang_situationer:sit, gjorde_i_stedet:instead,
-      trang_seneste:cr.slice(-6).map(x=>({dato:x.log_date,kl:hhmm(x.ts),situation:x.situation,intensitet:x.intensity,roeg:!!x.smoked,i_stedet:x.did_instead||[],note:x.note?String(x.note).slice(0,140):null}))
+      trang_situationer:sit, gjorde_i_stedet:instead
     };
   }catch(e){ return null; }
 }
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief4";
+  const t=todayISO(), LSK="liv-coachbrief5";
   try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
