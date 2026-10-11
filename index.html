@@ -1344,7 +1344,8 @@ function coachPayload(){
   const cur=M.length?+M[M.length-1].weight_kg:null, curDate=M.length?M[M.length-1].log_date:null;
   let diff=null; try{ if(cur!=null&&s.kur_basis_weight) diff=+(malvaegt(curDate,+s.kur_basis_weight)-cur).toFixed(2); }catch(e){}
   const sl=S.wellness.slice(-5).map(w=>[w.log_date,w.sleep_hours]).filter(x=>x[1]!=null);
-  const runs=S.workouts.filter(w=>w.kind==="loeb").slice(-6).map(w=>[w.log_date,w.distance_km]);
+  const runs=S.workouts.filter(w=>w.kind==="loeb").sort((x,y)=>x.log_date<y.log_date?-1:1).slice(-6).map(w=>[w.log_date,w.distance_km]);
+  const sidsteLoeb=runs.length?runs[runs.length-1][0]:null;
   const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
   const runDays=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
   let streak=0, d=ranToday?t:addDays(t,-1);
@@ -1356,14 +1357,14 @@ function coachPayload(){
     soevn_naetter:sl, soevn_i_nat:(wl.sleep_hours??null), lur_i_dag_min:Math.round(napH(t)*60)||0,
     hrv_i_dag:(wl.hrv??null), hrv_snit:Math.round(avg(S.wellness.slice(-21).map(w=>w.hrv).filter(x=>x!=null)))||null,
     hvilepuls:(wl.resting_hr??null),
-    loeb_seneste:runs, loebet_i_dag:ranToday, streak_dage:streak,
+    loeb_seneste_6_aeldst_foerst:runs, sidste_loebedag:sidsteLoeb, loebet_i_dag:ranToday, dage_i_traek_MED_loeb_til_og_med_i_gaar_eller_i_dag:streak,
     kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null
   };
 }
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief2";
+  const t=todayISO(), LSK="liv-coachbrief3";
   try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
