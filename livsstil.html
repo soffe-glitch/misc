@@ -1346,19 +1346,23 @@ async function logEnergiQuick(v){
 // ---- AI-coach: skriver dagens brief frisk ud fra data (erstatter skabelonen) ----
 function coachPayload(){
   const t=todayISO(), s=S.settings||{}, M=morning();
+  const WD=["søndag","mandag","tirsdag","onsdag","torsdag","fredag","lørdag"];
+  const dl=iso=>{ const d=parseD(iso); return WD[d.getDay()]+" "+d.getDate()+". "+MONTHS[d.getMonth()]; };
   const wl=S.wellness[S.wellness.length-1]||{};
-  const mW=M.slice(-8).map(w=>[w.log_date,+w.weight_kg]);
+  const mW=M.slice(-8).map(w=>[dl(w.log_date),+w.weight_kg]);
   const cur=M.length?+M[M.length-1].weight_kg:null, curDate=M.length?M[M.length-1].log_date:null;
   let diff=null; try{ if(cur!=null&&s.kur_basis_weight) diff=+(malvaegt(curDate,+s.kur_basis_weight)-cur).toFixed(2); }catch(e){}
-  const sl=S.wellness.slice(-5).map(w=>[w.log_date,w.sleep_hours]).filter(x=>x[1]!=null);
-  const runs=S.workouts.filter(w=>w.kind==="loeb").sort((x,y)=>x.log_date<y.log_date?-1:1).slice(-6).map(w=>[w.log_date,w.distance_km]);
-  const sidsteLoeb=runs.length?runs[runs.length-1][0]:null;
+  // søvn pr. nat med ugedag: natten står på den morgen, hun vågnede (fx "natten til fredag 9. okt")
+  const sl=[]; for(let i=6;i>=0;i--){ const di=addDays(t,-i); const w=S.wellness.find(x=>x.log_date===di); sl.push(["natten til "+dl(di), w&&w.sleep_hours!=null?+w.sleep_hours:"ingen data (uret var ikke på)"]); }
+  const runs=S.workouts.filter(w=>w.kind==="loeb").sort((x,y)=>x.log_date<y.log_date?-1:1).slice(-6).map(w=>[dl(w.log_date),w.distance_km]);
+  const sidsteLoebIso=S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date).sort().pop()||null; const sidsteLoeb=sidsteLoebIso?dl(sidsteLoebIso):null;
   const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
   const runDays=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
   let streak=0, d=ranToday?t:addDays(t,-1);
   while(runDays.has(d)){ streak++; d=addDays(d,-1); }
   return {
-    dato:t,
+    dato:t, i_dag:dl(t), note:"Alle datoer står med ugedag — brug dem, gæt aldrig ugedage. Søvn står på den morgen hun vågnede.",
+    dagsform:S.rd?{score:S.rd.score,niveau:S.rd.level,traekker_ned:S.rd.flags}:null,
     maal:{start:+s.start_weight||null, realistisk:+s.realistic_goal||null, maal:+s.goal_weight||null, foran_linjen_kg:diff},
     morgenvaegt:mW, vaegt_i_dag:cur,
     soevn_naetter:sl, soevn_i_nat:(wl.sleep_hours??null), lur_i_dag_min:Math.round(napH(t)*60)||0,
@@ -1390,7 +1394,7 @@ function smokePayload(t){
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief5";
+  const t=todayISO(), LSK="liv-coachbrief6";
   try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
