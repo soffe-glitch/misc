@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="auth.js?v=20261012"></script>
 <script src="readiness.js?v=1"></script>
+<script src="connections.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E1411">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -455,6 +456,13 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
     </div></details>
   </div>
 
+  <!-- SAMMENHÆNGE -->
+  <div class="page" id="p-connect">
+    <div class="ra-sum" style="margin:2px 2px 14px">Jeg har gennemsøgt alle dine Garmin-dage, vægt og løb efter mønstre – også med forsinkelse (det du gør i dag, og hvad kroppen gør i morgen). Kun forskelle, der holder statistisk, vises. <span id="cn-meta"></span></div>
+    <div id="cn-list"></div>
+    <details class="sec" id="cn-none-wrap" style="display:none"><summary>Tjekket, men intet fundet</summary><div class="secbody"><div id="cn-none" class="ra-sum"></div></div></details>
+  </div>
+
   <!-- LØB -->
   <div class="page" id="p-run">
     <div id="coach-rundetail"></div>
@@ -502,6 +510,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
   <button class="navbtn active" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="2"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg><span>Overblik</span></button>
   <button class="navbtn" data-page="run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16"/></svg><span>Løb</span></button>
   <button class="navbtn" data-page="trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg><span>Udvikling</span></button>
+  <button class="navbtn" data-page="connect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="2.2"/><circle cx="18.5" cy="8" r="2.2"/><circle cx="9" cy="18" r="2.2"/><path d="M7.4 7l9.2 .8M6.6 8l1.6 7.9M17.4 10l-7 6.4"/></svg><span>Mønstre</span></button>
 </nav>
 
 <script>
@@ -609,7 +618,7 @@ function setupTabs() {
 }
 
 // gamle faner → nye (bevarer gamle links/bogmærker)
-const PAGE_ALIAS = {goals:'overview', ghost:'overview', form:'overview', dagsform:'overview', insights:'trend', wellness:'trend', historik:'trend', activities:'trend', rundetail:'run', economy:'run'};
+const PAGE_ALIAS = {goals:'overview', ghost:'overview', form:'overview', dagsform:'overview', insights:'trend', moenstre:'connect', sammenhaenge:'connect', wellness:'trend', historik:'trend', activities:'trend', rundetail:'run', economy:'run'};
 function pageAlias(p){ return PAGE_ALIAS[p] || p; }
 function activateTab(page) {
   page = pageAlias(page);
@@ -705,6 +714,7 @@ function render() {
 
   if (page === 'p-overview') { renderOverview(fr); renderHabit(); renderDagsform(fr, fw); }
   if (page === 'p-run') { renderRunDetailPage(fr, fw); }
+  if (page === 'p-connect') { renderConnections(); }
   if (page === 'p-trend') { renderInsightCards(); renderWellness(fw); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
 }
@@ -1222,6 +1232,39 @@ function renderFaster() {
       }
     }
   });
+}
+
+// ---- MØNSTRE: sammenhænge på tværs af alle data (connections.js) ----
+let cnLoaded = false;
+async function renderConnections() {
+  if (cnLoaded || renderConnections._busy) return;
+  renderConnections._busy = true;
+  const list = document.getElementById('cn-list');
+  list.innerHTML = '<div class="ra-sum">Analyserer dine data…</div>';
+  try {
+    const res = await Connections.run();
+    document.getElementById('cn-meta').textContent = `(${res.days} dage siden ${res.from.slice(0, 7)})`;
+    list.innerHTML = res.findings.map((f, i) => `
+      <div class="card ins" style="margin-bottom:12px">
+        <div class="ins-k">${f.kicker}</div><h3>${f.title}</h3>
+        <div class="ins-t">${f.html}</div>
+        ${f.chart ? `<div class="ch" style="height:180px"><canvas id="cnc${i}"></canvas></div>` : ''}
+      </div>`).join('') || '<div class="ra-sum">Ingen sammenhænge, der holder statistisk, endnu.</div>';
+    res.findings.forEach((f, i) => { if (f.chart) drawConnChart('cnc' + i, f.chart); });
+    const names = { 'stress → vægtændring': 'Stress → vægt', 'søvn → vægtændring': 'Søvn → vægt', 'skridt → vægtændring': 'Skridt → vægt', 'løbekm → vægtændring': 'Løb → vægt' };
+    if (res.none.length) { document.getElementById('cn-none-wrap').style.display = ''; document.getElementById('cn-none').innerHTML = 'Disse sammenhænge blev undersøgt, men er ikke tydelige i dine data:<br>' + res.none.map(n => '• ' + (names[n] || n)).join('<br>'); }
+    cnLoaded = true;
+  } catch (e) { list.innerHTML = '<div class="ra-sum">Kunne ikke hente data til analysen: ' + (e.message || e) + '</div>'; }
+  renderConnections._busy = false;
+}
+function drawConnChart(id, c) {
+  const ds = [{ type: c.type === 'line' ? 'line' : 'bar', label: c.unit, data: c.data, backgroundColor: c.color, borderColor: c.color, borderRadius: 4, pointRadius: 3, tension: .3, spanGaps: true, yAxisID: 'y' }];
+  if (c.data2) ds.push({ type: 'line', label: c.unit2, data: c.data2, borderColor: c.color2, backgroundColor: c.color2, pointRadius: 3, tension: .3, spanGaps: true, yAxisID: 'y2' });
+  mkChart(id, { type: c.type === 'line' ? 'line' : 'bar', data: { labels: c.labels, datasets: ds },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: !!c.data2, labels: { color: '#8b8fa3' } }, tooltip: { callbacks: { label: x => ` ${x.dataset.label}: ${String(x.raw).replace('.', ',')}` } } },
+      scales: { x: { ticks: { color: '#8b8fa3', maxRotation: 0 }, grid: { display: false } },
+        y: { min: c.zero ? undefined : c.min, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: c.unit, color: '#8b8fa3' } },
+        ...(c.data2 ? { y2: { position: 'right', ticks: { color: c.color2 }, grid: { display: false }, title: { display: true, text: c.unit2, color: '#8b8fa3' } } } : {}) } } });
 }
 
 // ---- UDVIKLING: indsigter i klar tekst + én lille graf pr. indsigt ----
