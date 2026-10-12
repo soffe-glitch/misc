@@ -2,7 +2,8 @@
 <html lang="da">
 <head>
 <meta charset="UTF-8">
-<script src="auth.js"></script>
+<script src="auth.js?v=20261012"></script>
+<script src="readiness.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E1411">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -956,6 +957,7 @@ async function init() {
   try {
     await loadGarmin();
     [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick()]);
+    try { if (window.Readiness) await Readiness.load(400); } catch (e) { console.warn("Readiness", e); }
     if (typeof GARMIN_DATA !== 'undefined') garminData = GARMIN_DATA;
     updateTimestamp();
     document.getElementById('loader').style.display = 'none';
@@ -1179,7 +1181,7 @@ function setCoachAI(id, headline, body){
 }
 async function aiCoachRun(fr, headline){
   const el=document.getElementById('coach-overview'); if(!el) return;
-  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach';
+  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v2';
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
   if(aiCoachRun._busy) return; aiCoachRun._busy=true;
   try{
@@ -1193,7 +1195,7 @@ async function aiCoachRun(fr, headline){
     const sickRecent=(typeof sickDays!=='undefined'&&sickDays)?sickDays.filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)):[];
     const data={
       dato:t,
-      kontekst:'Genopbygning af daglig løbevane (1 km-gulv på hårde dage); netop oven på et par sygedage.',
+      kontekst:runCtx(),
       sidste_30_dage:{loeb:l30.length, km:+coachKm(l30).toFixed(1), tempo_min_km:coachFmtPace(coachPace(l30)), km_forrige_30:+coachKm(lPrev).toFixed(1)},
       sidste_7_dage:{loeb:l7.length, km:+coachKm(l7).toFixed(1), tempo_min_km:coachFmtPace(coachPace(l7))},
       laengste_tur_35d_km:+longest.toFixed(1),
@@ -1209,12 +1211,17 @@ async function aiCoachRun(fr, headline){
 }
 // ---- generel AI-coach til de øvrige kort (hver med egen cache pr. tab) ----
 function nowISO(){ return new Date().toISOString().substring(0,10); }
-const RUNCTX='Genopbygning af daglig løbevane (1 km-gulv på hårde dage); netop oven på et par sygedage. Erfaren løber, følger træner Søren.';
+function runCtx(){ try{ const t=nowISO(); const wd=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'][new Date(t+'T12:00:00').getDay()];
+  let c='Genopbygning af daglig løbevane (1 km-gulv på hårde dage). Erfaren løber, følger træner Søren. I dag er '+wd+' '+t+'.';
+  const sk=(sickDays||[]).filter(d=>d>=hAdd(t,-14)).sort();
+  if(sk.length){ const last=sk[sk.length-1]; const ago=Math.round((new Date(t)-new Date(last))/864e5);
+    c+=' Sygedage de seneste 14 dage: '+sk.join(', ')+' (sidste for '+ago+' dage siden'+(ago>=4?' — sygdommen er overstået; nævn den kun hvis den forklarer noget i tallene':'')+').'; }
+  return c; }catch(e){ return 'Genopbygning af daglig løbevane. Erfaren løber, følger træner Søren.'; } }
 function runReadiness(){ try{ const allW=wellness||[]; const dw=[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]; if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); return rd?rd.score:null; } }catch(e){} return null; }
 function sickCount14(){ try{ return (sickDays||[]).filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)).length; }catch(e){ return 0; } }
 async function aiCoachCard(cardId, tab, headline, data){
   const el=document.getElementById(cardId); if(!el) return;
-  const t=nowISO(), LSK='liv-run-coach-'+tab;
+  const t=nowISO(), LSK='liv-run-coach-v2-'+tab;
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI(cardId,headline,c.text); return; } }catch(e){}
   aiCoachCard._busy=aiCoachCard._busy||{}; if(aiCoachCard._busy[tab]) return; aiCoachCard._busy[tab]=true;
   try{
@@ -1246,21 +1253,21 @@ function coachGoals(r){
   else if(longest>0) body=`Længste tur nyligt: ${longest.toFixed(0)} km. Distancen bliver et stræk, så læg dig i et bevidst roligt tempo fra start og brug gåpauser — målet er gennemførsel, ikke tid.`;
   else body=`Ingen lange ture registreret for nylig. Kør søndag ekstra konservativt: rolig start, gåpauser, fyld depoterne. Gennemførsel er sejren.`;
   setCoach('coach-goals',headline,body);
-  aiCoachCard('coach-goals','goals',headline,{dato:nowISO(),fokus:'mål og langsigtet retning',kontekst:RUNCTX,laengste_tur_35d_km:+coachInWin(r,35).reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0).toFixed(1),sidste_30_dage_km:+coachKm(coachInWin(r,30)).toFixed(1),note:'Halvmarathon 20/9 er overstået; ingen aktiv tidsjagt nu.'});
+  aiCoachCard('coach-goals','goals',headline,{dato:nowISO(),fokus:'mål og langsigtet retning',kontekst:runCtx(),laengste_tur_35d_km:+coachInWin(r,35).reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0).toFixed(1),sidste_30_dage_km:+coachKm(coachInWin(r,30)).toFixed(1),note:'Halvmarathon 20/9 er overstået; ingen aktiv tidsjagt nu.'});
 }
 function coachDagsform(){
   const allW=wellness||[]; const today=new Date().toISOString().substring(0,10); const wMap={}; allW.forEach(x=>wMap[x.id]=x);
   let dw=wMap[today]||[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]||null;
   const rd = (dw && typeof calcReadiness==='function')?calcReadiness(dw,allW,activities):null;
   if(!rd){ setCoach('coach-dagsform','Ingen dagsform-data endnu.','Når søvn/HRV/hvilepuls er synket, læser jeg din readiness her.'); return; }
-  const s=rd.score; const state=s>=70?'god':(s>=40?'moderat':'lav');
+  const s=rd.score; const state=rd.level?({frisk:'god',middel:'moderat',lav:'lav'})[rd.level]:(s>=70?'god':(s>=40?'moderat':'lav'));
   const up=(rd.factors||[]).filter(f=>f.score>=65).map(f=>f.name);
   const down=(rd.factors||[]).filter(f=>f.score<45).map(f=>f.name);
   const headline=`Readiness ${s}/100 — ${state} form i dag`;
   let body=`${down.length?('Trækker ned: '+down.join(', ')+'. '):''}${up.length?('Trækker op: '+up.join(', ')+'. '):''}`;
   body+= s>=70?'God dag til at køre et pas ordentligt igennem, hvis det passer med Sørens program.':(s>=40?'Hold det moderat — lad kroppen sætte tempoet i opvarmningen.':'Kroppen beder om en let dag eller hvile; du kender signalerne bedst.');
   setCoach('coach-dagsform',headline,body);
-  aiCoachCard('coach-dagsform','dagsform',headline,{dato:nowISO(),fokus:'dagsform/readiness i dag',kontekst:RUNCTX,readiness:s,traekker_ned:down,traekker_op:up});
+  aiCoachCard('coach-dagsform','dagsform',headline,{dato:nowISO(),fokus:'dagsform/readiness i dag',kontekst:runCtx(),readiness:s,traekker_ned:down,traekker_op:up});
 }
 function coachRundetail(r){
   const recent=coachInWin(r,28), prev=coachBetween(r,28,56);
@@ -1272,7 +1279,7 @@ function coachRundetail(r){
   if(pct!=null) body+=`De sidste 4 uger er den ${pct>=0?'steget':'faldet'} ${Math.abs(pct).toFixed(0)}% vs. de forrige 4 (${efP.toFixed(2)}). ${pct>=2?'Klar fremgang — formen bygger.':(pct<=-2?'Lidt tilbagegang; ofte varme, træthed eller mindre volumen.':'Nogenlunde stabilt.')} `;
   body+=`Gns. tempo ${coachFmtPace(coachPace(recent))}/km over ${recent.length} løb.`;
   setCoach('coach-rundetail',headline,body);
-  aiCoachCard('coach-rundetail','rundetail',headline,{dato:nowISO(),fokus:'aerob effektivitet og tempoudvikling',kontekst:RUNCTX,aerob_effektivitet:{nu:+efR.toFixed(3),foer:efP?+efP.toFixed(3):null},aendring_pct:pct!=null?+pct.toFixed(1):null,tempo_min_km:coachFmtPace(coachPace(recent)),antal_loeb:recent.length,readiness_i_dag:runReadiness()});
+  aiCoachCard('coach-rundetail','rundetail',headline,{dato:nowISO(),fokus:'aerob effektivitet og tempoudvikling',kontekst:runCtx(),aerob_effektivitet:{nu:+efR.toFixed(3),foer:efP?+efP.toFixed(3):null},aendring_pct:pct!=null?+pct.toFixed(1):null,tempo_min_km:coachFmtPace(coachPace(recent)),antal_loeb:recent.length,readiness_i_dag:runReadiness()});
 }
 function coachAvg(list, sel){ const v=list.map(sel).filter(x=>x!=null&&isFinite(x)); return v.length?v.reduce((s,x)=>s+x,0)/v.length:null; }
 function coachEconomy(r){
@@ -1286,7 +1293,7 @@ function coachEconomy(r){
   if(strR!=null&&strP!=null){ const ds=strR-strP; if(Math.abs(ds)>=0.02) body+= ds>0?'Skridtlængden er vokset — typisk mere kraft/bedre form. ':'Skridtlængden er kortere — normalt i rolige/trætte perioder. '; }
   body+='Styrketræningen du genoptog kan give ekstra økonomi hen over vinteren.';
   setCoach('coach-economy',head.join(' · '),body);
-  aiCoachCard('coach-economy','economy',head.join(' · '),{dato:nowISO(),fokus:'løbeøkonomi (kadence og skridtlængde)',kontekst:RUNCTX,kadence:{nu:cadR?Math.round(cadR):null,foer:cadP?Math.round(cadP):null},skridtlaengde:{nu:strR?+strR.toFixed(2):null,foer:strP?+strP.toFixed(2):null}});
+  aiCoachCard('coach-economy','economy',head.join(' · '),{dato:nowISO(),fokus:'løbeøkonomi (kadence og skridtlængde)',kontekst:runCtx(),kadence:{nu:cadR?Math.round(cadR):null,foer:cadP?Math.round(cadP):null},skridtlaengde:{nu:strR?+strR.toFixed(2):null,foer:strP?+strP.toFixed(2):null}});
 }
 function coachInsights(r){
   const acute=coachKm(coachInWin(r,7));
@@ -1303,7 +1310,7 @@ function coachInsights(r){
   }
   body+=`Ca. ${nWk.toFixed(1)} løb/uge de sidste 4 uger.`;
   setCoach('coach-insights',headline,body);
-  aiCoachCard('coach-insights','insights',headline,{dato:nowISO(),fokus:'belastning (akut/kronisk) og skadesrisiko',kontekst:RUNCTX,acwr:acwr,akut_km_7d:+acute.toFixed(1),kronisk_uge_km:+chronic.toFixed(1),loeb_pr_uge:+nWk.toFixed(1)});
+  aiCoachCard('coach-insights','insights',headline,{dato:nowISO(),fokus:'belastning (akut/kronisk) og skadesrisiko',kontekst:runCtx(),acwr:acwr,akut_km_7d:+acute.toFixed(1),kronisk_uge_km:+chronic.toFixed(1),loeb_pr_uge:+nWk.toFixed(1)});
 }
 function renderCoach(page, fr){
   try{
@@ -2940,6 +2947,8 @@ function getBB(w) {
 // Inspireret af Garmin Body Battery, men gennemsigtig: du kan se præcis hvad der påvirker scoren.
 function calcReadiness(wellDay, wellAll, recentActs) {
   if (!wellDay) return null;
+  // Fælles motor (readiness.js) med Garmin-data — samme svar som livsstil-appen. Gammel beregning er fallback.
+  try { if (window.Readiness && Readiness.ready()) { const r = Readiness.computeFor(String(wellDay.id || "").slice(0, 10)); if (r) return { score: r.score, factors: r.factors, flags: r.flags, level: r.level }; } } catch (e) {}
 
   const factors = [];
   let totalWeight = 0;
@@ -3954,7 +3963,7 @@ function renderRunDetail() {
     setCoachAI('coach-rundetail', rdHead, rdFallback);
     const rdData={
       fokus:'Analysér netop DETTE ene løb ud fra alle dets data: hvad kendetegnede turen, hvordan gik den, og hvad fortæller puls, pulszoner, belastning, kadence, højdemeter og dagsformen den dag. Skriv IKKE om en trend over flere uger, og nævn IKKE aerob effektivitet.',
-      kontekst:RUNCTX,
+      kontekst:runCtx(),
       dato:day, navn:a.name||null, loebetype:runTypeLabel,
       distance_km:+km.toFixed(2), varighed_min:a.moving_time?Math.round(a.moving_time/60):null, tempo_min_km:p?coachFmtPace(p):null,
       puls_snit:a.average_heartrate||null, puls_max:a.max_heartrate||null,
