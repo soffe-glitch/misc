@@ -1181,7 +1181,7 @@ function setCoachAI(id, headline, body){
 }
 async function aiCoachRun(fr, headline){
   const el=document.getElementById('coach-overview'); if(!el) return;
-  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v2';
+  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v3';
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
   if(aiCoachRun._busy) return; aiCoachRun._busy=true;
   try{
@@ -1204,13 +1204,32 @@ async function aiCoachRun(fr, headline){
       sygedage_sidste_14:sickRecent.length,
       seneste_loeb:lastRuns
     };
-    const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({surface:'run',tab:'overview',trigger:'run-dashboard',data})});
+    const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(aiEnrich({surface:'run',tab:'overview',trigger:'run-dashboard',data}))});
     if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI('coach-overview',headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
   }catch(e){ /* offline / fejl → behold regelbaseret */ }
   finally{ aiCoachRun._busy=false; }
 }
 // ---- generel AI-coach til de øvrige kort (hver med egen cache pr. tab) ----
 function nowISO(){ return new Date().toISOString().substring(0,10); }
+// ---- giv AI-coachen ugedage på ALLE datoer + dagens fælles dagsform, så den aldrig gætter ----
+function aiEnrich(payload){
+  try{
+    const WD=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+    const wd=iso=>{ const [y,m,d]=iso.slice(0,10).split('-').map(Number); return WD[new Date(y,m-1,d).getDay()]; };
+    const walk=v=>{
+      if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}($|T)/.test(v)) return v.slice(0,10)+' ('+wd(v)+')'+v.slice(10);
+      if(Array.isArray(v)) return v.map(walk);
+      if(v&&typeof v==='object'){ const o={}; for(const k in v) o[k]=walk(v[k]); return o; }
+      return v;
+    };
+    const t=nowISO();
+    const data=walk(payload.data||{});
+    data.i_dag=t+' ('+wd(t)+')';
+    data.note='Alle datoer står med ugedag i parentes — brug dem, gæt aldrig ugedage. Søvn/HRV står på den morgen hun vågnede.';
+    try{ if(window.Readiness&&Readiness.ready()){ const r=Readiness.today(); if(r) data.dagsform_i_dag={score:r.score,niveau:r.level,traekker_ned:r.flags.map(f=>Readiness.FLAG_TXT[f]||f)}; } }catch(e){}
+    return Object.assign({},payload,{data});
+  }catch(e){ return payload; }
+}
 function runCtx(){ try{ const t=nowISO(); const wd=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'][new Date(t+'T12:00:00').getDay()];
   let c='Genopbygning af daglig løbevane (1 km-gulv på hårde dage). Erfaren løber, følger træner Søren. I dag er '+wd+' '+t+'.';
   const sk=(sickDays||[]).filter(d=>d>=hAdd(t,-14)).sort();
@@ -1221,11 +1240,11 @@ function runReadiness(){ try{ const allW=wellness||[]; const dw=[...allW].sort((
 function sickCount14(){ try{ return (sickDays||[]).filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)).length; }catch(e){ return 0; } }
 async function aiCoachCard(cardId, tab, headline, data){
   const el=document.getElementById(cardId); if(!el) return;
-  const t=nowISO(), LSK='liv-run-coach-v2-'+tab;
+  const t=nowISO(), LSK='liv-run-coach-v3-'+tab;
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI(cardId,headline,c.text); return; } }catch(e){}
   aiCoachCard._busy=aiCoachCard._busy||{}; if(aiCoachCard._busy[tab]) return; aiCoachCard._busy[tab]=true;
   try{
-    const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({surface:'run',tab,trigger:'run-dashboard',data})});
+    const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(aiEnrich({surface:'run',tab,trigger:'run-dashboard',data}))});
     if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI(cardId,headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
   }catch(e){ /* behold regelbaseret */ }
   finally{ aiCoachCard._busy[tab]=false; }
@@ -1233,13 +1252,13 @@ async function aiCoachCard(cardId, tab, headline, data){
 // ---- AI-analyse af ét konkret løb (Løb-fanen): cache pr. løb-id, ingen dags-udløb ----
 async function aiRunDetail(a, headline, data){
   const el=document.getElementById('coach-rundetail'); if(!el||!a) return;
-  const LSK='liv-rundetail-'+a.id;
+  const LSK='liv-rundetail2-'+a.id;
   try{ const c=localStorage.getItem(LSK); if(c){ setCoachAI('coach-rundetail',headline,c); return; } }catch(e){}
   aiRunDetail._pending=a.id;
   setTimeout(async()=>{
     if(aiRunDetail._pending!==a.id) return;   // brugeren skiftede løb imens
     try{
-      const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({surface:'run',tab:'rundetail',trigger:'run-detail',data})});
+      const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(aiEnrich({surface:'run',tab:'rundetail',trigger:'run-detail',data}))});
       if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ if(aiRunDetail._pending!==a.id) return; setCoachAI('coach-rundetail',headline,j.content); try{localStorage.setItem(LSK,j.content);}catch(e){} } }
     }catch(e){ /* behold interim */ }
   },450);
