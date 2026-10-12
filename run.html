@@ -1181,7 +1181,7 @@ function setCoachAI(id, headline, body){
 }
 async function aiCoachRun(fr, headline){
   const el=document.getElementById('coach-overview'); if(!el) return;
-  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v3';
+  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v4';
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
   if(aiCoachRun._busy) return; aiCoachRun._busy=true;
   try{
@@ -1225,7 +1225,7 @@ function aiEnrich(payload){
     const t=nowISO();
     const data=walk(payload.data||{});
     data.i_dag=t+' ('+wd(t)+')';
-    data.note='Alle datoer står med ugedag i parentes — brug dem, gæt aldrig ugedage. Søvn/HRV står på den morgen hun vågnede.';
+    data.note=(data.note?data.note+' ':'')+'Skriv direkte til Sofie i du-form (aldrig "Sofie er…" eller "hun"). Alle datoer står med ugedag i parentes — brug dem, gæt aldrig ugedage. Søvn/HRV står på den morgen hun vågnede.';
     try{ if(window.Readiness&&Readiness.ready()){ const r=Readiness.today(); if(r) data.dagsform_i_dag={score:r.score,niveau:r.level,traekker_ned:r.flags.map(f=>Readiness.FLAG_TXT[f]||f)}; } }catch(e){}
     return Object.assign({},payload,{data});
   }catch(e){ return payload; }
@@ -1234,13 +1234,13 @@ function runCtx(){ try{ const t=nowISO(); const wd=['søndag','mandag','tirsdag'
   let c='Genopbygning af daglig løbevane (1 km-gulv på hårde dage). Erfaren løber, følger træner Søren. I dag er '+wd+' '+t+'.';
   const sk=(sickDays||[]).filter(d=>d>=hAdd(t,-14)).sort();
   if(sk.length){ const last=sk[sk.length-1]; const ago=Math.round((new Date(t)-new Date(last))/864e5);
-    c+=' Sygedage de seneste 14 dage: '+sk.join(', ')+' (sidste for '+ago+' dage siden'+(ago>=4?' — sygdommen er overstået; nævn den kun hvis den forklarer noget i tallene':'')+').'; }
+    if(ago<4) c+=' Sygedage de seneste dage: '+sk.join(', ')+' (sidste for '+ago+' dage siden).'; }
   return c; }catch(e){ return 'Genopbygning af daglig løbevane. Erfaren løber, følger træner Søren.'; } }
 function runReadiness(){ try{ const allW=wellness||[]; const dw=[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]; if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); return rd?rd.score:null; } }catch(e){} return null; }
 function sickCount14(){ try{ return (sickDays||[]).filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)).length; }catch(e){ return 0; } }
 async function aiCoachCard(cardId, tab, headline, data){
   const el=document.getElementById(cardId); if(!el) return;
-  const t=nowISO(), LSK='liv-run-coach-v3-'+tab;
+  const t=nowISO(), LSK='liv-run-coach-v4-'+tab;
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI(cardId,headline,c.text); return; } }catch(e){}
   aiCoachCard._busy=aiCoachCard._busy||{}; if(aiCoachCard._busy[tab]) return; aiCoachCard._busy[tab]=true;
   try{
@@ -1264,15 +1264,14 @@ async function aiRunDetail(a, headline, data){
   },450);
 }
 function coachGoals(r){
-  const race=new Date('2026-09-20T00:00:00'); const days=Math.ceil((race.getTime()-Date.now())/86400000);
+  // NB: halvmarathonet 20/9 blev IKKE løbet (sprunget over). Intet løb i kalenderen lige nu.
   const l35=coachInWin(r,35); const longest=l35.reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0);
-  const headline = days>=0?`${days} dage til halvmarathon — plan: gennemfør behageligt`:'Halvmarathon overstået';
-  let body;
-  if(longest>=15) body=`Din længste tur nyligt er ${longest.toFixed(0)} km — basen til at komme rundt om de 21,1 km er der. Sub-1:47 er udskudt som sæsonmål; søndag handler om at krydse stregen i roligt tempo med gåpauser efter behov.`;
-  else if(longest>0) body=`Længste tur nyligt: ${longest.toFixed(0)} km. Distancen bliver et stræk, så læg dig i et bevidst roligt tempo fra start og brug gåpauser — målet er gennemførsel, ikke tid.`;
-  else body=`Ingen lange ture registreret for nylig. Kør søndag ekstra konservativt: rolig start, gåpauser, fyld depoterne. Gennemførsel er sejren.`;
+  const km30=coachKm(coachInWin(r,30));
+  const headline='Intet løb planlagt — fokus: vanen og basen';
+  const body=`Der står ikke noget løb i kalenderen lige nu. De sidste 30 dage er det blevet til ${km30.toFixed(0)} km${longest>0?`, og din længste tur de sidste 5 uger er ${longest.toFixed(1)} km`:''}. Sub-1:47 står stadig som dit retur-til-form-mål — uden dato, så der er ingen grund til at jagte tempo nu.`;
   setCoach('coach-goals',headline,body);
-  aiCoachCard('coach-goals','goals',headline,{dato:nowISO(),fokus:'mål og langsigtet retning',kontekst:runCtx(),laengste_tur_35d_km:+coachInWin(r,35).reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0).toFixed(1),sidste_30_dage_km:+coachKm(coachInWin(r,30)).toFixed(1),note:'Halvmarathon 20/9 er overstået; ingen aktiv tidsjagt nu.'});
+  aiCoachCard('coach-goals','goals',headline,{dato:nowISO(),fokus:'mål og langsigtet retning',kontekst:runCtx(),laengste_tur_35d_km:+longest.toFixed(1),sidste_30_dage_km:+km30.toFixed(1),
+    note:'Halvmarathonet 20. september blev IKKE løbet — hun sprang det over. Nævn det ikke som overstået eller gennemført. Der er intet løb planlagt nu. Fokus er den daglige løbevane (1 km-gulv) og at bygge basen op. Sub-1:47 på halvmarathon er et langsigtet retur-til-form-mål uden dato.'});
 }
 function coachDagsform(){
   const allW=wellness||[]; const today=new Date().toISOString().substring(0,10); const wMap={}; allW.forEach(x=>wMap[x.id]=x);
