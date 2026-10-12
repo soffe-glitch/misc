@@ -943,6 +943,44 @@ async function loadGarmin() {
   } catch (e) { /* uden Garmin-historik virker resten stadig */ }
 }
 
+// ---- Garmin-løb fra tabellen garmin_activities (frisk, helt op til i dag) ----
+// Oversættes til samme felter som intervals.icu, så resten af siden er uændret.
+// Cadence er pr. fod (siden ganger med 2), skridtlængde i meter.
+const GA_TYPE = { running:'Run', treadmill_running:'Run', trail_running:'TrailRun', virtual_run:'VirtualRun', walking:'Walk', hiking:'Hike' };
+async function fetchGarminActs() {
+  try {
+    const cols = ['activity_id','start_local','type','name','distance_m','duration_s','moving_s','avg_hr','max_hr','avg_speed',
+      'elevation_gain','vo2max','training_load','aerobic_te','anaerobic_te',
+      'gmt:raw->>startTimeGMT','cad:raw->>averageRunningCadenceInStepsPerMinute','stride:raw->>avgStrideLength',
+      'gct:raw->>avgGroundContactTime','vosc:raw->>avgVerticalOscillation','vrat:raw->>avgVerticalRatio',
+      'kcal:raw->>calories','loc:raw->>locationName','tmin:raw->>minTemperature','tmax:raw->>maxTemperature',
+      'z1:raw->>hrTimeInZone_1','z2:raw->>hrTimeInZone_2','z3:raw->>hrTimeInZone_3','z4:raw->>hrTimeInZone_4','z5:raw->>hrTimeInZone_5'].join(',');
+    const types = Object.keys(GA_TYPE).join(',');
+    const r = await fetch(`https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_activities?select=${cols}&type=in.(${types})&order=start_local.asc&limit=2000`, { headers: hdr() });
+    if (!r.ok) return [];
+    const n = v => (v == null || v === '' ? null : +v);
+    return (await r.json()).filter(g => g.distance_m > 0).map(g => {
+      const local = String(g.start_local).replace(' ', 'T').substring(0, 19);
+      const tmp = [n(g.tmin), n(g.tmax)].filter(x => x != null);
+      const zones = [g.z1, g.z2, g.z3, g.z4, g.z5].map(n);
+      return {
+        id: String(g.activity_id), _src: 'garmin-db', name: g.name, type: GA_TYPE[g.type] || 'Run',
+        start_date_local: local, start_date: g.gmt ? String(g.gmt).replace(' ', 'T').substring(0, 19) + 'Z' : local + 'Z',
+        distance: +g.distance_m, moving_time: Math.round(g.moving_s || g.duration_s), elapsed_time: Math.round(g.duration_s),
+        average_speed: n(g.avg_speed), average_heartrate: n(g.avg_hr), max_heartrate: n(g.max_hr),
+        average_cadence: n(g.cad) != null ? n(g.cad) / 2 : null,
+        average_stride: n(g.stride) != null ? n(g.stride) / 100 : null,
+        total_elevation_gain: n(g.elevation_gain), vo2max: n(g.vo2max), icu_training_load: n(g.training_load),
+        aerobic_te: n(g.aerobic_te), anaerobic_te: n(g.anaerobic_te),
+        gct: n(g.gct), vert_osc: n(g.vosc), vert_ratio: n(g.vrat),
+        calories: n(g.kcal), location: g.loc || null,
+        temp: tmp.length ? tmp.reduce((a, b) => a + b, 0) / tmp.length : null,
+        icu_hr_zone_times: zones.some(z => z != null) ? zones.map(z => z || 0) : null
+      };
+    });
+  } catch (e) { return []; }
+}
+
 // ---- Init ----
 async function init() {
   setupTabs();
@@ -1030,10 +1068,14 @@ async function fetchActs() {
   const r = await fetch(`${BASE}/athlete/${ATHLETE}/activities?oldest=2015-01-01&newest=2027-01-01`, { headers: hdr() });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const live = (await r.json()).filter(a => ['Run','VirtualRun','TrailRun','Walk','Hike'].includes(a.type));
-  // Flet Garmin-historik (base t.o.m. 17-07-2026) med Intervals (live). Intervals vinder ved samme dato.
-  const hist = (window.GARMIN_HISTORY || []);
-  const liveDates = new Set(live.map(a => (a.start_date_local || '').substring(0,10)));
-  const merged = hist.filter(h => !liveDates.has((h.start_date_local || '').substring(0,10))).concat(live);
+  // Flet tre lag pr. dato: Garmin-blob (gammel), garmin_activities (frisk), Intervals (live). Højeste lag vinder.
+  // Lag (laveste først): gammel Garmin-blob (2017-) < garmin_activities (2024-, helt til i dag) < intervals live.
+  const day = a => (a.start_date_local || '').substring(0,10);
+  const liveDates = new Set(live.map(day));
+  const gdb = (await fetchGarminActs()).filter(g => !liveDates.has(day(g)));
+  const gdbDates = new Set(gdb.map(day));
+  const hist = (window.GARMIN_HISTORY || []).filter(h => !liveDates.has(day(h)) && !gdbDates.has(day(h)));
+  const merged = hist.concat(gdb, live);
   merged.sort((a,b) => (a.start_date_local || '').localeCompare(b.start_date_local || ''));
   return merged;
 }
