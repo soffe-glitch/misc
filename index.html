@@ -2,7 +2,7 @@
 <html lang="da">
 <head>
 <meta charset="utf-8">
-<script src="auth.js"></script>
+<script src="auth.js?v=20261012"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sofies Livsstil</title>
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -1830,7 +1830,7 @@ $("#sickBtn").onclick=()=>toggleSick(todayISO());
 (async()=>{const b=$("#lockBtn"); if(!b||!window.LivAuth) return; if(!(await LivAuth.lock.supported())) return; b.style.display="";
   const paint=()=>{const on=LivAuth.lock.enabled(); b.textContent=on?"🔒":"🔓"; b.title=on?"Face ID-lås er til (tryk for at slå fra)":"Slå Face ID-lås til på denne enhed";}; paint();
   b.onclick=async()=>{try{ if(LivAuth.lock.enabled()){ if(confirm("Slå Face ID-lås fra på denne enhed?")) LivAuth.lock.disable(); } else { await LivAuth.lock.enable(); alert("Face ID-lås er slået til. Appen låser, når du åbner den igen."); } }catch(e){ alert("Kunne ikke slå Face ID til: "+((e&&e.message)||e)); } paint();};})();
-$("#pwBtn").onclick=()=>{ if(window.LivAuth&&LivAuth.changePassword) LivAuth.changePassword(); };
+$("#pwBtn").onclick=()=>{ if(window.LivAuth&&LivAuth.changePassword) LivAuth.changePassword(); else { alert("Appen bruger stadig en gammel version — genindlæser…"); location.reload(); } };
 $("#logoutBtn").onclick=()=>{ if(window.LivAuth && confirm("Log ud på denne enhed?")) LivAuth.logout(); };
 $("#streakStrip").addEventListener("click",e=>{const c=e.target.closest("[data-d]"); if(c) toggleSick(c.dataset.d);});
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
