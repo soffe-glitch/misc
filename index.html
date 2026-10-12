@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="auth.js?v=20261012"></script>
+<script src="readiness.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sofies Livsstil</title>
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -748,6 +749,7 @@ async function loadAll(){
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
                rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake})); }catch(e){ S.garmin=[]; }
   try{ S.gacts=await get("garmin_activities","?select=log_date,type,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
+  try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -1448,14 +1450,15 @@ function coach(){
   if(sleepDebt) flags.push("søvngæld");
   const FLAG_TXT={"søvn":"kort nat","søvnkvalitet":"urolig søvn","hrv":"lav HRV","puls":"høj hvilepuls","batteri":"lavt Body Battery",
     "stress":"stresset dag i går","ben":"hård træning i går","alkohol":"alkohol i går","drænet":"drænende dag i går","søvngæld":"søvngæld"};
-  const level = flags.length>=3?"lav":flags.length>=1?"middel":"frisk";
+  if(S.rd){ flags.length=0; S.rd.flags.forEach(x=>flags.push(x)); sig.unshift(`dagsform ${S.rd.score}/100`); }
+  const level = S.rd ? S.rd.level : (flags.length>=3?"lav":flags.length>=1?"middel":"frisk");
 
   if(wl){ const body=sig.length?` (${sig.join(", ")})`:"";
     if(level==="frisk") parts.push(`Kroppen ser <b>frisk</b> ud i dag${body}.`);
     else if(level==="middel") parts.push(`Kroppen er <b>lidt lav</b> i dag${body} — ikke rødt, men ikke topdag.`);
     else parts.push(`Kroppen er <b>lav</b> i dag${body}${yAlc>0?", bl.a. efter gårsdagens alkohol":""}.`);
   }
-  if(flags.length) parts.push(`Trækker ned: ${flags.map(f=>FLAG_TXT[f]||f).join(", ")}.`);
+  if(flags.length) parts.push(`Trækker ned: ${flags.map(f=>(window.Readiness&&Readiness.FLAG_TXT[f])||FLAG_TXT[f]||f).join(", ")}.`);
   if(sleepDebt) parts.push(`Du har sovet ~${hhmm(debtAvg)} i snit de sidste ${recentSleep.length} nætter — det er reel søvngæld, ikke bare én kort nat. Derfor kalder jeg dig ikke frisk, selv når HRV-tallet i dag ser ok ud: gulvet holder kæden, men lad morgenturen blive kort.`);
 
   // ---- træning: gennemført / planlagt i dag / næste pas ----
