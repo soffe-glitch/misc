@@ -220,6 +220,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <button class="btn" id="syncBtn" title="Hent nyeste fra Withings + intervals.icu">↻ Synk</button>
       <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
       <button class="btn" id="lockBtn" title="Face ID-lås på denne enhed" style="display:none">🔓</button>
+      <button class="btn" id="pwBtn" title="Skift adgangskode">🔑</button>
       <button class="btn" id="logoutBtn" title="Log ud af denne enhed">Log ud</button>
     </div>
   </header>
@@ -1829,6 +1830,7 @@ $("#sickBtn").onclick=()=>toggleSick(todayISO());
 (async()=>{const b=$("#lockBtn"); if(!b||!window.LivAuth) return; if(!(await LivAuth.lock.supported())) return; b.style.display="";
   const paint=()=>{const on=LivAuth.lock.enabled(); b.textContent=on?"🔒":"🔓"; b.title=on?"Face ID-lås er til (tryk for at slå fra)":"Slå Face ID-lås til på denne enhed";}; paint();
   b.onclick=async()=>{try{ if(LivAuth.lock.enabled()){ if(confirm("Slå Face ID-lås fra på denne enhed?")) LivAuth.lock.disable(); } else { await LivAuth.lock.enable(); alert("Face ID-lås er slået til. Appen låser, når du åbner den igen."); } }catch(e){ alert("Kunne ikke slå Face ID til: "+((e&&e.message)||e)); } paint();};})();
+$("#pwBtn").onclick=()=>{ if(window.LivAuth&&LivAuth.changePassword) LivAuth.changePassword(); };
 $("#logoutBtn").onclick=()=>{ if(window.LivAuth && confirm("Log ud på denne enhed?")) LivAuth.logout(); };
 $("#streakStrip").addEventListener("click",e=>{const c=e.target.closest("[data-d]"); if(c) toggleSick(c.dataset.d);});
 $("#mCancel").onclick=()=>$("#mDialog").classList.remove("open");
