@@ -1936,8 +1936,9 @@ function renderPrePauseBaseline(allRuns, allWellness) {
 // (Old goal editor removed — replaced by Sub-20 Projektion)
 
 function fmtTime(min) {
-  const m = Math.floor(min);
-  const s = Math.round((min - m) * 60);
+  const T = Math.round(min * 60);
+  const m = Math.floor(T / 60);
+  const s = T % 60;
   return m + ':' + String(s).padStart(2, '0');
 }
 
@@ -2285,7 +2286,7 @@ function renderProjection(allRuns) {
           title: { display: true, text: 'Estimeret 5K tid (min)', color: '#8b8fa3' },
           ticks: {
             color: '#8b8fa3',
-            callback: v => { const m = Math.floor(v); const s = Math.round((v - m) * 60); return m + ':' + String(s).padStart(2, '0'); }
+            callback: v => { const T = Math.round(v * 60); const m = Math.floor(T / 60); const s = T % 60; return m + ':' + String(s).padStart(2, '0'); }
           },
           grid: { color: 'rgba(42,46,61,.5)' },
           suggestedMin: 18, suggestedMax: 32
@@ -3129,7 +3130,7 @@ function linReg(data) {
   const intercept = (sy - slope * sx) / n;
   return data.map((_, i) => parseFloat((intercept + slope * i).toFixed(2)));
 }
-function fmtPace(m) { if(!m||!isFinite(m)) return '-'; const mm=Math.floor(m); const ss=Math.round((m-mm)*60); return mm+':'+String(ss).padStart(2,'0'); }
+function fmtPace(m) { if(!m||!isFinite(m)) return '-'; const T=Math.round(m*60); const mm=Math.floor(T/60); const ss=T%60; return mm+':'+String(ss).padStart(2,'0'); }
 function fmtDur(s) { const h=Math.floor(s/3600); const m=Math.floor((s%3600)/60); return h>0?h+'t '+m+'m':m+'m'; }
 function weekKey(a) { const dt=new Date(a.start_date_local||a.start_date); const day=dt.getDay(); const diff=dt.getDate()-day+(day===0?-6:1); const ws=new Date(dt); ws.setDate(diff); return ws.toISOString().substring(0,10); }
 
