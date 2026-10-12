@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="auth.js?v=20261012"></script>
 <script src="readiness.js?v=1"></script>
+<script src="connections.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E1411">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,7 +130,6 @@ tr:hover td { background:var(--card2); }
 .ra-table td { text-align:right; padding:7px 8px; border-top:1px solid var(--border); font-variant-numeric:tabular-nums; }
 .ra-table th:first-child, .ra-table td:first-child { text-align:left; }
 .ra-table tr.fast td { color:var(--green); }
-.ra-table tr.short td { opacity:.55; }
 .factor-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
 .factor { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; min-width:0; }
 .factor .f-label { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:6px; }
@@ -402,8 +402,9 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
     </div>
 
     <div class="card ins" style="margin-bottom:12px">
-      <div class="ins-k">Søvn</div><h3>Løber jeg bedre efter god søvn?</h3>
+      <div class="ins-k">Mønstre</div><h3>Hvad afgør, hvordan mine løb går?</h3>
       <div id="ins-sleep-text" class="ins-t"></div>
+      <div class="ra-sum">Jeg sammenligner dine rolige ture (lav puls) på dage med høj og lav værdi af hver faktor. Kun forskelle på 6 sek./km eller mere tæller.</div>
     </div>
 
     <div class="card ins" style="margin-bottom:12px">
@@ -455,6 +456,13 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
     </div></details>
   </div>
 
+  <!-- SAMMENHÆNGE -->
+  <div class="page" id="p-connect">
+    <div class="ra-sum" style="margin:2px 2px 14px">Jeg har gennemsøgt alle dine Garmin-dage, vægt og løb efter mønstre – også med forsinkelse (det du gør i dag, og hvad kroppen gør i morgen). Kun forskelle, der holder statistisk, vises. <span id="cn-meta"></span></div>
+    <div id="cn-list"></div>
+    <details class="sec" id="cn-none-wrap" style="display:none"><summary>Tjekket, men intet fundet</summary><div class="secbody"><div id="cn-none" class="ra-sum"></div></div></details>
+  </div>
+
   <!-- LØB -->
   <div class="page" id="p-run">
     <div id="coach-rundetail"></div>
@@ -464,6 +472,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       <button class="nav-btn" onclick="navRun(1)">&rarr;</button>
     </div>
     <div class="grid g6 statstrip" id="run-metrics"></div>
+    <div class="ra-sum" id="ra-vo2" style="margin:-4px 2px 12px"></div>
 
     <div class="card" id="ra-split-card" style="margin-bottom:12px">
       <h3>Opdeling</h3>
@@ -501,6 +510,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
   <button class="navbtn active" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="2"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg><span>Overblik</span></button>
   <button class="navbtn" data-page="run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16"/></svg><span>Løb</span></button>
   <button class="navbtn" data-page="trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg><span>Udvikling</span></button>
+  <button class="navbtn" data-page="connect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="6" r="2.2"/><circle cx="18.5" cy="8" r="2.2"/><circle cx="9" cy="18" r="2.2"/><path d="M7.4 7l9.2 .8M6.6 8l1.6 7.9M17.4 10l-7 6.4"/></svg><span>Mønstre</span></button>
 </nav>
 
 <script>
@@ -608,7 +618,7 @@ function setupTabs() {
 }
 
 // gamle faner → nye (bevarer gamle links/bogmærker)
-const PAGE_ALIAS = {goals:'overview', ghost:'overview', form:'overview', dagsform:'overview', insights:'trend', wellness:'trend', historik:'trend', activities:'trend', rundetail:'run', economy:'run'};
+const PAGE_ALIAS = {goals:'overview', ghost:'overview', form:'overview', dagsform:'overview', insights:'trend', moenstre:'connect', sammenhaenge:'connect', wellness:'trend', historik:'trend', activities:'trend', rundetail:'run', economy:'run'};
 function pageAlias(p){ return PAGE_ALIAS[p] || p; }
 function activateTab(page) {
   page = pageAlias(page);
@@ -704,6 +714,7 @@ function render() {
 
   if (page === 'p-overview') { renderOverview(fr); renderHabit(); renderDagsform(fr, fw); }
   if (page === 'p-run') { renderRunDetailPage(fr, fw); }
+  if (page === 'p-connect') { renderConnections(); }
   if (page === 'p-trend') { renderInsightCards(); renderWellness(fw); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
 }
@@ -796,7 +807,7 @@ function setCoachAI(id, headline, body){
 }
 async function aiCoachRun(fr, headline){
   const el=document.getElementById('coach-overview'); if(!el) return;
-  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v4';
+  const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v5';
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
   if(aiCoachRun._busy) return; aiCoachRun._busy=true;
   try{
@@ -807,7 +818,6 @@ async function aiCoachRun(fr, headline){
     const lastRuns=fr.slice().sort((a,b)=>new Date(b.start_date_local||b.start_date)-new Date(a.start_date_local||a.start_date)).slice(0,6)
       .map(a=>[(a.start_date_local||a.start_date||'').substring(0,10), +((a.distance||0)/1000).toFixed(2), coachFmtPace(((a.moving_time||0)/60)/Math.max(0.001,(a.distance||0)/1000))]);
     let readiness=null; try{ const allW=wellness||[]; const dw=[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]; if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); if(rd) readiness=rd.score; } }catch(e){}
-    const sickRecent=(typeof sickDays!=='undefined'&&sickDays)?sickDays.filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)):[];
     const data={
       dato:t,
       kontekst:runCtx(),
@@ -816,7 +826,6 @@ async function aiCoachRun(fr, headline){
       laengste_tur_35d_km:+longest.toFixed(1),
       aerob_effektivitet:{nu:efR?+efR.toFixed(3):null, foer:efP?+efP.toFixed(3):null},
       readiness_i_dag:readiness,
-      sygedage_sidste_14:sickRecent.length,
       seneste_loeb:lastRuns
     };
     const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(aiEnrich({surface:'run',tab:'overview',trigger:'run-dashboard',data}))});
@@ -841,21 +850,17 @@ function aiEnrich(payload){
     const data=walk(payload.data||{});
     data.i_dag=t+' ('+wd(t)+')';
     data.note=(data.note?data.note+' ':'')+'Skriv direkte til Sofie i du-form (aldrig "Sofie er…" eller "hun"). Alle datoer står med ugedag i parentes — brug dem, gæt aldrig ugedage. Søvn/HRV står på den morgen hun vågnede.';
-    try{ if(window.Readiness&&Readiness.ready()){ const r=Readiness.today(); if(r) data.dagsform_i_dag={score:r.score,niveau:r.level,traekker_ned:r.flags.map(f=>Readiness.FLAG_TXT[f]||f)}; } }catch(e){}
+    try{ if(window.Readiness&&Readiness.ready()){ const r=Readiness.today(); if(r) data.dagsform_i_dag={score:r.score,niveau:r.level,traekker_ned:r.flags.filter(f=>f!=='syg').map(f=>Readiness.FLAG_TXT[f]||f)}; } }catch(e){}
     return Object.assign({},payload,{data});
   }catch(e){ return payload; }
 }
 function runCtx(){ try{ const t=nowISO(); const wd=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'][new Date(t+'T12:00:00').getDay()];
   let c='Genopbygning af daglig løbevane (1 km-gulv på hårde dage). Erfaren løber, følger træner Søren. I dag er '+wd+' '+t+'.';
-  const sk=(sickDays||[]).filter(d=>d>=hAdd(t,-14)).sort();
-  if(sk.length){ const last=sk[sk.length-1]; const ago=Math.round((new Date(t)-new Date(last))/864e5);
-    if(ago<4) c+=' Sygedage de seneste dage: '+sk.join(', ')+' (sidste for '+ago+' dage siden).'; }
   return c; }catch(e){ return 'Genopbygning af daglig løbevane. Erfaren løber, følger træner Søren.'; } }
 function runReadiness(){ try{ const allW=wellness||[]; const dw=[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]; if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); return rd?rd.score:null; } }catch(e){} return null; }
-function sickCount14(){ try{ return (sickDays||[]).filter(d=>d>=new Date(Date.now()-14*864e5).toISOString().substring(0,10)).length; }catch(e){ return 0; } }
 async function aiCoachCard(cardId, tab, headline, data){
   const el=document.getElementById(cardId); if(!el) return;
-  const t=nowISO(), LSK='liv-run-coach-v4-'+tab;
+  const t=nowISO(), LSK='liv-run-coach-v5-'+tab;
   try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI(cardId,headline,c.text); return; } }catch(e){}
   aiCoachCard._busy=aiCoachCard._busy||{}; if(aiCoachCard._busy[tab]) return; aiCoachCard._busy[tab]=true;
   try{
@@ -1229,6 +1234,39 @@ function renderFaster() {
   });
 }
 
+// ---- MØNSTRE: sammenhænge på tværs af alle data (connections.js) ----
+let cnLoaded = false;
+async function renderConnections() {
+  if (cnLoaded || renderConnections._busy) return;
+  renderConnections._busy = true;
+  const list = document.getElementById('cn-list');
+  list.innerHTML = '<div class="ra-sum">Analyserer dine data…</div>';
+  try {
+    const res = await Connections.run();
+    document.getElementById('cn-meta').textContent = `(${res.days} dage siden ${res.from.slice(0, 7)})`;
+    list.innerHTML = res.findings.map((f, i) => `
+      <div class="card ins" style="margin-bottom:12px">
+        <div class="ins-k">${f.kicker}</div><h3>${f.title}</h3>
+        <div class="ins-t">${f.html}</div>
+        ${f.chart ? `<div class="ch" style="height:180px"><canvas id="cnc${i}"></canvas></div>` : ''}
+      </div>`).join('') || '<div class="ra-sum">Ingen sammenhænge, der holder statistisk, endnu.</div>';
+    res.findings.forEach((f, i) => { if (f.chart) drawConnChart('cnc' + i, f.chart); });
+    const names = { 'stress → vægtændring': 'Stress → vægt', 'søvn → vægtændring': 'Søvn → vægt', 'skridt → vægtændring': 'Skridt → vægt', 'løbekm → vægtændring': 'Løb → vægt' };
+    if (res.none.length) { document.getElementById('cn-none-wrap').style.display = ''; document.getElementById('cn-none').innerHTML = 'Disse sammenhænge blev undersøgt, men er ikke tydelige i dine data:<br>' + res.none.map(n => '• ' + (names[n] || n)).join('<br>'); }
+    cnLoaded = true;
+  } catch (e) { list.innerHTML = '<div class="ra-sum">Kunne ikke hente data til analysen: ' + (e.message || e) + '</div>'; }
+  renderConnections._busy = false;
+}
+function drawConnChart(id, c) {
+  const ds = [{ type: c.type === 'line' ? 'line' : 'bar', label: c.unit, data: c.data, backgroundColor: c.color, borderColor: c.color, borderRadius: 4, pointRadius: 3, tension: .3, spanGaps: true, yAxisID: 'y' }];
+  if (c.data2) ds.push({ type: 'line', label: c.unit2, data: c.data2, borderColor: c.color2, backgroundColor: c.color2, pointRadius: 3, tension: .3, spanGaps: true, yAxisID: 'y2' });
+  mkChart(id, { type: c.type === 'line' ? 'line' : 'bar', data: { labels: c.labels, datasets: ds },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: !!c.data2, labels: { color: '#8b8fa3' } }, tooltip: { callbacks: { label: x => ` ${x.dataset.label}: ${String(x.raw).replace('.', ',')}` } } },
+      scales: { x: { ticks: { color: '#8b8fa3', maxRotation: 0 }, grid: { display: false } },
+        y: { min: c.zero ? undefined : c.min, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: c.unit, color: '#8b8fa3' } },
+        ...(c.data2 ? { y2: { position: 'right', ticks: { color: c.color2 }, grid: { display: false }, title: { display: true, text: c.unit2, color: '#8b8fa3' } } } : {}) } } });
+}
+
 // ---- UDVIKLING: indsigter i klar tekst + én lille graf pr. indsigt ----
 const DAY = 864e5;
 const fmtD = (v, n = 1) => (+v).toFixed(n).replace('.', ',');
@@ -1271,8 +1309,21 @@ function renderFitness() {
     ? `VO2max er <b>${fmtD(now.v, 0)}</b> – uændret de seneste 3 måneder.`
     : diff > 0 ? `VO2max er <b>${fmtD(now.v, 0)}</b> – <b class="good">op ${fmtD(diff)} siden for 3 måneder siden</b> (${fmtD(ago.v, 0)}).`
       : `VO2max er <b>${fmtD(now.v, 0)}</b> – <b class="bad">ned ${fmtD(-diff)} siden for 3 måneder siden</b> (${fmtD(ago.v, 0)}).`;
-  el.innerHTML = t;
-  fitnessAge().then(fa => { if (fa) el.innerHTML = t + ` Garmin skønner din <b>konditionsalder til ${fmtD(fa.fit)} år</b>, og du er ${fa.real}.`; });
+  // hvert hop knyttes til løbet, hvor ændringen skete
+  const jumps = []; let pv = null;
+  [...activities].filter(a => a.vo2max).sort((x, y) => x.start_date_local.localeCompare(y.start_date_local)).forEach(a => {
+    if (pv != null && +a.vo2max !== pv) jumps.push({ a, from: pv, to: +a.vo2max });
+    pv = +a.vo2max;
+  });
+  const recent = jumps.filter(j => (Date.now() - new Date(j.a.start_date_local).getTime()) / DAY <= 180).slice(-6).reverse();
+  let extra = '';
+  if (recent.length) {
+    const ups = jumps.filter(j => j.to > j.from), hrAll = avg(runs(activities).map(a => a.average_heartrate).filter(Boolean)), hrUp = avg(ups.map(j => j.a.average_heartrate).filter(Boolean));
+    const pat = ups.length >= 3 && hrUp && hrAll ? `Dine stigninger kom typisk efter ture med <b>${hrUp > hrAll + 3 ? 'højere puls end normalt' : hrUp < hrAll - 3 ? 'lavere puls end normalt' : 'helt almindelig puls'}</b> (gns. ${Math.round(hrUp)} mod ${Math.round(hrAll)} bpm, ${ups.length} stigninger).<br>` : '';
+    extra = `<div class="ra-sum" style="margin-top:6px"><b>Hvad flyttede kurven?</b><br>${pat}` + recent.map(j => { const pc = pace(j.a), km = (j.a.distance || 0) / 1000; return `${j.a.start_date_local.substring(5, 10).split('-').reverse().join('/')}: <b class="${j.to > j.from ? 'good' : 'bad'}">${j.to > j.from ? '+' : ''}${fmtD(j.to - j.from, 0)}</b> (${fmtD(j.from, 0)} → ${fmtD(j.to, 0)}) · ${j.a.name || 'Løb'} · ${fmtD(km)} km${pc ? ' · ' + fmtPace(pc) + '/km' : ''}${j.a.average_heartrate ? ' · puls ' + Math.round(j.a.average_heartrate) : ''}`; }).join('<br>') + '</div>';
+  }
+  el.innerHTML = t + extra;
+  fitnessAge().then(fa => { if (fa) el.innerHTML = t + ` Garmin skønner din <b>konditionsalder til ${fmtD(fa.fit)} år</b>, og du er ${fa.real}.` + extra; });
   const last = v.filter(x => (Date.now() - x.t) / DAY <= 365);
   mkChart('ch-vo2', { type: 'line', data: { datasets: [{ data: last.map(x => ({ x: x.t, y: x.v })), borderColor: '#4cc2ff', backgroundColor: 'rgba(76,194,255,.12)', fill: true, pointRadius: 0, tension: .3 }] },
     options: { ...mini(), scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3', maxTicksLimit: 7 }, grid: { color: 'rgba(42,46,61,.5)' } }, y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, suggestedMin: Math.min(...last.map(x => x.v)) - 1, suggestedMax: Math.max(...last.map(x => x.v)) + 1 } } } });
@@ -1302,25 +1353,42 @@ function renderRecovery() {
 
 function renderSleepLink() {
   const el = document.getElementById('ins-sleep-text');
-  const hrs = wSeries('sleepSecs', x => x / 3600), sc = wSeries('sleepScore');
-  const s14 = winAvg(hrs, 0, 14), s90 = winAvg(hrs, 0, 90), c14 = winAvg(sc, 0, 14);
-  let html = s14 != null ? `De seneste 14 nætter har du sovet <b>${fmtD(s14)} timer</b> i snit${c14 != null ? ` (søvnscore ${fmtD(c14, 0)})` : ''}${s90 != null ? ` – ${Math.abs(s14 - s90) < 0.2 ? 'det samme som' : s14 > s90 ? '<b class="good">mere end</b>' : '<b class="bad">mindre end</b>'} dit 3-måneders-snit på ${fmtD(s90)} t` : ''}. ` : '';
-  // forbindelse: tempo på rolige ture efter god vs. dårlig nat
   const z2 = getZ2Range(), limit = z2.high + 5, wm = {}; (wellness || []).forEach(x => wm[x.id] = x);
-  const easy = runs(activities).filter(a => a.average_heartrate && a.average_heartrate <= limit && (a.distance || 0) >= 3000 && pace(a) && wm[d(a)] && wm[d(a)].sleepScore)
-    .map(a => ({ p: pace(a), sc: wm[d(a)].sleepScore }));
-  if (easy.length >= 12) {
-    const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v[Math.floor(v.length / 2)]; };
-    const cut = med(easy.map(x => x.sc)), good = easy.filter(x => x.sc >= cut), bad = easy.filter(x => x.sc < cut);
-    if (good.length >= 5 && bad.length >= 5) {
-      const diff = (med(bad.map(x => x.p)) - med(good.map(x => x.p))) * 60;
-      html += Math.abs(diff) < 5
-        ? `<br><br>Jeg kan ikke se nogen tydelig forskel på dine rolige ture efter gode og dårlige nætter (${easy.length} ture).`
-        : diff > 0 ? `<br><br>Efter nætter med søvnscore <b>${fmtD(cut, 0)} eller mere</b> løber du <b class="good">${Math.round(diff)} sek./km hurtigere</b> ved samme rolige puls (${easy.length} ture). Søvn betyder noget for dig.`
-          : `<br><br>Overraskende nok løber du <b>${Math.round(-diff)} sek./km langsommere</b> efter dine bedste nætter (${easy.length} ture) – søvnscoren forklarer ikke din form særlig godt.`;
-    }
-  } else if (easy.length) html += `<br><br>Der skal mindst 12 rolige ture med søvndata til, før jeg kan sammenligne (har ${easy.length}).`;
-  el.innerHTML = html || 'Ikke nok søvndata endnu.';
+  const all = runs(activities).slice().sort((x, y) => x.start_date_local.localeCompare(y.start_date_local));
+  const prevDay = {}; all.forEach((a, i) => { prevDay[a.start_date_local] = i ? Math.round((new Date(d(a)) - new Date(d(all[i - 1]))) / DAY) - 1 : null; });
+  const easy = all.filter(a => a.average_heartrate && a.average_heartrate <= limit && (a.distance || 0) >= 3000 && pace(a));
+  const F = [
+    { k: 'Temperatur', unit: '°', get: a => a.temp, dec: 0 },
+    { k: 'HRV', unit: ' ms', get: a => (wm[d(a)] || {}).hrv, dec: 0 },
+    { k: 'Søvnscore', unit: '', get: a => (wm[d(a)] || {}).sleepScore, dec: 0 },
+    { k: 'Hvilepuls', unit: ' bpm', get: a => (wm[d(a)] || {}).restingHR, dec: 0 },
+    { k: 'Hviledage før løbet', unit: ' dage', get: a => { const r = prevDay[a.start_date_local]; return r != null && r >= 0 && r < 10 ? r : null; }, dec: 0 },
+    { k: 'Tidspunkt på dagen', unit: '', get: a => new Date(a.start_date_local).getHours(), dec: 0, hour: true }
+  ];
+  const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v[Math.floor(v.length / 2)]; };
+  const res = [], none = [];
+  F.forEach(f => {
+    const rows = easy.map(a => ({ v: f.get(a), p: pace(a) })).filter(r => r.v != null && isFinite(r.v));
+    if (rows.length < 20) return;
+    const cut = med(rows.map(r => r.v));
+    let hi = rows.filter(r => r.v > cut), lo = rows.filter(r => r.v <= cut);
+    if (hi.length < 6 || lo.length < 6) { hi = rows.filter(r => r.v >= cut); lo = rows.filter(r => r.v < cut); }
+    if (hi.length < 6 || lo.length < 6) return;
+    const diff = (med(lo.map(r => r.p)) - med(hi.map(r => r.p))) * 60; // + = høj værdi giver hurtigere
+    (Math.abs(diff) >= 6 ? res : none).push({ f, cut, diff, n: rows.length });
+  });
+  if (!res.length && !none.length) { el.innerHTML = `Jeg skal bruge mindst 20 rolige ture med målinger for at se mønstre (har ${easy.length}).`; return; }
+  res.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+  const line = r => {
+    const f = r.f, c = f.hour ? `${Math.round(r.cut)}:00` : `${(+r.cut).toFixed(f.dec).replace('.', ',')}${f.unit}`;
+    const word = r.diff > 0 ? 'hurtigere' : 'langsommere';
+    const when = f.hour ? `løber du ${r.diff > 0 ? 'efter' : 'før'} kl. ${c}` : `når den er ${r.diff > 0 ? 'over' : 'under'} ${c} er dine rolige ture`;
+    return `<b>${f.k}</b> – ${when} <b class="${r.diff > 0 ? 'good' : 'bad'}">${Math.round(Math.abs(r.diff))} sek./km ${word}</b>`;
+  };
+  let h = res.length ? `Det der betyder mest for dig: <b>${res[0].f.k.toLowerCase()}</b>.<br><br>` + res.slice(0, 3).map(line).join('<br>')
+    : 'Ingen af faktorerne gør en målbar forskel på dine rolige ture. Din form er stabil på tværs af dage.';
+  if (none.length) h += `<br><br><span style="color:var(--muted)">Ingen målbar forskel: ${none.map(r => r.f.k.toLowerCase()).join(', ')}.</span>`;
+  el.innerHTML = h;
 }
 
 function renderVolume() {
@@ -2055,6 +2123,11 @@ function driftInfo(L) {
 async function renderRunAnalysis(a) {
   rdCur = a;
   renderTech(a);
+  { // flyttede dette løb din VO2max?
+    const v = document.getElementById('ra-vo2'), older = rdRuns.filter(x => d(x) < d(a) && x.vo2max).sort((x, y) => y.start_date_local.localeCompare(x.start_date_local))[0];
+    if (a.vo2max && older && +a.vo2max !== +older.vo2max) { const up = a.vo2max > older.vo2max; v.innerHTML = `📈 Dette løb flyttede din <b>VO2max</b>: <b class="${up ? 'good' : 'bad'}">${fmtD(older.vo2max, 0)} → ${fmtD(a.vo2max, 0)}</b>`; }
+    else v.innerHTML = '';
+  }
   const card = document.getElementById('ra-split-card');
   const driftCard = document.getElementById('ra-drift-card');
   driftCard.style.display = 'none';
@@ -2071,7 +2144,7 @@ async function renderRunAnalysis(a) {
   const paces = L.map(lapPace);
   const fastest = Math.min(...paces), slowest = Math.max(...paces);
   const top = slowest + 0.3, hrs = L.map(l => l.hr).filter(Boolean);   // søjlehøjde = top - pace → hurtigere = højere
-  const lab = l => Math.abs(l.dist - 1000) < 60 ? String(l.i) : (l.dist / 1000).toFixed(1).replace('.', ',') + 'k';
+  const lab = l => String(l.i);
   mkChart('cSplits', {
     type: 'bar',
     data: {
@@ -2097,19 +2170,26 @@ async function renderRunAnalysis(a) {
   const fastIdx = paces.indexOf(fastest);
   document.getElementById('ra-split-body').innerHTML = L.map((l, k) => {
     const t = Math.round(l.dur), tm = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
-    return `<tr class="${k === fastIdx && L.length > 2 ? 'fast' : ''} ${l.dist < 300 ? 'short' : ''}"><td>${l.i}</td><td>${l.dist >= 950 && l.dist <= 1050 ? '1,00' : (l.dist / 1000).toFixed(2).replace('.', ',')} km</td><td>${tm}</td><td>${fmtPace(lapPace(l))}</td><td>${l.hr ? Math.round(l.hr) : '–'}</td><td>${l.cad ? Math.round(l.cad) : '–'}</td><td>${l.stride ? l.stride.toFixed(2).replace('.', ',') : '–'}</td></tr>`;
+    return `<tr class="${k === fastIdx && L.length > 2 ? 'fast' : ''}"><td>${l.i}</td><td>${l.dist >= 950 && l.dist <= 1050 ? '1,00' : (l.dist / 1000).toFixed(2).replace('.', ',')} km</td><td>${tm}</td><td>${fmtPace(lapPace(l))}</td><td>${l.hr ? Math.round(l.hr) : '–'}</td><td>${l.cad ? Math.round(l.cad) : '–'}</td><td>${l.stride ? l.stride.toFixed(2).replace('.', ',') : '–'}</td></tr>`;
   }).join('');
 
   // resumé over grafen
   const dr = driftInfo(L);
   const parts = [];
-  if (L.length > 1) parts.push(`Hurtigst: <b>${fmtPace(fastest)}</b> (${lab(L[fastIdx]) === String(L[fastIdx].i) ? 'km ' + L[fastIdx].i : 'lap ' + L[fastIdx].i})`);
+  if (L.length > 1) parts.push(`Hurtigst (grøn i tabellen): <b>${fmtPace(fastest)}</b> (${Math.abs(L[fastIdx].dist - 1000) < 60 ? 'km ' : 'lap '}${L[fastIdx].i}${L[fastIdx].dist < 950 ? ', ' + Math.round(L[fastIdx].dist) + ' m' : ''})`);
   if (dr && dr.steady) {
     const diff = (dr.p1 - dr.p2) * 60;
     if (Math.abs(diff) < 3) parts.push('Jævnt tempo hele vejen');
     else if (diff > 0) parts.push(`<b>Negativ split</b>: 2. halvdel ${Math.round(diff)} sek./km hurtigere`);
     else parts.push(`2. halvdel ${Math.round(-diff)} sek./km langsommere`);
-  } else if (L.length >= 6) parts.push('Varieret løb (intervaller/strides)');
+  } else if (L.length >= 6) {
+    // beskriv opbygningen: hurtige strækninger mod rolige
+    const m = avg(L.map(l => l.spd)), hard = L.filter(l => l.spd > m * 1.1 && l.dist <= 1000), easyL = L.filter(l => !(l.spd > m * 1.1 && l.dist <= 1000));
+    if (hard.length >= 3) {
+      const hd = Math.round(avg(hard.map(l => l.dist)) / 50) * 50;
+      parts.push(`Opbygning: <b>${hard.length} hurtige strækninger á ca. ${hd} m</b> (gns. ${fmtPace(avg(hard.map(lapPace)))}) mellem rolige stykker (gns. ${fmtPace(avg(easyL.map(lapPace)))})`);
+    } else parts.push('Varieret løb (intervaller/strides)');
+  }
   document.getElementById('ra-split-sum').innerHTML = parts.join(' · ');
 
   // drift – kun for jævne løb over 4 km
@@ -2334,6 +2414,32 @@ let _grZoneCache = null, _grZoneBusy = false;
   });
 })();
 
+
+// ---- UI: sektioner, info-ikoner, graf-vælger ----
+function resizeCharts(){ requestAnimationFrame(() => Object.values(charts).forEach(c => { try { c.resize(); } catch(e){} })); }
+document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('sec') && e.target.open) resizeCharts(); }, true);
+(function(){
+  // forklaringstekster bag et lille (i)-ikon i stedet for altid synlige
+  document.querySelectorAll('.card').forEach(card => {
+    if (card.closest('.goal-card') && !card.querySelector(':scope > .help, :scope > .chpane .help, :scope > div > .help')) return;
+    const help = card.querySelector('.help'); if (!help) return;
+    const head = card.querySelector(':scope > h3, :scope > .ch-head');
+    if (!head) return;
+    card.classList.add('hashelp');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'infobtn'; btn.setAttribute('aria-label', 'Vis forklaring'); btn.textContent = 'i';
+    btn.addEventListener('click', ev => { ev.stopPropagation(); card.classList.toggle('help-on'); });
+    head.classList.add('hasinfo'); head.appendChild(btn);
+  });
+  // graf-vælger på Overblik
+  const seg = document.getElementById('ovSeg');
+  if (seg) seg.addEventListener('click', e => {
+    const b = e.target.closest('button[data-pane]'); if (!b) return;
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.chartcard .chpane').forEach(pn => pn.classList.toggle('on', pn.dataset.pane === b.dataset.pane));
+    resizeCharts();
+  });
+})();
 
 init();
 </script>
