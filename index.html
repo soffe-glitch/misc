@@ -718,7 +718,7 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(){const r=await fetch(BOOKS_FN);if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[],sickDays:[],smokeCfg:null,cravings:[],slips:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[],sickDays:[],smokeCfg:null,cravings:[],slips:[],garmin:[],gacts:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
@@ -743,6 +743,10 @@ async function loadAll(){
   try{ S.smokeCfg=(await get("smoking_config","?select=*&limit=1"))[0]||null; }catch(e){ S.smokeCfg=null; }
   try{ S.cravings=await get("cravings","?select=*&order=ts.asc"); }catch(e){ S.cravings=[]; }
   try{ S.slips=await get("slips","?select=*&order=ts.asc"); }catch(e){ S.slips=[]; }
+  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-60)))
+      .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
+               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake})); }catch(e){ S.garmin=[]; }
+  try{ S.gacts=await get("garmin_activities","?select=log_date,type,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -1398,33 +1402,51 @@ function coach(){
   const hi = h<10?"Godmorgen":h<14?"Goddag":h<18?"Hej":"Godaften";
   const parts=[hi+"."];
 
-  // ---- readiness: vægt søvn, HRV, hvilepuls, alkohol, dagsform, energi sammen ----
-  const wl=S.wellness[S.wellness.length-1];
-  const avgS=avg(S.wellness.slice(-21).map(w=>w.sleep_hours).filter(x=>x!=null));
-  const avgHrv=avg(S.wellness.slice(-21).map(w=>w.hrv).filter(x=>x!=null));
-  const avgRhr=avg(S.wellness.slice(-21).map(w=>w.resting_hr).filter(x=>x!=null));
+  // ---- readiness (dagsform): Garmin-søvn/-score, HRV, hvilepuls, Body Battery ved opvågning,
+  // gårsdagens stress + træning, alkohol og gårsdagens dagslinje. Intervals-wellness er fallback.
   const yday=addDays(t,-1);
+  const G=S.garmin||[];
+  const gT=G.find(g=>g.log_date===t)||null;
+  const gB=G.filter(g=>g.log_date<t).slice(-21);
+  const useG=gB.length>=7;
+  const wlI=S.wellness[S.wellness.length-1];
+  const wl = gT ? {log_date:t,sleep_hours:gT.sleep_h,hrv:gT.hrv,resting_hr:gT.rhr} : wlI;
+  const avgS  =useG?avg(gB.map(g=>g.sleep_h)):avg(S.wellness.slice(-21).map(w=>w.sleep_hours));
+  const avgHrv=useG?avg(gB.map(g=>g.hrv))    :avg(S.wellness.slice(-21).map(w=>w.hrv));
+  const avgRhr=useG?avg(gB.map(g=>g.rhr))    :avg(S.wellness.slice(-21).map(w=>w.resting_hr));
+  const avgBB =avg(gB.map(g=>g.bb_wake));
+  const avgSt =avg(gB.map(g=>g.stress));
+  const gY=G.find(g=>g.log_date===yday)||null;
   const yAlc=+(((S.daily.find(d=>d.log_date===yday)||{}).alcohol_units)||0);
-  const todayLog=S.daily.find(d=>d.log_date===t)||{};
-  const eToday=S.checkins.filter(c=>c.log_date===t).map(c=>c.energy||c.mood).filter(x=>x!=null);
-  const energyToday=eToday.length?avg(eToday):null;
+  const yLog=S.daily.find(d=>d.log_date===yday)||{};
+  const yTags=(yLog.tags||[]).map(x=>String(x).toLowerCase().replace("\u2212","-"));
+  const yActs=(S.gacts||[]).filter(a=>a.log_date===yday);
 
   const flags=[]; const sig=[];
   if(wl){
     if(wl.sleep_hours!=null){ const npT=napH(wl.log_date); const slTot=wl.sleep_hours+npT; if(slTot<Math.min(avgS-0.7,6.5)) flags.push("søvn"); sig.push(`sov ${hhmm(wl.sleep_hours)}${npT>0?` +${Math.round(npT*60)} min lur`:""}`); }
-    if(wl.hrv!=null){ if(avgHrv&&wl.hrv<avgHrv-4) flags.push("hrv"); sig.push(`HRV ${wl.hrv}${avgHrv?` (snit ${Math.round(avgHrv)})`:""}`); }
-    if(wl.resting_hr!=null){ if(avgRhr&&wl.resting_hr>avgRhr+3) flags.push("puls"); sig.push(`hvilepuls ${wl.resting_hr}`); }
+    if(wl.hrv!=null){ if(avgHrv&&wl.hrv<avgHrv-4) flags.push("hrv"); sig.push(`HRV ${Math.round(wl.hrv)}${avgHrv?` (snit ${Math.round(avgHrv)})`:""}`); }
+    if(wl.resting_hr!=null){ if(avgRhr&&wl.resting_hr>avgRhr+3) flags.push("puls"); sig.push(`hvilepuls ${Math.round(wl.resting_hr)}`); }
   }
+  if(gT){
+    if(gT.score!=null){ if(gT.score<60) flags.push("søvnkvalitet"); sig.push(`søvnscore ${gT.score}`); }
+    if(gT.bb_wake!=null){ if(gT.bb_wake<40||(avgBB&&gT.bb_wake<avgBB-15)) flags.push("batteri"); sig.push(`Body Battery ${Math.round(gT.bb_wake)} ved opvågning`); }
+  }
+  if(gY&&gY.stress>0&&avgSt&&gY.stress>avgSt+7) flags.push("stress");
+  // "hårde ben": dine almindelige Z2-ture ligger på ~150-190 i belastning; intervaller/lange ture 220+
+  const yLoad=yActs.reduce((s,a)=>s+(+a.training_load||0),0);
+  if(yLoad>=220||yActs.some(a=>(+a.anaerobic_te||0)>=2.5)) flags.push("ben");
   if(yAlc>0) flags.push("alkohol");
-  if(todayLog.day_type==="sofa") flags.push("sofa");
-  if(energyToday!=null&&energyToday<=2) flags.push("energi");
+  if((yLog.day_score!=null&&+yLog.day_score<=2)||yTags.some(x=>["drænet","social-","stresset","syg","øv"].includes(x))) flags.push("drænet");
   // søvngæld over flere nætter — mod et FAST gulv (6,5 t), ikke mod dit eget snit.
   // Ellers normaliserer et kronisk lavt snit underskuddet væk, og en uge med 6 t/nat
   // ender med at se "frisk" ud. Fanger det du selv fangede.
-  const recentSleep=S.wellness.slice(-4).map(w=>w.sleep_hours).filter(x=>x!=null);
+  const recentSleep=(useG?G.filter(g=>g.log_date<=t).slice(-4).map(g=>g.sleep_h):S.wellness.slice(-4).map(w=>w.sleep_hours)).filter(x=>x!=null);
   const debtAvg=recentSleep.length>=3?avg(recentSleep):null;
   const sleepDebt=debtAvg!=null&&debtAvg<6.5;
   if(sleepDebt) flags.push("søvngæld");
+  const FLAG_TXT={"søvn":"kort nat","søvnkvalitet":"urolig søvn","hrv":"lav HRV","puls":"høj hvilepuls","batteri":"lavt Body Battery",
+    "stress":"stresset dag i går","ben":"hård træning i går","alkohol":"alkohol i går","drænet":"drænende dag i går","søvngæld":"søvngæld"};
   const level = flags.length>=3?"lav":flags.length>=1?"middel":"frisk";
 
   if(wl){ const body=sig.length?` (${sig.join(", ")})`:"";
@@ -1432,6 +1454,7 @@ function coach(){
     else if(level==="middel") parts.push(`Kroppen er <b>lidt lav</b> i dag${body} — ikke rødt, men ikke topdag.`);
     else parts.push(`Kroppen er <b>lav</b> i dag${body}${yAlc>0?", bl.a. efter gårsdagens alkohol":""}.`);
   }
+  if(flags.length) parts.push(`Trækker ned: ${flags.map(f=>FLAG_TXT[f]||f).join(", ")}.`);
   if(sleepDebt) parts.push(`Du har sovet ~${hhmm(debtAvg)} i snit de sidste ${recentSleep.length} nætter — det er reel søvngæld, ikke bare én kort nat. Derfor kalder jeg dig ikke frisk, selv når HRV-tallet i dag ser ok ud: gulvet holder kæden, men lad morgenturen blive kort.`);
 
   // ---- træning: gennemført / planlagt i dag / næste pas ----
