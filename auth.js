@@ -110,14 +110,17 @@
     });
     var em = o.querySelector("#liv-email"); if (em) em.focus();
   }
-  function showChange(done) {
+  function showChange(done, opts) {
+    opts = opts || {};
     var o = mount(
-      '<h1>Vælg din egen adgangskode</h1><p>Du loggede ind med en midlertidig kode. Vælg en ny, som kun du kender (mindst 10 tegn). Din telefon tilbyder at gemme den.</p>' +
+      (opts.voluntary ? '<h1>Skift adgangskode</h1><p>Vælg en ny adgangskode (mindst 10 tegn). Din telefon tilbyder at gemme den, så du også kan logge ind på andre enheder.</p>' : '<h1>Vælg din egen adgangskode</h1><p>Du loggede ind med en midlertidig kode. Vælg en ny, som kun du kender (mindst 10 tegn). Din telefon tilbyder at gemme den.</p>') +
       '<form id="liv-change" autocomplete="on"><input type="text" name="username" autocomplete="username" value="' + ((session && session.user && session.user.email) || "") + '" hidden>' +
       '<label for="liv-n1">Ny adgangskode</label><input id="liv-n1" name="password" type="password" autocomplete="new-password" minlength="10" required>' +
       '<label for="liv-n2">Gentag adgangskode</label><input id="liv-n2" type="password" autocomplete="new-password" minlength="10" required>' +
-      '<button type="submit">Gem og fortsæt</button><div class="err" role="alert"></div></form>');
+      '<button type="submit">Gem og fortsæt</button><div class="err" role="alert"></div></form>' +
+      (opts.voluntary ? '<div class="hint"><a href="#" id="liv-cancel" style="color:inherit">Annuller</a></div>' : ''));
     var f = o.querySelector("form"), err = o.querySelector(".err"), btn = o.querySelector("button");
+    var cx = o.querySelector("#liv-cancel"); if (cx) cx.addEventListener("click", function (e) { e.preventDefault(); unmount(); touch(); });
     f.addEventListener("submit", async function (e) {
       e.preventDefault(); err.textContent = "";
       var a = f.querySelector("#liv-n1").value, b2 = f.querySelector("#liv-n2").value;
@@ -246,6 +249,10 @@
     logout: function () { save(null); try { localStorage.removeItem(LOCK_LS); } catch (e) {} location.reload(); },
     lock: { supported: lockSupported, enabled: function () { return !!lockCred(); }, enable: enableLock, disable: function () { try { localStorage.removeItem(LOCK_LS); } catch (e) {} } },
     user: function () { return session && session.user; },
+    changePassword: async function () {
+      try { await getToken(); } catch (e) {}
+      showChange(function () { unmount(); touch(); alert("Din nye adgangskode er gemt."); }, { voluntary: true });
+    },
     ready: function () { return getToken(); }
   };
 
