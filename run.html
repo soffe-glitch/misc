@@ -129,7 +129,6 @@ tr:hover td { background:var(--card2); }
 .ra-table td { text-align:right; padding:7px 8px; border-top:1px solid var(--border); font-variant-numeric:tabular-nums; }
 .ra-table th:first-child, .ra-table td:first-child { text-align:left; }
 .ra-table tr.fast td { color:var(--green); }
-.ra-table tr.short td { opacity:.55; }
 .factor-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
 .factor { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; min-width:0; }
 .factor .f-label { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:6px; }
@@ -2102,7 +2101,7 @@ async function renderRunAnalysis(a) {
   const paces = L.map(lapPace);
   const fastest = Math.min(...paces), slowest = Math.max(...paces);
   const top = slowest + 0.3, hrs = L.map(l => l.hr).filter(Boolean);   // søjlehøjde = top - pace → hurtigere = højere
-  const lab = l => Math.abs(l.dist - 1000) < 60 ? String(l.i) : (l.dist / 1000).toFixed(1).replace('.', ',') + 'k';
+  const lab = l => String(l.i);
   mkChart('cSplits', {
     type: 'bar',
     data: {
@@ -2128,19 +2127,26 @@ async function renderRunAnalysis(a) {
   const fastIdx = paces.indexOf(fastest);
   document.getElementById('ra-split-body').innerHTML = L.map((l, k) => {
     const t = Math.round(l.dur), tm = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
-    return `<tr class="${k === fastIdx && L.length > 2 ? 'fast' : ''} ${l.dist < 300 ? 'short' : ''}"><td>${l.i}</td><td>${l.dist >= 950 && l.dist <= 1050 ? '1,00' : (l.dist / 1000).toFixed(2).replace('.', ',')} km</td><td>${tm}</td><td>${fmtPace(lapPace(l))}</td><td>${l.hr ? Math.round(l.hr) : '–'}</td><td>${l.cad ? Math.round(l.cad) : '–'}</td><td>${l.stride ? l.stride.toFixed(2).replace('.', ',') : '–'}</td></tr>`;
+    return `<tr class="${k === fastIdx && L.length > 2 ? 'fast' : ''}"><td>${l.i}</td><td>${l.dist >= 950 && l.dist <= 1050 ? '1,00' : (l.dist / 1000).toFixed(2).replace('.', ',')} km</td><td>${tm}</td><td>${fmtPace(lapPace(l))}</td><td>${l.hr ? Math.round(l.hr) : '–'}</td><td>${l.cad ? Math.round(l.cad) : '–'}</td><td>${l.stride ? l.stride.toFixed(2).replace('.', ',') : '–'}</td></tr>`;
   }).join('');
 
   // resumé over grafen
   const dr = driftInfo(L);
   const parts = [];
-  if (L.length > 1) parts.push(`Hurtigst: <b>${fmtPace(fastest)}</b> (${lab(L[fastIdx]) === String(L[fastIdx].i) ? 'km ' + L[fastIdx].i : 'lap ' + L[fastIdx].i})`);
+  if (L.length > 1) parts.push(`Hurtigst (grøn i tabellen): <b>${fmtPace(fastest)}</b> (${Math.abs(L[fastIdx].dist - 1000) < 60 ? 'km ' : 'lap '}${L[fastIdx].i}${L[fastIdx].dist < 950 ? ', ' + Math.round(L[fastIdx].dist) + ' m' : ''})`);
   if (dr && dr.steady) {
     const diff = (dr.p1 - dr.p2) * 60;
     if (Math.abs(diff) < 3) parts.push('Jævnt tempo hele vejen');
     else if (diff > 0) parts.push(`<b>Negativ split</b>: 2. halvdel ${Math.round(diff)} sek./km hurtigere`);
     else parts.push(`2. halvdel ${Math.round(-diff)} sek./km langsommere`);
-  } else if (L.length >= 6) parts.push('Varieret løb (intervaller/strides)');
+  } else if (L.length >= 6) {
+    // beskriv opbygningen: hurtige strækninger mod rolige
+    const m = avg(L.map(l => l.spd)), hard = L.filter(l => l.spd > m * 1.1 && l.dist <= 1000), easyL = L.filter(l => !(l.spd > m * 1.1 && l.dist <= 1000));
+    if (hard.length >= 3) {
+      const hd = Math.round(avg(hard.map(l => l.dist)) / 50) * 50;
+      parts.push(`Opbygning: <b>${hard.length} hurtige strækninger á ca. ${hd} m</b> (gns. ${fmtPace(avg(hard.map(lapPace)))}) mellem rolige stykker (gns. ${fmtPace(avg(easyL.map(lapPace)))})`);
+    } else parts.push('Varieret løb (intervaller/strides)');
+  }
   document.getElementById('ra-split-sum').innerHTML = parts.join(' · ');
 
   // drift – kun for jævne løb over 4 km
