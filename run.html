@@ -106,6 +106,14 @@ tr:hover td { background:var(--card2); }
 .run-selector select:focus { border-color:var(--accent); }
 .run-selector .nav-btn { flex:none; width:46px; height:46px; background:var(--card); border:1px solid var(--border); border-radius:14px; color:var(--muted); cursor:pointer; font-size:18px; }
 .run-selector .nav-btn:active { border-color:var(--accent); color:var(--text); }
+.ra-sum { font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
+.ra-sum b { color:var(--text); font-weight:600; }
+.ra-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.ra-table th { text-align:right; color:var(--muted); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; }
+.ra-table td { text-align:right; padding:7px 8px; border-top:1px solid var(--border); font-variant-numeric:tabular-nums; }
+.ra-table th:first-child, .ra-table td:first-child { text-align:left; }
+.ra-table tr.fast td { color:var(--green); }
+.ra-table tr.short td { opacity:.55; }
 .factor-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
 .factor { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; min-width:0; }
 .factor .f-label { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; margin-bottom:6px; }
@@ -381,92 +389,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
     </div></details>
 
 
-    <details class="sec"><summary>Alle løb</summary><div class="secbody">
-          <div class="card">
-      <h3>Alle l&oslash;b</h3>
-      <div style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>Dato</th><th>Navn</th><th>Distance</th><th>Tid</th><th>Pace</th><th>Gns. puls</th><th>Kadence</th><th>Stigning</th><th>Belastning</th><th>Dag-kvalitet</th>
-        </tr></thead>
-        <tbody id="tblBody"></tbody>
-      </table>
-      </div>
-    </div>
-    </div></details>
-
-    <details class="sec"><summary>Historik</summary><div class="secbody">
-    <div class="grid g6" id="hStats"></div>
-    <div class="card full"><h3>Kalender-heatmap</h3><div id="hHeat" style="overflow-x:auto"></div>
-      <div style="font-size:12px;color:#8b8fa3;margin-top:8px">Gr&aring; = ingen l&oslash;b &middot; m&oslash;rk&rarr;lys gr&oslash;n = kort&rarr;langt l&oslash;b</div></div>
-    <div class="card full"><h3>Bliver jeg mere effektiv? (fart pr. puls, aerobe ture)</h3><div class="ch tall"><canvas id="hEff"></canvas></div>
-      <div style="font-size:13px;color:#8b8fa3;margin-top:6px" id="hEffNote"></div></div>
-    <div class="grid g2">
-      <div class="card"><h3>Comeback-buen (km pr. &aring;r)</h3><div class="ch"><canvas id="hYear"></canvas></div></div>
-    </div>
-    <div class="card full"><h3>PR-udvikling (pace pr. distance)</h3><div id="hPRcards" class="grid g6" style="margin-bottom:12px"></div><div class="ch"><canvas id="hPR"></canvas></div></div>
-    </div></details>
-  </div>
-
-  <!-- LØB -->
-  <div class="page" id="p-run">
-    <div id="coach-rundetail"></div>
-    <div class="run-selector">
-      <button class="nav-btn" onclick="navRun(-1)">&larr;</button>
-      <select id="runSelect" onchange="renderRunDetail()"></select>
-      <button class="nav-btn" onclick="navRun(1)">&rarr;</button>
-    </div>
-    <div class="factor-grid" id="run-factors"></div>
-    <div class="grid g6 statstrip" id="run-metrics"></div>
-
-    <details class="sec"><summary>Intervaller, zoner &amp; dynamik</summary><div class="secbody">
-          <div class="card" style="margin-bottom:20px" id="interval-section">
-      <h3>Interval-breakdown</h3>
-      <div id="interval-loading" style="color:var(--muted);font-size:13px;padding:12px 0;">Henter intervaller...</div>
-      <div id="interval-table-wrap" style="display:none;"></div>
-      <div id="interval-progression-wrap" style="display:none;margin-top:16px;">
-        <h3 style="margin-top:16px;">Progression i hurtige intervaller</h3>
-        <div class="ch"><canvas id="cIntervalProg"></canvas></div>
-        <div class="help">Viser pace-udviklingen i dine hurtige intervaller (strides/tempo) inden for dette løb. <span class="good">Faldende linje = du accelererede.</span></div>
-      </div>
-    </div>
-          <div class="trend-row" id="zone-section">
-      <div class="card">
-        <h3>Pulszone-fordeling</h3>
-        <div class="ch"><canvas id="cHRZones"></canvas></div>
-        <div class="help">Tid brugt i hver pulszone. Zone 1-2 = aerob base, Zone 3 = tærskel, Zone 4-5 = anaerob/VO2max.</div>
-      </div>
-      <div class="card">
-        <h3>Pace-zone-fordeling</h3>
-        <div class="ch"><canvas id="cPaceZones"></canvas></div>
-        <div class="help">Tid brugt i hver pace-zone baseret på din threshold pace.</div>
-      </div>
-    </div>
-          <div class="card" style="margin-bottom:20px" id="dynamics-section">
-      <h3>Running dynamics per interval</h3>
-      <div id="dynamics-wrap" style="display:none;">
-        <div class="ch tall"><canvas id="cDynamics"></canvas></div>
-        <div class="help">Kadence (spm) og skridtlængde (m) for hvert interval. <span class="good">Hurtige intervaller bør have højere kadence og længere skridt.</span></div>
-      </div>
-      <div id="dynamics-empty" style="color:var(--muted);font-size:13px;padding:12px 0;">Henter data...</div>
-    </div>
-    </div></details>
-
-    <details class="sec"><summary>Dagen før &amp; sammenligning</summary><div class="secbody">
-      <div class="trend-row">
-              <div class="card"><h3>Wellness-trend (5 dage f&oslash;r l&oslash;bet)</h3><div class="ch"><canvas id="cPreWellness"></canvas></div>
-        <div class="help">Viser hvordan din HRV, hvilepuls og s&oslash;vn udviklede sig i dagene op til l&oslash;bet. <span class="good">Stigende HRV + faldende hvilepuls = god form.</span> <span class="bad">Faldende HRV + stigende hvilepuls = tr&aelig;thed.</span></div>
-      </div>
-              <div class="card"><h3>Sammenligning med lignende l&oslash;b</h3><div class="ch"><canvas id="cCompare"></canvas></div>
-        <div class="help">Sammenligner dette l&oslash;bs pace med andre l&oslash;b p&aring; ca. samme distance. <span class="good">Gr&oslash;n = bedre end gns.</span> <span class="bad">R&oslash;d = langsommere end gns.</span></div>
-      </div>
-      </div>
-          <div class="card" style="margin-bottom:20px"><h3>Dine seneste l&oslash;b &mdash; farvekodet efter dag-kvalitet</h3><div class="ch tall"><canvas id="cTimeline"></canvas></div>
-      <div class="help">Hvert l&oslash;b farvet efter wellness den dag: <span class="good">gr&oslash;n = god dag</span> (h&oslash;j HRV, lav hvilepuls, god s&oslash;vn), <span class="warn">gul = OK</span>, <span class="bad">r&oslash;d = h&aring;rd dag</span>. Lilla = ingen wellness-data. S&oslash;jleh&oslash;jden viser pace (lavere = hurtigere).</div>
-    </div>
-    </div></details>
-
-    <details class="sec"><summary>Løbeøkonomi</summary><div class="secbody">
+    <details class="sec"><summary>Løbeøkonomi over tid</summary><div class="secbody">
       <div id="coach-economy" style="display:none"></div>
       <div class="grid g2">
               <div class="card">
@@ -502,8 +425,73 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       </div>
     </div></details>
 
+    <details class="sec"><summary>Alle løb</summary><div class="secbody">
+          <div class="card">
+      <h3>Alle l&oslash;b</h3>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Dato</th><th>Navn</th><th>Distance</th><th>Tid</th><th>Pace</th><th>Gns. puls</th><th>Kadence</th><th>Stigning</th><th>Belastning</th><th>Dag-kvalitet</th>
+        </tr></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+      </div>
+    </div>
+    </div></details>
+
+    <details class="sec"><summary>Historik</summary><div class="secbody">
+    <div class="grid g6" id="hStats"></div>
+    <div class="card full"><h3>Kalender-heatmap</h3><div id="hHeat" style="overflow-x:auto"></div>
+      <div style="font-size:12px;color:#8b8fa3;margin-top:8px">Gr&aring; = ingen l&oslash;b &middot; m&oslash;rk&rarr;lys gr&oslash;n = kort&rarr;langt l&oslash;b</div></div>
+    <div class="card full"><h3>Bliver jeg mere effektiv? (fart pr. puls, aerobe ture)</h3><div class="ch tall"><canvas id="hEff"></canvas></div>
+      <div style="font-size:13px;color:#8b8fa3;margin-top:6px" id="hEffNote"></div></div>
+    <div class="grid g2">
+      <div class="card"><h3>Comeback-buen (km pr. &aring;r)</h3><div class="ch"><canvas id="hYear"></canvas></div></div>
+    </div>
+    <div class="card full"><h3>PR-udvikling (pace pr. distance)</h3><div id="hPRcards" class="grid g6" style="margin-bottom:12px"></div><div class="ch"><canvas id="hPR"></canvas></div></div>
+    </div></details>
   </div>
-</div>
+
+  <!-- LØB -->
+  <div class="page" id="p-run">
+    <div id="coach-rundetail"></div>
+    <div class="run-selector">
+      <button class="nav-btn" onclick="navRun(-1)">&larr;</button>
+      <select id="runSelect" onchange="renderRunDetail()"></select>
+      <button class="nav-btn" onclick="navRun(1)">&rarr;</button>
+    </div>
+    <div class="grid g6 statstrip" id="run-metrics"></div>
+
+    <div class="card" id="ra-split-card" style="margin-bottom:12px">
+      <h3>Opdeling</h3>
+      <div id="ra-split-sum" class="ra-sum"></div>
+      <div class="ch tall"><canvas id="cSplits"></canvas></div>
+      <div style="overflow-x:auto;margin-top:10px"><table class="ra-table">
+        <thead><tr><th>#</th><th>Dist.</th><th>Tid</th><th>Pace</th><th>Puls</th><th>Kad.</th><th>Skridt</th></tr></thead>
+        <tbody id="ra-split-body"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card" id="ra-drift-card" style="display:none;margin-bottom:12px">
+      <h3>Holdt du dampen?</h3>
+      <div id="ra-drift"></div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:12px">
+      <div class="card"><h3>Tid i pulszoner</h3><div class="ch"><canvas id="cHRZones"></canvas></div></div>
+      <div class="card"><h3>Løbeteknik</h3><div id="ra-tech"></div></div>
+    </div>
+
+    <details class="sec" open><summary>Dagen før løbet</summary><div class="secbody">
+      <div class="factor-grid" id="run-factors"></div>
+      <div class="card"><h3>Wellness de 5 dage før</h3><div class="ch"><canvas id="cPreWellness"></canvas></div></div>
+    </div></details>
+
+    <details class="sec"><summary>Sammenlign med andre løb</summary><div class="secbody">
+      <div class="card" style="margin-bottom:12px"><h3>Lignende løb</h3><div class="ch"><canvas id="cCompare"></canvas></div></div>
+      <div class="card"><h3>Dine seneste løb &mdash; farvet efter dagsform</h3><div class="ch tall"><canvas id="cTimeline"></canvas></div></div>
+    </div></details>
+  </div>
 
 <!-- NAVIGATION: bundmenu på mobil, sidebjælke på desktop -->
 <nav class="bottomnav" aria-label="Hovedmenu">
@@ -652,7 +640,17 @@ async function fetchActs() {
   // Lag (laveste først): gammel Garmin-blob (2017-) < garmin_activities (2024-, helt til i dag) < intervals live.
   const day = a => (a.start_date_local || '').substring(0,10);
   const liveDates = new Set(live.map(day));
-  const gdb = (await fetchGarminActs()).filter(g => !liveDates.has(day(g)));
+  const gAll = await fetchGarminActs();
+  // Live-løb får manglende felter (løbeteknik, zoner m.m.) + garmin-id (til km-opdeling) fra garmin_activities
+  const FILL = ['average_cadence','average_stride','gct','vert_osc','vert_ratio','temp','location','icu_hr_zone_times','calories','vo2max','total_elevation_gain','max_heartrate','average_heartrate'];
+  live.forEach(a => {
+    const t = new Date(a.start_date_local || 0).getTime();
+    const g = gAll.filter(x => day(x) === day(a)).sort((x, y) => Math.abs(new Date(x.start_date_local) - t) - Math.abs(new Date(y.start_date_local) - t))[0];
+    if (!g || Math.abs(new Date(g.start_date_local) - t) > 90 * 60000) return;
+    a._gid = g.id;
+    FILL.forEach(k => { if (a[k] == null && g[k] != null) a[k] = g[k]; });
+  });
+  const gdb = gAll.filter(g => !liveDates.has(day(g)));
   const gdbDates = new Set(gdb.map(day));
   const hist = (window.GARMIN_HISTORY || []).filter(h => !liveDates.has(day(h)) && !gdbDates.has(day(h)));
   const merged = hist.concat(gdb, live);
@@ -702,8 +700,8 @@ function render() {
   const page = document.querySelector('.page.active')?.id;
 
   if (page === 'p-overview') { renderOverview(fr); renderHabit(); renderDagsform(fr, fw); }
-  if (page === 'p-run') { renderRunDetailPage(fr, fw); renderEconomy(fr); }
-  if (page === 'p-trend') { renderWellness(fw); renderVo2maxChart(); renderActivities(fa, fw); renderHistorik(); }
+  if (page === 'p-run') { renderRunDetailPage(fr, fw); }
+  if (page === 'p-trend') { renderWellness(fw); renderVo2maxChart(); renderEconomy(fr); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
 }
 
@@ -866,7 +864,7 @@ async function aiCoachCard(cardId, tab, headline, data){
 // ---- AI-analyse af ét konkret løb (Løb-fanen): cache pr. løb-id, ingen dags-udløb ----
 async function aiRunDetail(a, headline, data){
   const el=document.getElementById('coach-rundetail'); if(!el||!a) return;
-  const LSK='liv-rundetail2-'+a.id;
+  const LSK='liv-rundetail3-'+a.id;
   try{ const c=localStorage.getItem(LSK); if(c){ setCoachAI('coach-rundetail',headline,c); return; } }catch(e){}
   aiRunDetail._pending=a.id;
   setTimeout(async()=>{
@@ -1597,13 +1595,20 @@ function mkChart(id, cfg) {
   if (charts[id]) charts[id].destroy();
   const el = document.getElementById(id);
   if (!el) return;
+  el.style.display = '';
+  const m = el.parentElement.querySelector('.empty-msg'); if (m) m.remove();
   charts[id] = new Chart(el, cfg);
 }
 
-
+// Tom-tilstand: skjul canvas og vis en tekst (canvas bevares, så grafen kan tegnes igen for næste løb)
 function mkEmpty(id, msg) {
   const el = document.getElementById(id);
-  if (el) el.parentElement.innerHTML = '<p style="color:var(--muted);text-align:center;padding:60px 0;font-size:13px;">'+msg+'</p>';
+  if (!el) return;
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  el.style.display = 'none';
+  let m = el.parentElement.querySelector('.empty-msg');
+  if (!m) { m = document.createElement('p'); m.className = 'empty-msg'; m.style.cssText = 'color:var(--muted);text-align:center;padding:60px 0;font-size:13px;'; el.parentElement.appendChild(m); }
+  m.textContent = msg;
 }
 
 function opts(extra={}) {
@@ -2026,28 +2031,6 @@ function renderRunDetail() {
     else if (bb > 70) explains.push({ bad:false, text:`Body Battery p\u00e5 <strong>${bb}%</strong> — masser af energi i tanken.` });
   }
 
-  // CTL/ATL — beregnet fra faktiske aktiviteter (ikke planlagte workouts)
-  const dayDate = new Date(day);
-  const actualATL = calcATLfromActivities(activities, dayDate, 7);
-  const actualCTL = calcATLfromActivities(activities, dayDate, 42);
-  if (actualATL > 0 || actualCTL > 0) {
-    const atlCtlRatio = actualATL / Math.max(actualCTL, 1);
-    if (atlCtlRatio > 1.5) {
-      if (isHardRun) {
-        explains.push({ bad:false, text:`ATL/CTL-ratio var ${atlCtlRatio.toFixed(2)} — h\u00f8j belastning, men det er forventeligt p\u00e5 en ${runTypeLabel}. Hold \u00f8je med restitutionen de n\u00e6ste dage.` });
-      } else {
-        explains.push({ bad:true, text:`Din tr\u00e6thed (ATL: ${Math.round(actualATL)}) var markant h\u00f8jere end din fitness (CTL: ${Math.round(actualCTL)}). Du var overr\u00e6kt — kroppen havde brug for hvile.` });
-      }
-    } else if (atlCtlRatio > 1.3 && !isHardRun) {
-      explains.push({ bad:true, text:`Din tr\u00e6thed (ATL: ${Math.round(actualATL)}) var h\u00f8jere end din fitness (CTL: ${Math.round(actualCTL)}). Kroppen var let overr\u00e6kt.` });
-    }
-    factors.push({ label:'Fitness (CTL)', val: Math.round(actualCTL).toString(), cmp: null });
-    factors.push({ label:'Tr\u00e6thed (ATL)', val: Math.round(actualATL).toString(), cmp: null });
-  } else if (wl.ctl || wl.atl) {
-    if (wl.ctl) factors.push({ label:'Fitness (CTL)', val: Math.round(wl.ctl).toString(), cmp: null });
-    if (wl.atl) factors.push({ label:'Tr\u00e6thed (ATL)', val: Math.round(wl.atl).toString(), cmp: null });
-  }
-
   // Readiness Score
   const readiness = calcReadiness(wl, Object.values(rdWellMap), activities);
   if (readiness) {
@@ -2138,8 +2121,7 @@ function renderRunDetail() {
     <div class="card"><div class="lbl">Tid</div><div class="val" style="color:var(--blue)">${fmtDur(a.moving_time||0)}</div></div>
     <div class="card"><div class="lbl">Gns. puls</div><div class="val" style="color:var(--pink)">${a.average_heartrate?Math.round(a.average_heartrate):'-'}</div></div>
     <div class="card"><div class="lbl">Kadence</div><div class="val" style="color:var(--blue)">${cad||'-'}</div><div class="sub">${cad?'spm':''}</div></div>
-    <div class="card"><div class="lbl">Efficiency</div><div class="val" style="color:var(--cyan)">${efVal?efVal.toFixed(2):'-'}</div></div>
-    <div class="card"><div class="lbl">Belastning</div><div class="val" style="color:var(--purple)">${a.icu_training_load?Math.round(a.icu_training_load):'-'}</div></div>
+    <div class="card"><div class="lbl">Højdemeter</div><div class="val" style="color:var(--cyan)">${a.total_elevation_gain!=null?Math.round(a.total_elevation_gain):'-'}</div><div class="sub">${a.total_elevation_gain!=null?'m':''}</div></div>
   `;
 
   // Pre-run wellness trend (5 days before)
@@ -2170,17 +2152,162 @@ function renderRunDetail() {
       vs_snit:{tempo_min_km:avgP?coachFmtPace(avgP):null, puls:avgHRv?Math.round(avgHRv):null},
       dagsform:{soevn_timer:wl.sleepSecs?+(wl.sleepSecs/3600).toFixed(1):null, soevn_score:wl.sleepScore||null, hrv:wl.hrv||null, hvilepuls:wl.restingHR||null}
     };
-    aiRunDetail(a, rdHead, rdData);
+    fetchRunLaps(a).catch(() => null).then(raw => {
+      const L = raw ? normLaps(raw) : [];
+      if (L.length) rdData.km_opdeling = L.slice(0, 40).map(l => ({ nr:l.i, meter:Math.round(l.dist), tempo:fmtPace(lapPace(l)), puls:l.hr, kadence:l.cad?Math.round(l.cad):null }));
+      rdData.loebeteknik = { kadence_spm:cadVal, skridtlaengde_m:a.average_stride?+(+a.average_stride).toFixed(2):null, ground_contact_ms:a.gct?Math.round(a.gct):null, vertikal_oscillation_cm:a.vert_osc?+(+a.vert_osc).toFixed(1):null };
+      const dr = L.length ? driftInfo(L) : null;
+      if (dr && dr.steady) rdData.drift_procent = +dr.drift.toFixed(1);
+      aiRunDetail(a, rdHead, rdData);
+    });
   }catch(e){}
 
   // NEW: HR & Pace zone distribution
   renderZoneCharts(a);
 
-  // NEW: Interval breakdown + progression + dynamics
-  renderIntervalSection(a);
+  // Km-opdeling, drift og løbeteknik (Garmin-splits)
+  renderRunAnalysis(a);
 }
 
-// ---- ZONE CHARTS (HR + Pace) ----
+
+// ---- LØBEANALYSE: km-opdeling, drift og løbeteknik (Garmin-splits fra garmin_activities) ----
+const lapCache = {};
+let rdCur = null;
+async function fetchRunLaps(a) {
+  const gid = a._src === 'garmin-db' ? a.id : a._gid;
+  if (!gid) return null;
+  if (lapCache[gid] !== undefined) return lapCache[gid];
+  try {
+    const r = await fetch(`https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_activities?select=splits&activity_id=eq.${gid}`, { headers: hdr() });
+    const rows = r.ok ? await r.json() : [];
+    const laps = rows[0] && rows[0].splits && rows[0].splits.lapDTOs;
+    lapCache[gid] = laps && laps.length ? laps : null;
+  } catch (e) { lapCache[gid] = null; }
+  return lapCache[gid];
+}
+function normLaps(raw) {
+  return raw.map((l, i) => ({
+    i: i + 1, dist: l.distance || 0, dur: l.duration || 0, hr: l.averageHR || null,
+    spd: l.averageSpeed || 0, cad: l.averageRunCadence || null,
+    stride: l.strideLength ? l.strideLength / 100 : null, gct: l.groundContactTime || null, vo: l.verticalOscillation || null
+  })).filter(l => l.dist >= 50 && l.spd > 0);
+}
+function lapPace(l) { return 1000 / 60 / l.spd; } // min/km
+function driftInfo(L) {
+  const H = L.filter(l => l.hr);
+  const D = L.reduce((s, l) => s + l.dist, 0);
+  if (H.length < 4 || D < 4000) return null;
+  const spds = L.map(l => l.spd), m = avg(spds), sd = Math.sqrt(avg(spds.map(x => (x - m) ** 2)));
+  const steady = sd / m < 0.09; // jævnt løb – ikke intervaller/strides
+  let acc = 0; const a1 = [], a2 = [];
+  H.forEach(l => { (acc < D / 2 ? a1 : a2).push(l); acc += l.dist; });
+  const eff = arr => { const dist = arr.reduce((s, l) => s + l.dist, 0), dur = arr.reduce((s, l) => s + l.dur, 0), hr = arr.reduce((s, l) => s + l.hr * l.dur, 0) / dur; return (dist / dur) / hr; };
+  const e1 = eff(a1), e2 = eff(a2);
+  const sp = arr => arr.reduce((s, l) => s + l.dist, 0) / arr.reduce((s, l) => s + l.dur, 0);
+  const hrA = arr => arr.reduce((s, l) => s + l.hr * l.dur, 0) / arr.reduce((s, l) => s + l.dur, 0);
+  return { steady, drift: (e1 - e2) / e1 * 100, p1: 1000 / 60 / sp(a1), p2: 1000 / 60 / sp(a2), h1: hrA(a1), h2: hrA(a2) };
+}
+
+async function renderRunAnalysis(a) {
+  rdCur = a;
+  renderTech(a);
+  const card = document.getElementById('ra-split-card');
+  const driftCard = document.getElementById('ra-drift-card');
+  driftCard.style.display = 'none';
+  card.style.display = '';
+  document.getElementById('ra-split-sum').textContent = 'Henter opdeling…';
+  document.getElementById('ra-split-body').innerHTML = '';
+  if (charts.cSplits) { charts.cSplits.destroy(); delete charts.cSplits; }
+  const raw = await fetchRunLaps(a);
+  if (rdCur !== a) return; // brugeren skiftede løb imens
+  const L = raw ? normLaps(raw) : [];
+  if (!L.length) { card.style.display = 'none'; return; }
+
+  // chart: pace pr. lap (søjler, hurtig = høj) + puls (linje)
+  const paces = L.map(lapPace);
+  const fastest = Math.min(...paces), slowest = Math.max(...paces);
+  const top = slowest + 0.3, hrs = L.map(l => l.hr).filter(Boolean);   // søjlehøjde = top - pace → hurtigere = højere
+  const lab = l => Math.abs(l.dist - 1000) < 60 ? String(l.i) : (l.dist / 1000).toFixed(1).replace('.', ',') + 'k';
+  mkChart('cSplits', {
+    type: 'bar',
+    data: {
+      labels: L.map(lab),
+      datasets: [
+        { type: 'bar', label: 'Pace', data: paces.map(x => top - x), yAxisID: 'y', borderRadius: 4,
+          backgroundColor: paces.map(x => slowest - fastest < 0.05 ? 'rgba(34,197,94,.55)' : `rgba(34,197,94,${(0.25 + 0.6 * (slowest - x) / (slowest - fastest)).toFixed(2)})`) },
+        { type: 'line', label: 'Puls', data: L.map(l => l.hr), yAxisID: 'y2', borderColor: 'rgba(236,72,153,.9)', backgroundColor: 'rgba(236,72,153,.9)', pointRadius: 2, tension: .25, spanGaps: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b8fa3' } }, tooltip: { callbacks: { label: c => c.dataset.label === 'Pace' ? ` Pace ${fmtPace(paces[c.dataIndex])} · ${Math.round(L[c.dataIndex].dist)} m` : ` Puls ${c.raw}` } } },
+      scales: {
+        x: { ticks: { color: '#8b8fa3' }, grid: { display: false } },
+        y: { min: 0, max: top - Math.max(0, fastest - 0.3), ticks: { color: '#8b8fa3', callback: v => fmtPace(top - v) }, grid: { color: 'rgba(42,46,61,.5)' } },
+        y2: { position: 'right', min: hrs.length ? Math.min(...hrs) - 25 : undefined, max: hrs.length ? Math.max(...hrs) + 6 : undefined, ticks: { color: 'rgba(236,72,153,.8)' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // tabel
+  const fastIdx = paces.indexOf(fastest);
+  document.getElementById('ra-split-body').innerHTML = L.map((l, k) => {
+    const t = Math.round(l.dur), tm = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    return `<tr class="${k === fastIdx && L.length > 2 ? 'fast' : ''} ${l.dist < 300 ? 'short' : ''}"><td>${l.i}</td><td>${l.dist >= 950 && l.dist <= 1050 ? '1,00' : (l.dist / 1000).toFixed(2).replace('.', ',')} km</td><td>${tm}</td><td>${fmtPace(lapPace(l))}</td><td>${l.hr ? Math.round(l.hr) : '–'}</td><td>${l.cad ? Math.round(l.cad) : '–'}</td><td>${l.stride ? l.stride.toFixed(2).replace('.', ',') : '–'}</td></tr>`;
+  }).join('');
+
+  // resumé over grafen
+  const dr = driftInfo(L);
+  const parts = [];
+  if (L.length > 1) parts.push(`Hurtigst: <b>${fmtPace(fastest)}</b> (${lab(L[fastIdx]) === String(L[fastIdx].i) ? 'km ' + L[fastIdx].i : 'lap ' + L[fastIdx].i})`);
+  if (dr && dr.steady) {
+    const diff = (dr.p1 - dr.p2) * 60;
+    if (Math.abs(diff) < 3) parts.push('Jævnt tempo hele vejen');
+    else if (diff > 0) parts.push(`<b>Negativ split</b>: 2. halvdel ${Math.round(diff)} sek./km hurtigere`);
+    else parts.push(`2. halvdel ${Math.round(-diff)} sek./km langsommere`);
+  } else if (L.length >= 6) parts.push('Varieret løb (intervaller/strides)');
+  document.getElementById('ra-split-sum').innerHTML = parts.join(' · ');
+
+  // drift – kun for jævne løb over 4 km
+  if (dr && dr.steady) {
+    const dv = dr.drift;
+    const verdict = dv < 3 ? ['good', 'Stabilt', 'Pulsen steg næsten ikke i forhold til tempoet – god aerob base.']
+      : dv < 6 ? ['warn', 'Lidt drift', 'Pulsen steg noget i anden halvdel ved samme fart. Normalt på længere ture eller varme dage.']
+      : ['bad', 'Tydelig drift', 'Du brugte væsentligt mere puls i anden halvdel. Ofte for højt starttempo, varme, væske eller for lidt base.'];
+    document.getElementById('ra-drift').innerHTML = `
+      <div style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
+        <div class="${verdict[0]}" style="font-family:'Fraunces',Georgia,serif;font-size:30px">${dv.toFixed(1).replace('.', ',')}%</div>
+        <div style="font-weight:600">${verdict[1]}</div>
+      </div>
+      <div class="ra-sum">${verdict[2]}</div>
+      <div class="ra-sum">1. halvdel: <b>${fmtPace(dr.p1)}</b> ved puls <b>${Math.round(dr.h1)}</b> &nbsp;→&nbsp; 2. halvdel: <b>${fmtPace(dr.p2)}</b> ved puls <b>${Math.round(dr.h2)}</b></div>`;
+    driftCard.style.display = '';
+  }
+}
+
+function renderTech(a) {
+  const el = document.getElementById('ra-tech');
+  const others = rdRuns.filter(x => x !== a && d(x) < d(a)).slice(0, 30);
+  const defs = [
+    { label: 'Kadence', val: a.average_cadence ? a.average_cadence * 2 : null, get: x => x.average_cadence ? x.average_cadence * 2 : null, unit: 'spm', dec: 0, better: 'up' },
+    { label: 'Skridtlængde', val: a.average_stride, get: x => x.average_stride, unit: 'm', dec: 2, better: null },
+    { label: 'Jordkontakt', val: a.gct, get: x => x.gct, unit: 'ms', dec: 0, better: 'down' },
+    { label: 'Vertikal bevægelse', val: a.vert_osc, get: x => x.vert_osc, unit: 'cm', dec: 1, better: 'down' }
+  ].filter(t => t.val != null);
+  if (!defs.length) { el.innerHTML = '<div class="ra-sum">Ingen løbeteknik-data for dette løb.</div>'; return; }
+  el.innerHTML = `<div class="factor-grid" style="margin:0">` + defs.map(t => {
+    const ref = avg(others.map(t.get).filter(v => v != null));
+    let cmp = '';
+    if (ref != null) {
+      const diff = t.val - ref, small = Math.abs(diff) < Math.pow(10, -t.dec) * 1.5;
+      const cls = small || !t.better ? 'f-neutral' : ((diff > 0) === (t.better === 'up') ? 'f-up' : 'f-down');
+      cmp = `<div class="f-cmp ${cls}">${small ? '●' : diff > 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(t.dec).replace('.', ',')} ${t.unit} vs. dit snit (${(+ref).toFixed(t.dec).replace('.', ',')})</div>`;
+    }
+    return `<div class="factor"><div class="f-label">${t.label}</div><div class="f-val">${(+t.val).toFixed(t.dec).replace('.', ',')}<small style="font-size:12px;color:var(--muted)"> ${t.unit}</small></div>${cmp}</div>`;
+  }).join('') + `</div><div class="ra-sum" style="margin-top:10px">Sammenlignet med dine seneste 30 løb. Tempo påvirker alle fire, så kig mest på udvikling over tid (under Udvikling).</div>`;
+}
+
+// ---- ZONE CHARTS (HR) ----
 function renderZoneCharts(a) {
   // HR Zones
   const hrzt = a.icu_hr_zone_times;
@@ -2220,250 +2347,12 @@ function renderZoneCharts(a) {
   } else {
     mkEmpty('cHRZones', 'Ingen pulszone-data for dette løb');
   }
-
-  // Pace Zones
-  const pzt = a.pace_zone_times;
-  if (pzt && pzt.some(t => t > 0)) {
-    const pzLabels = pzt.map((_, i) => 'Zone ' + (i + 1));
-    const pzColors = ['rgba(34,197,94,.7)', 'rgba(6,182,212,.7)', 'rgba(99,102,241,.7)', 'rgba(245,158,11,.7)', 'rgba(239,68,68,.7)', 'rgba(168,85,247,.7)', 'rgba(236,72,153,.7)'];
-    const totalSec = pzt.reduce((a, b) => a + b, 0);
-    mkChart('cPaceZones', {
-      type: 'doughnut',
-      data: {
-        labels: pzLabels.filter((_, i) => pzt[i] > 0),
-        datasets: [{
-          data: pzt.filter(t => t > 0),
-          backgroundColor: pzColors.filter((_, i) => pzt[i] > 0),
-          borderColor: 'rgba(26,29,39,1)',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: '#8b8fa3', font: { size: 11 }, padding: 12 } },
-          tooltip: {
-            callbacks: {
-              label: function(ctx) {
-                const secs = ctx.raw;
-                const pct = (secs / totalSec * 100).toFixed(0);
-                const m = Math.floor(secs / 60);
-                const s = secs % 60;
-                return ` ${ctx.label}: ${m}:${String(s).padStart(2,'0')} (${pct}%)`;
-              }
-            }
-          }
-        }
-      }
-    });
-  } else {
-    mkEmpty('cPaceZones', 'Ingen pace-zone-data for dette løb');
-  }
-}
-
-// ---- INTERVAL SECTION ----
-let intervalCache = {};
-
-async function fetchIntervals(actId) {
-  if (intervalCache[actId]) return intervalCache[actId];
-  try {
-    const r = await fetch(`${BASE}/activity/${actId}/intervals`, { headers: hdr() });
-    if (!r.ok) return null;
-    const data = await r.json();
-    intervalCache[actId] = data;
-    return data;
-  } catch(e) { console.error('Interval fetch failed:', e); return null; }
 }
 
 
 
-async function renderIntervalSection(a) {
-  const loadEl = document.getElementById('interval-loading');
-  const tableWrap = document.getElementById('interval-table-wrap');
-  const progWrap = document.getElementById('interval-progression-wrap');
-  const dynWrap = document.getElementById('dynamics-wrap');
-  const dynEmpty = document.getElementById('dynamics-empty');
 
-  loadEl.style.display = 'block';
-  tableWrap.style.display = 'none';
-  progWrap.style.display = 'none';
-  dynWrap.style.display = 'none';
-  dynEmpty.style.display = 'block';
 
-  const data = await fetchIntervals(a.id);
-  loadEl.style.display = 'none';
-
-  if (!data || !data.icu_intervals || data.icu_intervals.length === 0) {
-    tableWrap.style.display = 'block';
-    tableWrap.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:12px 0;">Ingen interval-data tilgængelig for dette løb.</p>';
-    dynEmpty.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:12px 0;">Ingen dynamics-data tilgængelig.</p>';
-    return;
-  }
-
-  const intervals = data.icu_intervals;
-  // Filter out very short recovery blips (< 5m distance and < 5s)
-  const meaningful = intervals.filter(iv => iv.distance > 5 || iv.moving_time > 5);
-
-  // Build table
-  let html = '<div style="overflow-x:auto;"><table><thead><tr><th>#</th><th>Type</th><th>Distance</th><th>Tid</th><th>Pace</th><th>Gns. puls</th><th>Max puls</th><th>Kadence</th><th>Skridtl.</th></tr></thead><tbody>';
-
-  meaningful.forEach((iv, i) => {
-    const dist = iv.distance || 0;
-    const time = iv.moving_time || iv.elapsed_time || 0;
-    const avgSpeed = iv.average_speed || 0;
-    const paceVal = avgSpeed > 0 ? (1000 / avgSpeed / 60) : null;
-    const paceStr = paceVal ? fmtPace(paceVal) : '-';
-    const typeLabel = iv.type === 'WORK' ? 'Arbejde' : iv.type === 'RECOVERY' ? 'Restitution' : iv.type === 'REST' ? 'Pause' : iv.type || '-';
-    const typeColor = iv.type === 'WORK' ? 'var(--accent2)' : 'var(--muted)';
-    const mins = Math.floor(time / 60);
-    const secs = time % 60;
-    const cad = iv.average_cadence ? Math.round(iv.average_cadence * 2) : null;
-    const stride = iv.average_stride ? iv.average_stride.toFixed(2) : '-';
-
-    html += `<tr style="opacity:${iv.type === 'RECOVERY' || iv.type === 'REST' ? '0.55' : '1'}">
-      <td>${i + 1}</td>
-      <td style="color:${typeColor};font-weight:600;">${typeLabel}</td>
-      <td>${dist >= 1000 ? (dist/1000).toFixed(2) + ' km' : Math.round(dist) + ' m'}</td>
-      <td>${mins}:${String(secs).padStart(2,'0')}</td>
-      <td style="font-weight:600;">${paceStr}</td>
-      <td>${iv.average_heartrate ? Math.round(iv.average_heartrate) : '-'}</td>
-      <td>${iv.max_heartrate ? Math.round(iv.max_heartrate) : '-'}</td>
-      <td>${cad || '-'}</td>
-      <td>${stride} m</td>
-    </tr>`;
-  });
-  html += '</tbody></table></div>';
-  tableWrap.innerHTML = html;
-  tableWrap.style.display = 'block';
-
-  // Identify fast intervals (strides/tempo) — short work intervals that are significantly faster than average
-  const workIntervals = meaningful.filter(iv => iv.type === 'WORK' && iv.distance > 20);
-  const avgWorkSpeed = avg(workIntervals.map(iv => iv.average_speed).filter(Boolean));
-  const fastIntervals = workIntervals.filter(iv => iv.average_speed && iv.average_speed > avgWorkSpeed * 1.1 && iv.moving_time <= 120);
-
-  if (fastIntervals.length >= 3) {
-    progWrap.style.display = 'block';
-    const labels = fastIntervals.map((_, i) => 'Stride ' + (i + 1));
-    const paces = fastIntervals.map(iv => iv.average_speed > 0 ? (1000 / iv.average_speed / 60) : null);
-    const hrs = fastIntervals.map(iv => iv.average_heartrate || null);
-
-    mkChart('cIntervalProg', {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Pace (min/km)',
-            data: paces,
-            borderColor: 'rgba(99,102,241,.9)',
-            backgroundColor: 'rgba(99,102,241,.15)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 5,
-            pointBackgroundColor: paces.map((p, i) => {
-              if (i === 0) return 'rgba(99,102,241,1)';
-              return p < paces[i-1] ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)';
-            }),
-            yAxisID: 'y'
-          },
-          {
-            label: 'Puls (bpm)',
-            data: hrs,
-            borderColor: 'rgba(236,72,153,.7)',
-            borderDash: [5, 3],
-            tension: 0.3,
-            pointRadius: 4,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3' } },
-          y: { reverse: true, position: 'left', title: { display: true, text: 'Pace (min/km)', color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3', callback: function(v) { return fmtPace(v); } } },
-          y1: { position: 'right', title: { display: true, text: 'Puls (bpm)', color: '#8b8fa3' }, grid: { drawOnChartArea: false }, ticks: { color: '#8b8fa3' } }
-        },
-        plugins: {
-          legend: { labels: { color: '#8b8fa3', font: { size: 11 } } },
-          tooltip: {
-            callbacks: {
-              label: function(ctx) {
-                if (ctx.datasetIndex === 0) return ' Pace: ' + fmtPace(ctx.raw) + '/km';
-                return ' Puls: ' + Math.round(ctx.raw) + ' bpm';
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Running dynamics per interval
-  const dynIntervals = meaningful.filter(iv => iv.type === 'WORK' && iv.distance > 20 && (iv.average_cadence || iv.average_stride));
-  if (dynIntervals.length >= 2) {
-    dynEmpty.style.display = 'none';
-    dynWrap.style.display = 'block';
-
-    const dynLabels = dynIntervals.map((iv, i) => {
-      const dist = iv.distance >= 1000 ? (iv.distance/1000).toFixed(1) + 'km' : Math.round(iv.distance) + 'm';
-      return `#${i+1} (${dist})`;
-    });
-    const cadData = dynIntervals.map(iv => iv.average_cadence ? Math.round(iv.average_cadence * 2) : null);
-    const strideData = dynIntervals.map(iv => iv.average_stride || null);
-    const speedData = dynIntervals.map(iv => iv.average_speed || 0);
-
-    // Color bars by speed (fast = green, slow = blue)
-    const maxSpeed = Math.max(...speedData);
-    const minSpeed = Math.min(...speedData.filter(s => s > 0));
-    const cadColors = speedData.map(s => {
-      const t = maxSpeed > minSpeed ? (s - minSpeed) / (maxSpeed - minSpeed) : 0.5;
-      return t > 0.6 ? 'rgba(34,197,94,.7)' : t > 0.3 ? 'rgba(99,102,241,.7)' : 'rgba(59,130,246,.7)';
-    });
-
-    mkChart('cDynamics', {
-      type: 'bar',
-      data: {
-        labels: dynLabels,
-        datasets: [
-          {
-            label: 'Kadence (spm)',
-            data: cadData,
-            backgroundColor: cadColors,
-            borderRadius: 3,
-            yAxisID: 'y',
-            order: 2
-          },
-          {
-            label: 'Skridtlængde (m)',
-            data: strideData,
-            type: 'line',
-            borderColor: 'rgba(245,158,11,.9)',
-            backgroundColor: 'rgba(245,158,11,.1)',
-            pointRadius: 5,
-            pointBackgroundColor: 'rgba(245,158,11,1)',
-            tension: 0.3,
-            yAxisID: 'y1',
-            order: 1
-          }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3', font: { size: 10 }, maxRotation: 45 } },
-          y: { position: 'left', title: { display: true, text: 'Kadence (spm)', color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3' } },
-          y1: { position: 'right', title: { display: true, text: 'Skridtlængde (m)', color: '#8b8fa3' }, grid: { drawOnChartArea: false }, ticks: { color: '#8b8fa3' } }
-        },
-        plugins: { legend: { labels: { color: '#8b8fa3', font: { size: 11 } } } }
-      }
-    });
-  } else {
-    dynEmpty.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:12px 0;">Ikke nok intervaller med dynamics-data.</p>';
-  }
-}
 
 // ---- COMPARISON WITH SAME WORKOUT TYPE ----
 function renderPreWellness(day) {
