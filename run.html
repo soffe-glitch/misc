@@ -232,7 +232,6 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
   .chartcard .ch { height:320px; }
   details.sec > .secbody { padding:0 18px 20px; }
 }
-body[data-page="goals"] .controls { display:none; }
 @media(min-width:700px) and (max-width:999px) { .bottomnav { left:50%; right:auto; width:520px; transform:translateX(-50%); } }
 
 /* ---- Spøgelse (ghost race) fane ---- */
@@ -322,13 +321,17 @@ body[data-page="goals"] .controls { display:none; }
       <div id="coach-overview"></div>
       <div id="recent-activity-summary"></div>
     </div>
+    <div id="coach-dagsform" style="display:none"></div>
+    <div id="df-score"></div>
+    <div id="df-workout"></div>
+    <div class="grid g6 statstrip" id="df-metrics"></div>
+    <details class="sec"><summary>Hvad påvirker din dagsform?</summary><div class="secbody"><div id="df-factors"></div></div></details>
     <div id="habit-mini"></div>
-    <div id="acwr-alert"></div>
     <div class="grid g6 statstrip" id="summary"></div>
     <div class="card chartcard">
       <div class="ch-head"><h3>Udvikling</h3><div class="segctl" id="ovSeg"><button type="button" class="on" data-pane="cWeekly">Distance</button><button type="button" class="" data-pane="cPace">Pace</button><button type="button" class="" data-pane="cHR">Puls</button><button type="button" class="" data-pane="cEF">Effektivitet</button><button type="button" class="" data-pane="cZones">Zoner</button></div></div>
       <div class="chpane on" data-pane="cWeekly"><div class="ch tall"><canvas id="cWeekly"></canvas></div>
-        <div class="help">Viser din samlede distance pr. uge. <span class="good">J&aelig;vn stigning</span> er ideelt &mdash; store pludselige hop &oslash;ger skadesrisiko.</div>
+        <div class="help">Viser din samlede distance pr. uge. <span class="good">J&aelig;vn stigning</span> er ideelt &mdash; store pludselige hop er en grund til at s&aelig;tte tempoet ned.</div>
       </div>
 <div class="chpane" data-pane="cPace"><div class="ch"><canvas id="cPace"></canvas></div>
         <div class="help"><span class="good">Lavere = hurtigere.</span> En faldende kurve betyder du bliver hurtigere. Husk at pace varierer med distance, terr&aelig;n og vejr.</div>
@@ -350,363 +353,13 @@ body[data-page="goals"] .controls { display:none; }
     </div></details>
   </div>
 
-  <!-- MÅL -->
-  <div class="page" id="p-goals">
-    <!-- LØBEVANE (aktuelt mål) -->
-    <div class="goal-card" id="habit-card" style="border-left:4px solid var(--accent);">
-      <h3>Løbevane: 66 dage</h3>
-      <div id="hb-full"></div>
-    </div>
-
-    <div id="coach-goals" style="display:none"></div>
-
-    <!-- Retur-til-form-sæsonmål (sub 1:47) — udskudt forbi 20/9 -->
-    <div class="goal-card" id="hm-sub145-card">
-      <h3 style="margin-bottom:4px;">Retur til PB-form: sub 1:47 (stretch sub 1:45) — sæsonmål uden dato</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Sub-1:47 er dit retur-til-form-mål. Der er ikke valgt et løb til det endnu. <strong>Primært mål: sub 1:47</strong> — tilbage til PB-form efter pausen (sep 2025 – feb 2026), realistisk hvis du træner regelmæssigt hele sommeren (5:04/km gns). <strong>Stretch: sub 1:45</strong> (4:59/km) hvis opbygningen går over forventning.</p>
-
-      <div class="grid g3" style="margin:16px 0;">
-        <div>
-          <div class="goal-label">Primært mål</div>
-          <div class="goal-value" style="color:var(--green);">1:46:59</div>
-          <div class="goal-hint">5:04/km gns · stretch 1:44:59 (4:59/km)</div>
-        </div>
-        <div>
-          <div class="goal-label">Nuværende PB</div>
-          <div class="goal-value" id="hm-pb">1:47:00</div>
-          <div class="goal-hint">Før pause (efterår 2025)</div>
-        </div>
-        <div>
-          <div class="goal-label">Næste løb</div>
-          <div class="goal-value" id="hm-days-left" style="color:var(--accent2);">--</div>
-          <div class="goal-hint">Intet løb planlagt</div>
-        </div>
+  <!-- UDVIKLING -->
+  <div class="page" id="p-trend">
+    <details class="sec" open><summary>Form over tid</summary><div class="secbody">
+      <div class="card">
+        <h3>VO2max (Garmin)</h3>
+        <div class="ch tall"><canvas id="ch-vo2"></canvas></div>
       </div>
-
-      <div class="info" style="margin-top:8px;">
-        <strong>Vurdering pr. 21. juni 2026: sub 1:47 realistisk, sub 1:45 ambitiøst</strong>
-        <p style="margin-top:6px; font-size:13px; line-height:1.7;">10K-testen 9. juni (54:19 i 22° varme, skæv pacing) projicerer rå til ~1:58, men model-tallet er trukket ned af varme, positiv split og lav CTL — ikke din reelle form. På en kølig dag med jævn pacing svarer din nuværende form til ~1:51–1:53 HM. Med 13 ugers regelmæssig træning og HM-specifik opbygning er en retur til PB-form (sub 1:47) det realistiske mål. Sub 1:45 kræver at du går lidt forbi dit gamle niveau — holdes som stretch. Afhænger af konsistens og skadesfrihed.</p>
-      </div>
-
-      <div class="card" style="margin-top:16px;">
-        <h3>Tjekpunkter mod m&aring;let</h3>
-        <p style="font-size:12px;color:var(--muted);margin:4px 0 8px;">Trend-mark&oslash;rer afl&aelig;st af <em>hvad du end l&oslash;ber</em> &mdash; uafh&aelig;ngigt af hvilke pas S&oslash;ren l&aelig;gger, og hvorn&aring;r. Ingen bindes til bestemte pas eller datoer, s&aring; intet fejlmelder "Misset".</p>
-        <table style="margin-top:8px;">
-          <thead><tr><th>Mark&oslash;r</th><th>Nu</th><th>Trend</th><th>Status</th></tr></thead>
-          <tbody id="goalMarkers"></tbody>
-        </table>
-        <div class="help" style="margin-top:12px;">
-          <strong>S&aring;dan l&aelig;ses de:</strong> Konsistens og volumen viser, om motoren i tr&aelig;ningen k&oslash;rer. Den lange tur skal vokse mod 18&ndash;19 km. L&oslash;be&oslash;konomi (fart pr. puls) skal trende opad. M&aring;lpace-arbejde t&aelig;ller tid ved t&aelig;rskel og hurtigere &mdash; dvs. tid t&aelig;t p&aring;/under 5:04 &mdash; uanset hvad passet hedder. <em>Bem&aelig;rk: sommervarme trykker &oslash;konomi- og pace-tal, s&aring; en flad kurve nu er ikke n&oslash;dvendigvis et stop.</em>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px;">
-        <h3>Pace-reference — racedag</h3>
-        <table style="margin-top:8px;">
-          <thead>
-            <tr><th>Distance</th><th>Sub 1:47 (primært · 5:04/km)</th><th>Sub 1:45 (stretch · 4:59/km)</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>5 km</td><td>25:22</td><td>24:53</td></tr>
-            <tr><td>10 km</td><td>50:43</td><td>49:46</td></tr>
-            <tr><td>15 km</td><td>1:16:05</td><td>1:14:38</td></tr>
-            <tr><td>21,1 km</td><td><strong style="color:var(--green);">1:46:59</strong></td><td><strong style="color:var(--accent2);">1:44:59</strong></td></tr>
-          </tbody>
-        </table>
-        <div class="help" style="margin-top:12px;">Disse splits er din <strong>retur-til-form-reference til et senere løb</strong> — ikke målet 20/9, hvor planen er behagelig gennemførsel (se boksen øverst). Når du engang jager tiden igen, gælder læren fra 9. juni stadig: åbn kontrolleret (ikke hurtigere end målpace) og gem kræfter til de sidste 6 km, hvor det afgøres.</div>
-      </div>
-    </div>
-
-    <!-- HM-PROGNOSE (Riegel) -->
-    <div class="goal-card" id="hm-prognose-card">
-      <h3>HM-prognose (rullende)</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Estimeret HM-tid baseret på dine bedste indsatser de seneste 30 dage, projiceret via Riegel-formlen (T2 = T1 × (D2/D1)^1.06).</p>
-      <div class="grid g3" style="margin:12px 0;">
-        <div>
-          <div class="goal-label">Nuværende HM-prognose</div>
-          <div class="goal-value" id="hm-prognose-current" style="color:var(--accent2);">--:--:--</div>
-          <div class="goal-hint" id="hm-prognose-source">Bedste projektion</div>
-        </div>
-        <div>
-          <div class="goal-label">Gap til sub 1:47</div>
-          <div class="goal-value" id="hm-prognose-gap">--</div>
-          <div class="goal-hint" id="hm-prognose-gap-hint">Positivt = bagud</div>
-        </div>
-        <div>
-          <div class="goal-label">Datakilder</div>
-          <div class="goal-value" id="hm-prognose-count" style="font-size:18px;">--</div>
-          <div class="goal-hint">Indsatser brugt (30 dage)</div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:12px;">
-        <h3>HM-prognose seneste 12 uger</h3>
-        <div class="ch"><canvas id="cHmPrognose"></canvas></div>
-        <div class="help">Prognosen opdateres automatisk når du registrerer nye løb. Bedst når der er nyere tempo- eller race-data. Vandret linje = sub 1:47 (primært mål); stretch sub 1:45 ligger 2 min hurtigere.</div>
-      </div>
-    </div>
-
-    <!-- LANGE TURE PROGRESSION -->
-    <div class="goal-card" id="long-runs-card">
-      <h3>Længste ugentlige løbetur — vejen mod 20 km</h3>
-      <div class="ch"><canvas id="cLongRuns"></canvas></div>
-      <div class="help">Faktisk længste tur per uge (lilla) vs. mål-kurven (grøn stiplet) der bygger gradvist op til ~20 km i ugen før race (7. sept). Specificitet på lange ture er afgørende for HM.</div>
-    </div>
-
-    <!-- RACE-PACE ZONE TRACKER -->
-    <div class="goal-card" id="race-pace-card">
-      <h3>Tid i HM-pace-zone (4:50–5:05/km)</h3>
-      <div class="ch"><canvas id="cRacePace"></canvas></div>
-      <div class="help" id="race-pace-help">Specificitet — minutter løbet i HM-race-pace per uge. Stiger som race nærmer sig.</div>
-    </div>
-
-    <!-- DECOUPLING / HR-DRIFT -->
-    <div class="goal-card" id="decoupling-card">
-      <h3>Aerob decoupling — lange ture</h3>
-      <div class="ch"><canvas id="cDecoupling"></canvas></div>
-      <div class="help" id="decoupling-help">Lavt decoupling = du kan holde pacen — vigtigt for HM-mål. Grøn zone &lt;5% = god aerob form, rød zone &gt;10% = mangler udholdenhed.</div>
-    </div>
-
-    <!-- PRE-PAUSE BASELINE -->
-    <div class="goal-card" id="prepause-card">
-      <h3>Sammenligning mod pre-pause niveau (jun–sept 2025)</h3>
-      <div class="grid g2" id="prepause-grid" style="margin-top:8px;"></div>
-      <div class="help" style="margin-top:12px;">100 % betyder du har matchet dit gamle niveau. Sub 1:45 kræver at du går lidt forbi det — ikke bare tilbage på det.</div>
-    </div>
-
-    <div class="goal-card" id="z2-guide">
-      <h3>Din Zone 2 Guide</h3>
-      <div id="z2-info"></div>
-      <div id="z2-alert"></div>
-    </div>
-
-    <div class="goal-card">
-      <h3>Konsistens: Regelmæssig løberoutine</h3>
-      <div class="grid g2" style="margin-bottom:16px;">
-        <div>
-          <div class="goal-label">Løb pr. uge (gns. denne måned)</div>
-          <div class="goal-value" id="runs-per-week">--</div>
-        </div>
-        <div>
-          <div class="goal-label">Nuværende streak</div>
-          <div class="goal-value" id="run-streak">--</div>
-          <div class="goal-hint">Uger i træk med 3+ løb</div>
-        </div>
-      </div>
-      <div class="card full" style="margin-bottom:16px;"><h3>Løb pr. uge (seneste 12 mdr.)</h3><div class="ch"><canvas id="cRunsPerWeek"></canvas></div>
-        <div class="help">Viser hvor mange løb du har haft hver uge. Ideelt 3-5 løb pr. uge for at balancere progression med restitution.</div>
-      </div>
-      <div class="info"><strong>Konsistens betyder alt</strong>
-        <div style="margin-top:8px; font-size:13px; line-height:1.7;">
-          <p>Den vigtigste faktor for at blive hurtigere er at løbe regelmæssigt. Sporadic træning giver ikke de samme resultater som stabil, målrettet træning over længere tid.</p>
-          <ul style="margin:8px 0 0 20px;">
-            <li><strong>3 løb/uge:</strong> Minimum for at se progress. Er godt for begyndere og til skadesforebyggelse</li>
-            <li><strong>4-5 løb/uge:</strong> Ideelt for at bygge aerob kapacitet og forbedre tempo</li>
-            <li><strong>6+ løb/uge:</strong> For erfarne løbere med god restitution og lav skadesrisiko</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="goal-card">
-      <h3>Ordforklaringer: Alt hvad du skal vide</h3>
-      <div style="font-size:13px;">
-        <details open>
-          <summary><span class="expand-btn">▶</span>Træningsudtryk</summary>
-          <div class="glossary-item">
-            <div class="glossary-term">VO2Max</div>
-            <div class="glossary-desc">Maksimal mængde ilt din krop kan optage og udnytte under intensiv træning. Måles i ml/kg/min.</div>
-            <div class="glossary-hint">Godt niveau for kvinder: 40-45 ml/kg/min | Eksellent: 45-50+ | Dette er lidt ligesom dine lungers "kapacitet" til arbejde</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">HRV (Heart Rate Variability - Hjerterytme-variabilitet)</div>
-            <div class="glossary-desc">Måler variationen i tid mellem dine hjerteslag. Higher HRV indikerer, at kroppen er klar til at yde.</div>
-            <div class="glossary-hint">Typisk 20-200 ms afhængigt af person og målemetode | HRV er som din krops "batteriniveau" - jo højere, jo mere energi og klar til træning</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">CTL (Chronic Training Load - Kronisk træningsbelastning)</div>
-            <div class="glossary-desc">Dit 42-dages løbende gennemsnit af træningsbelastning. Viser din samlede fitness og kapacitet.</div>
-            <div class="glossary-hint">Skal stige gradvist over tid | CTL stiger = du bliver fitter og stærkere</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">ATL (Acute Training Load - Akut træningsbelastning)</div>
-            <div class="glossary-desc">Dit 7-dages løbende gennemsnit af træningsbelastning. Viser hvor træt du er LIGE NU.</div>
-            <div class="glossary-hint">Skal holdes under CTL for at undgå overtræningstilstand | Hvis ATL >> CTL = du er overrakt og skal hvile</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">ACWR (Acute:Chronic Workload Ratio - Akut til kronisk arbejdsbelastning ratio)</div>
-            <div class="glossary-desc">Forholdet mellem din aktuelle træning (ATL) og din planlagte fitness (CTL). Bruges til at vurdere skadesrisiko.</div>
-            <div class="glossary-hint">Sikkert område: 0.8-1.3 | Over 1.3 = høj skadesrisiko, under 0.8 = lav træningsbelastning</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">TRIMP (Training Impulse - Træningsimpuls)</div>
-            <div class="glossary-desc">En beregning af træningsintensitet baseret på varighed, intensitet og hjertefrekvens. Jo højere TRIMP, desto hårdere træning.</div>
-            <div class="glossary-hint">Et løb på 60 min ved Zone 2 = ~30-40 TRIMP | Et løb på 30 min ved Zone 4 = ~40-50 TRIMP</div>
-          </div>
-        </details>
-        <details>
-          <summary><span class="expand-btn">▶</span>Løbepræstation</summary>
-          <div class="glossary-item">
-            <div class="glossary-term">Pace (min/km)</div>
-            <div class="glossary-desc">Gennemsnitlig tid pr. km løb. Lavere pace = hurtigere løb.</div>
-            <div class="glossary-hint">Eksempel: 5:00/km betyder 5 minutter pr. kilometer | For 10km ville det være 50 minutter i alt</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Efficiency Factor (EF)</div>
-            <div class="glossary-desc">Forholdet mellem din pace og din gennemsnitlige puls under løbet. Viser hvor effektivt du løber pr. hjerteslag.</div>
-            <div class="glossary-hint">Højere EF = bedre løbeøkonomi | Stiger EF over tid = din form bliver bedre</div>
-          </div>
-          <div class="glossary-term">Kadence</div>
-          <div class="glossary-desc">Antal skridt pr. minut (tipisk 160-180 for løbere). Vigtig for løbeteknik og skadesrisiko.</div>
-          <div class="glossary-hint">For lav kadence (under 160) kan øge skaderne | Optimal kadence for fleste: 170-180 skridt/min</div>
-        </details>
-        <details>
-          <summary><span class="expand-btn">▶</span>Restitution & Wellness</summary>
-          <div class="glossary-item">
-            <div class="glossary-term">Hvilepuls (RHR)</div>
-            <div class="glossary-desc">Din hjertehyppighed når du er fuldt afslappet om morgenen. Lavere er bedre.</div>
-            <div class="glossary-hint">Typisk område: 40-60 bpm | Øver løbere: 35-50 bpm | Stigende hvilepuls can indikere tretthed eller sygdom</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Søvn</div>
-            <div class="glossary-desc">Kritisk for restitution, muskelopbygning og mental sundhed. De fleste løbere har brug for 7-9 timer.</div>
-            <div class="glossary-hint">Under 6 timer påvirker performance negativt | 7-9 timer = optimal | Søvnkvalitet betyder lige så meget som mængde</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Pulszoner (Zone 1-5)</div>
-            <div class="glossary-desc">Område baseret på procentdel af din maksimale hjertefrekvens eller reserve:</div>
-            <div class="glossary-hint">
-              Zone 1 (50-60%): Meget let, opvarmning og aktiv restitution<br>
-              Zone 2 (60-70%): Let, grundlaget for langvarigt løb<br>
-              Zone 3 (70-80%): Moderat/tempo, omkring tærskelintensitet<br>
-              Zone 4 (80-90%): Hård, intervalltræning<br>
-              Zone 5 (90-100%): Meget hård, maksimal indsats<br>
-              <strong>80/20 regel:</strong> 80% af løbene bør være i Zone 1-2, 20% i Zone 3-5
-            </div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Readiness Score</div>
-            <div class="glossary-desc">Et samlet score (0-100) beregnet ud fra HRV, hvilepuls, søvn og træningsbelastning. Viser hvor klar du er til at træne.</div>
-            <div class="glossary-hint">Over 70 = Gå på med træningen | 40-70 = Moderat, afpasset træning OK | Under 40 = Hvil eller let træning</div>
-          </div>
-        </details>
-        <details>
-          <summary><span class="expand-btn">▶</span>Træningstyper</summary>
-          <div class="glossary-item">
-            <div class="glossary-term">Easy Run (Let løb)</div>
-            <div class="glossary-desc">Langsomt løb i Zone 1-2. Bygger grundlag, forbedrer aerob kapacitet, reducerer skaderisiko.</div>
-            <div class="glossary-hint">Skal kunne tale under løbet | 70-80% af dine løb bør være easy runs | Typisk 45-90 minutter</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Tempo Run (Tempotræning)</div>
-            <div class="glossary-desc">Vedvarende løb i Zone 3, omkring din laktattærskel. Forbedrer din evne til at holde hurtige tempi.</div>
-            <div class="glossary-hint">Typisk 20-40 minutter ved steady intensitet | Ikke helt sprint, men hårdere end easy pace</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Interval / Speedwork</div>
-            <div class="glossary-desc">Korte intensive perioder (400m-2km) med aktiv restitution imellem. Forbedrer VO2Max og løbehastighed.</div>
-            <div class="glossary-hint">Eksempler: 5x1km, 8x400m, 10x3 minutter | Vigtigste for at blive hurtigere | 1 gang/uge er ideelt</div>
-          </div>
-          <div class="glossary-item">
-            <div class="glossary-term">Long Run (Langtur)</div>
-            <div class="glossary-desc">Længere løb (typisk 60-180 min) i let tempo. Bygger aerob kapacitet og mentalt styrke.</div>
-            <div class="glossary-hint">1 gang/uge er standard | Skal være langsommere end race pace | Vigtig for bygger grundlag for 5K</div>
-          </div>
-        </details>
-      </div>
-    </div>
-
-    <div class="goal-card" id="ghost-card">
-      <h3>Spøgelset: dig vs. din 2024-form</h3>
-    <div class="gr-standfirst">
-      <div class="gr-verdict" id="gr-verdict"></div>
-      <div class="gr-vsub" id="gr-vsub"></div>
-    </div>
-    <div class="gr-lbl">Stillingen</div>
-    <div class="gr-duels" id="gr-duels"></div>
-    <div class="gr-lbl">Pace ved pulszone &mdash; sekunder/km</div>
-    <table class="gr-zt">
-      <thead><tr><th>Pulszone</th><th class="num">Dig nu</th><th class="num">Sp&oslash;gelset</th><th class="num">Gab</th></tr></thead>
-      <tbody id="gr-zone-body"></tbody>
-    </table>
-    <div class="gr-lbl">Stregerne du jagter (2024-peak)</div>
-    <div class="gr-targets" id="gr-targets"></div>
-    <div class="gr-foot" id="gr-foot"></div>
-    </div>
-
-    <!-- DRØMMEMÅL: Sub-20 5K (kollapset, ikke aktiv træningsfokus) -->
-    <details class="goal-card" id="dreamgoal-wrap" style="margin-top:24px;">
-      <summary>Drømmemål: Sub-20 5K (langsigtet — ikke aktiv træningsfokus)</summary>
-      <div class="goal-card" id="projection-card" style="margin-top:12px;border:none;padding:0;">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Sammenligner din nuværende progression med din 2024-opbygning mod PR (22:25). Dette er et langsigtet sigtemål — det aktive fokus er sub 1:47 (stretch sub 1:45) på HM 20. september 2026.</p>
-
-        <div id="projection-status"></div>
-
-        <div class="grid g3" style="margin:16px 0;">
-          <div>
-            <div class="goal-label">Nuværende 5K estimat</div>
-            <div class="goal-value" id="proj-current">--:--</div>
-            <div class="goal-hint" id="proj-current-hint">Garmin race prediction</div>
-          </div>
-          <div>
-            <div class="goal-label">Milepæl: Juli 2026</div>
-            <div class="goal-value" style="color:var(--orange);">22:30</div>
-            <div class="goal-hint">Tilbage til PR-nærhed</div>
-          </div>
-          <div>
-            <div class="goal-label">Endemål</div>
-            <div class="goal-value" style="color:var(--red);">Sub-20:00</div>
-            <div class="goal-hint">Kræver VO2max ~50+</div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:16px;">
-          <h3>Pace-projektion: Nu vs. 2024-opbygning</h3>
-          <div class="ch tall"><canvas id="cProjection"></canvas></div>
-          <div class="help">
-            <span style="color:var(--green);">Grøn = din 2024-opbygning</span> (apr-okt 2024, den vej der førte til PR 22:25).
-            <span style="color:var(--accent2);">Lilla = din nuværende progression</span> (fra feb 2026).
-            <span style="color:var(--orange);">Orange stiplet = projiceret vej til sub-20</span> baseret på konsistent 3-4x/uge træning.
-            <span style="color:var(--red);">Rød = sub-20 mållinjen</span>.
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:16px;">
-          <h3>Ugentlig træningsvolumen: Nu vs. 2024</h3>
-          <div class="ch"><canvas id="cVolumeCompare"></canvas></div>
-          <div class="help">Sammenligner dine ugentlige kilometer nu med samme fase i 2024-opbygningen. For at følge 2024-trajektorien bør du ramme mindst 25-30 km/uge.</div>
-        </div>
-
-        <div class="card" style="margin-top:16px;">
-          <h3>VO2max-projektion</h3>
-          <div class="ch"><canvas id="cVo2Projection"></canvas></div>
-          <div class="help">
-            <span style="color:var(--green);">Grøn = VO2max under 2024-opbygningen.</span>
-            <span style="color:var(--accent2);">Lilla = nuværende VO2max.</span>
-            <span style="color:var(--red);">Rød stiplet = estimeret VO2max krav for sub-20 (~50).</span>
-          </div>
-        </div>
-      </div>
-    </details>
-  </div>
-
-  <!-- FORM -->
-  <div class="page" id="p-form">
-    <div id="coach-dagsform" style="display:none"></div>
-    <div id="df-score"></div>
-    <div id="df-workout"></div>
-    <div class="grid g6 statstrip" id="df-metrics"></div>
-    <div id="df-factors"></div>
-
-    <details class="sec" open><summary>Seneste 14 dage</summary><div class="secbody">
-      <div class="grid g2">
-              <div class="card"><h3>Readiness de seneste 14 dage</h3><div class="ch"><canvas id="cDf14"></canvas></div>
-        <div class="help"><span class="good">Gr&oslash;n = klar til at pr&aelig;stere (70+).</span> <span class="warn">Gul = moderat (40-70).</span> <span class="bad">R&oslash;d = hvil (&lt;40).</span></div>
-      </div>
-              <div class="card"><h3>Wellness-trend (7 dage)</h3><div class="ch"><canvas id="cDf7"></canvas></div>
-        <div class="help">Viser udviklingen i HRV, hvilepuls og s&oslash;vnscore den seneste uge. <span class="good">Stigende HRV + faldende hvilepuls = god tendens.</span></div>
-      </div>
-      </div>
-          <div class="card" style="margin-top:16px"><h3>Tr&aelig;ningshistorik (seneste 7 dage)</h3><div id="df-recent"></div></div>
     </div></details>
 
     <details class="sec"><summary>Søvn, HRV &amp; puls</summary><div class="secbody">
@@ -722,60 +375,36 @@ body[data-page="goals"] .controls { display:none; }
               <div class="card"><h3>V&aelig;gt</h3><div class="ch"><canvas id="cWeight"></canvas></div>
         <div class="help">Sm&aring; daglige udsving er helt normalt (v&aelig;ske, mad). Kig p&aring; den overordnede tendens over uger, ikke enkeltdage.</div>
       </div>
-            <div class="card" style="margin-top:16px">
-      <h3>Readiness Score over tid</h3>
-      <div class="help" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:10px">
-        Vores beregnede &ldquo;Body Battery&rdquo; baseret p&aring; dine data. Scoren (0-100) kombinerer HRV, hvilepuls, s&oslash;vn og tr&aelig;ningsbelastning.
-        <span class="good">Over 70 = klar til at pr&aelig;stere.</span> <span class="warn">40-70 = moderat.</span> <span class="bad">Under 40 = kroppen har brug for hvile.</span>
-      </div>
-      <div class="ch tall"><canvas id="cReadiness"></canvas></div>
-    </div>
       </div>
       <div id="readiness-today" style="margin-top:14px"></div>
       <details id="wellness-fields" class="card" style="margin-top:14px"></details>
     </div></details>
 
-    <details class="sec"><summary>Belastning &amp; skadesrisiko</summary><div class="secbody grid g2">
-          <div class="card" style="margin-top:16px">
-      <h3>Tr&aelig;ningsbelastning: Fitness (CTL) vs. Tr&aelig;thed (ATL)</h3>
-      <div class="ch tall"><canvas id="cLoad"></canvas></div>
-      <div class="help"><strong>CTL (gr&oslash;n)</strong> = din langsigtede fitness (42-dages snit). <strong>ATL (r&oslash;d)</strong> = akut tr&aelig;thed (7-dages snit).
-        <span class="good">N&aring;r CTL stiger, er du i bedre form.</span> <span class="bad">N&aring;r ATL er langt over CTL, er du overr&aelig;kt og b&oslash;r hvile.</span>
-        Ideelt stiger begge gradvist med ATL tæt p&aring; CTL.</div>
-    </div>
-          <div class="card" style="margin-top:16px">
-      <h3>ACWR &mdash; Skadesrisiko over tid</h3>
-      <div class="ch tall"><canvas id="cACWR"></canvas></div>
-      <div class="help">
-        <strong>ACWR</strong> (Acute:Chronic Workload Ratio) sammenligner din tr&aelig;ning de seneste 7 dage med dit 28-dages gennemsnit.
-        <span class="good">0.8&ndash;1.3 = sikker zone</span> (mellem de stiplede linjer).
-        <span class="bad">Over 1.3 = du har &oslash;get for hurtigt</span> &mdash; h&oslash;j skadesrisiko.
-        <span class="warn">Under 0.8 = du tr&aelig;ner markant mindre</span> &mdash; ok som restitution, men pas p&aring; med at miste fitness.
+
+    <details class="sec"><summary>Alle løb</summary><div class="secbody">
+          <div class="card">
+      <h3>Alle l&oslash;b</h3>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Dato</th><th>Navn</th><th>Distance</th><th>Tid</th><th>Pace</th><th>Gns. puls</th><th>Kadence</th><th>Stigning</th><th>Belastning</th><th>Dag-kvalitet</th>
+        </tr></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
       </div>
     </div>
     </div></details>
 
-    <details class="sec"><summary>Indsigter &amp; sammenhænge</summary><div class="secbody">
-      <div id="coach-insights" style="display:none"></div>
-      <div class="grid g2" id="insight-cards"></div>
-      <div class="grid g2">
-            <div class="card" style="margin-bottom:16px">
-      <h3>Hvordan din restitution forudsiger dine l&oslash;b</h3>
-      <div class="ch tall"><canvas id="cReadinessVsEF"></canvas></div>
-      <div class="help">Hvert punkt = et l&oslash;b. X-akse = composite readiness-score (HRV + hvilepuls + s&oslash;vn, normaliseret 0-100). Y-akse = Efficiency Factor (hastighed &divide; puls). <span class="good">Punkter op til h&oslash;jre = god restitution gav effektive l&oslash;b.</span></div>
+    <details class="sec"><summary>Historik</summary><div class="secbody">
+    <div class="grid g6" id="hStats"></div>
+    <div class="card full"><h3>Kalender-heatmap</h3><div id="hHeat" style="overflow-x:auto"></div>
+      <div style="font-size:12px;color:#8b8fa3;margin-top:8px">Gr&aring; = ingen l&oslash;b &middot; m&oslash;rk&rarr;lys gr&oslash;n = kort&rarr;langt l&oslash;b</div></div>
+    <div class="card full"><h3>Bliver jeg mere effektiv? (fart pr. puls, aerobe ture)</h3><div class="ch tall"><canvas id="hEff"></canvas></div>
+      <div style="font-size:13px;color:#8b8fa3;margin-top:6px" id="hEffNote"></div></div>
+    <div class="grid g2">
+      <div class="card"><h3>Comeback-buen (km pr. &aring;r)</h3><div class="ch"><canvas id="hYear"></canvas></div></div>
     </div>
-            <div class="card" style="margin-bottom:16px">
-      <h3>VO2max-udvikling (Garmin)</h3>
-      <div class="ch tall"><canvas id="ch-vo2"></canvas></div>
-      <div class="help">VO2max er det bedste m&aring;l for aerob kapacitet. H&oslash;jere = bedre kondition. Kvinder: 35-40 godt, 40-45 fremragende, 45+ elite.</div>
-    </div>
-              <div class="card"><h3>Tidspunkt p&aring; dagen vs. Pace</h3><div class="ch"><canvas id="cTimeOfDay"></canvas></div>
-        <div class="help"><span class="good">Gr&oslash;n s&oslash;jle = dit bedste tidspunkt.</span> Mange l&oslash;bere er hurtigere sen eftermiddag/aften pga. h&oslash;jere kropstemperatur. Tallet i parentes = antal l&oslash;b i den periode.</div>
-      </div>
-              <div class="card"><h3>Tr&aelig;ningskonsistens (l&oslash;b/uge) vs. Pace n&aelig;ste uge</h3><div class="ch"><canvas id="cConsistency"></canvas></div>
-        <div class="help">Viser om flere l&oslash;b pr. uge f&oslash;rer til bedre pace den f&oslash;lgende uge. <span class="good">Lavere s&oslash;jle = hurtigere pace.</span> Find den balance der virker for dig.</div>
-      </div>
-      </div>
+    <div class="card full"><h3>PR-udvikling (pace pr. distance)</h3><div id="hPRcards" class="grid g6" style="margin-bottom:12px"></div><div class="ch"><canvas id="hPR"></canvas></div></div>
     </div></details>
   </div>
 
@@ -858,7 +487,7 @@ body[data-page="goals"] .controls { display:none; }
             <div class="card" style="margin-bottom:20px;">
       <h3>Kadence over tid</h3>
       <div class="ch"><canvas id="cCadence"></canvas></div>
-      <div class="help"><span class="good">Grøn zone = optimalt interval (170-185 spm).</span> Højere kadence reducerer belastning per skridt og mindsker skadesrisiko. Kadence stiger naturligt med tempoet.</div>
+      <div class="help"><span class="good">Grøn zone = optimalt interval (170-185 spm).</span> Højere kadence giver mindre belastning per skridt.</div>
     </div>
             <div class="card" style="margin-bottom:20px;">
       <h3>Hvad gør dig hurtigere? Skridtlængde vs. Kadence</h3>
@@ -873,46 +502,14 @@ body[data-page="goals"] .controls { display:none; }
       </div>
     </div></details>
 
-    <details class="sec"><summary>Alle løb</summary><div class="secbody">
-          <div class="card">
-      <h3>Alle l&oslash;b</h3>
-      <div style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>Dato</th><th>Navn</th><th>Distance</th><th>Tid</th><th>Pace</th><th>Gns. puls</th><th>Kadence</th><th>Stigning</th><th>Belastning</th><th>Dag-kvalitet</th>
-        </tr></thead>
-        <tbody id="tblBody"></tbody>
-      </table>
-      </div>
-    </div>
-    </div></details>
-
-    <details class="sec"><summary>Historik — 9 år</summary><div class="secbody">
-    <div class="grid g6" id="hStats"></div>
-    <div class="card full"><h3>Kalender-heatmap &mdash; 9 &aring;r</h3><div id="hHeat" style="overflow-x:auto"></div>
-      <div style="font-size:12px;color:#8b8fa3;margin-top:8px">Gr&aring; = ingen l&oslash;b &middot; m&oslash;rk&rarr;lys gr&oslash;n = kort&rarr;langt l&oslash;b</div></div>
-    <div class="card full"><h3>Bliver jeg mere effektiv? (fart pr. puls, aerobe ture)</h3><div class="ch tall"><canvas id="hEff"></canvas></div>
-      <div style="font-size:13px;color:#8b8fa3;margin-top:6px" id="hEffNote"></div></div>
-    <div class="grid g2">
-      <div class="card"><h3>Comeback-buen (km pr. &aring;r)</h3><div class="ch"><canvas id="hYear"></canvas></div></div>
-      <div class="card"><h3>Rundt om jorden (kumuleret km)</h3><div class="ch"><canvas id="hCum"></canvas></div>
-        <div style="font-size:12px;color:#8b8fa3;margin-top:6px" id="hCumNote"></div></div>
-    </div>
-    <div class="grid g2">
-      <div class="card"><h3>Hvorn&aring;r l&oslash;ber jeg?</h3><div class="ch"><canvas id="hHour"></canvas></div></div>
-      <div class="card"><h3>Hvor l&oslash;ber jeg?</h3><div class="ch"><canvas id="hLoc"></canvas></div></div>
-    </div>
-    <div class="card full"><h3>PR-udvikling (pace pr. distance)</h3><div id="hPRcards" class="grid g6" style="margin-bottom:12px"></div><div class="ch"><canvas id="hPR"></canvas></div></div>
-    </div></details>
   </div>
 </div>
 
 <!-- NAVIGATION: bundmenu på mobil, sidebjælke på desktop -->
 <nav class="bottomnav" aria-label="Hovedmenu">
   <button class="navbtn active" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="2"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg><span>Overblik</span></button>
-  <button class="navbtn" data-page="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg><span>Mål</span></button>
-  <button class="navbtn" data-page="form"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg><span>Form</span></button>
   <button class="navbtn" data-page="run"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16"/></svg><span>Løb</span></button>
+  <button class="navbtn" data-page="trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg><span>Udvikling</span></button>
 </nav>
 
 <script>
@@ -1012,23 +609,6 @@ function updateTimestamp() {
   document.getElementById('last-updated').textContent = `Sidst opdateret: ${date} ${time}`;
 }
 
-async function refreshData() {
-  const btn = document.getElementById('refresh-btn');
-  btn.disabled = true;
-  btn.style.opacity = '0.5';
-  try {
-    [activities, wellness, events] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents()]);
-    if (typeof GARMIN_DATA !== 'undefined') garminData = GARMIN_DATA;
-    updateTimestamp();
-    render();
-  } catch(e) {
-    console.error('Refresh failed:', e);
-    alert('Kunne ikke opdatere data: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-  }
-}
 
 function setupTabs() {
   document.querySelectorAll('.navbtn[data-page], .moreitem[data-page]').forEach(b =>
@@ -1037,7 +617,7 @@ function setupTabs() {
 }
 
 // gamle faner → nye (bevarer gamle links/bogmærker)
-const PAGE_ALIAS = {dagsform:'form', insights:'form', wellness:'form', rundetail:'run', economy:'run', activities:'run', historik:'run', ghost:'goals'};
+const PAGE_ALIAS = {goals:'overview', ghost:'overview', form:'overview', dagsform:'overview', insights:'trend', wellness:'trend', historik:'trend', activities:'trend', rundetail:'run', economy:'run'};
 function pageAlias(p){ return PAGE_ALIAS[p] || p; }
 function activateTab(page) {
   page = pageAlias(page);
@@ -1121,10 +701,9 @@ function render() {
   const fw = fil(wellness, 'id');
   const page = document.querySelector('.page.active')?.id;
 
-  if (page === 'p-overview') { renderOverview(fr); renderHabit(); }
-  if (page === 'p-goals') { renderGoals(fr, fw); renderGhost(); renderHabit(); }
-  if (page === 'p-form') { renderDagsform(fr, fw); renderWellness(fw); renderInsights(fr, fw); }
-  if (page === 'p-run') { renderRunDetailPage(fr, fw); renderEconomy(fr); renderActivities(fa, fw); renderHistorik(); }
+  if (page === 'p-overview') { renderOverview(fr); renderHabit(); renderDagsform(fr, fw); }
+  if (page === 'p-run') { renderRunDetailPage(fr, fw); renderEconomy(fr); }
+  if (page === 'p-trend') { renderWellness(fw); renderVo2maxChart(); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
 }
 
@@ -1298,73 +877,6 @@ async function aiRunDetail(a, headline, data){
     }catch(e){ /* behold interim */ }
   },450);
 }
-function coachGoals(r){
-  // NB: halvmarathonet 20/9 blev IKKE løbet (sprunget over). Intet løb i kalenderen lige nu.
-  const l35=coachInWin(r,35); const longest=l35.reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0);
-  const km30=coachKm(coachInWin(r,30));
-  const headline='Intet løb planlagt — fokus: vanen og basen';
-  const body=`Der står ikke noget løb i kalenderen lige nu. De sidste 30 dage er det blevet til ${km30.toFixed(0)} km${longest>0?`, og din længste tur de sidste 5 uger er ${longest.toFixed(1)} km`:''}. Sub-1:47 står stadig som dit retur-til-form-mål — uden dato, så der er ingen grund til at jagte tempo nu.`;
-  setCoach('coach-goals',headline,body);
-  aiCoachCard('coach-goals','goals',headline,{dato:nowISO(),fokus:'mål og langsigtet retning',kontekst:runCtx(),laengste_tur_35d_km:+longest.toFixed(1),sidste_30_dage_km:+km30.toFixed(1),
-    note:'Halvmarathonet 20. september blev IKKE løbet — hun sprang det over. Nævn det ikke som overstået eller gennemført. Der er intet løb planlagt nu. Fokus er den daglige løbevane (1 km-gulv) og at bygge basen op. Sub-1:47 på halvmarathon er et langsigtet retur-til-form-mål uden dato.'});
-}
-function coachDagsform(){
-  const allW=wellness||[]; const today=new Date().toISOString().substring(0,10); const wMap={}; allW.forEach(x=>wMap[x.id]=x);
-  let dw=wMap[today]||[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]||null;
-  const rd = (dw && typeof calcReadiness==='function')?calcReadiness(dw,allW,activities):null;
-  if(!rd){ setCoach('coach-dagsform','Ingen dagsform-data endnu.','Når søvn/HRV/hvilepuls er synket, læser jeg din readiness her.'); return; }
-  const s=rd.score; const state=rd.level?({frisk:'god',middel:'moderat',lav:'lav'})[rd.level]:(s>=70?'god':(s>=40?'moderat':'lav'));
-  const up=(rd.factors||[]).filter(f=>f.score>=65).map(f=>f.name);
-  const down=(rd.factors||[]).filter(f=>f.score<45).map(f=>f.name);
-  const headline=`Readiness ${s}/100 — ${state} form i dag`;
-  let body=`${down.length?('Trækker ned: '+down.join(', ')+'. '):''}${up.length?('Trækker op: '+up.join(', ')+'. '):''}`;
-  body+= s>=70?'God dag til at køre et pas ordentligt igennem, hvis det passer med Sørens program.':(s>=40?'Hold det moderat — lad kroppen sætte tempoet i opvarmningen.':'Kroppen beder om en let dag eller hvile; du kender signalerne bedst.');
-  setCoach('coach-dagsform',headline,body);
-  aiCoachCard('coach-dagsform','dagsform',headline,{dato:nowISO(),fokus:'dagsform/readiness i dag',kontekst:runCtx(),readiness:s,traekker_ned:down,traekker_op:up});
-}
-function coachRundetail(r){
-  const recent=coachInWin(r,28), prev=coachBetween(r,28,56);
-  const efR=coachEF(recent), efP=coachEF(prev);
-  if(efR==null){ setCoach('coach-rundetail','For lidt puls-data til analyse.','Når der er løb med pulsdata, viser jeg effektivitet, tempo og udvikling her.'); return; }
-  const pct = efP? ((efR-efP)/efP*100):null;
-  const headline=`Aerob effektivitet ${efR.toFixed(2)} ${coachArrow(efR,efP,true)}`;
-  let body=`Effektivitet = hvor langt du løber pr. pulsslag; højere = mere økonomisk motor. `;
-  if(pct!=null) body+=`De sidste 4 uger er den ${pct>=0?'steget':'faldet'} ${Math.abs(pct).toFixed(0)}% vs. de forrige 4 (${efP.toFixed(2)}). ${pct>=2?'Klar fremgang — formen bygger.':(pct<=-2?'Lidt tilbagegang; ofte varme, træthed eller mindre volumen.':'Nogenlunde stabilt.')} `;
-  body+=`Gns. tempo ${coachFmtPace(coachPace(recent))}/km over ${recent.length} løb.`;
-  setCoach('coach-rundetail',headline,body);
-  aiCoachCard('coach-rundetail','rundetail',headline,{dato:nowISO(),fokus:'aerob effektivitet og tempoudvikling',kontekst:runCtx(),aerob_effektivitet:{nu:+efR.toFixed(3),foer:efP?+efP.toFixed(3):null},aendring_pct:pct!=null?+pct.toFixed(1):null,tempo_min_km:coachFmtPace(coachPace(recent)),antal_loeb:recent.length,readiness_i_dag:runReadiness()});
-}
-function coachAvg(list, sel){ const v=list.map(sel).filter(x=>x!=null&&isFinite(x)); return v.length?v.reduce((s,x)=>s+x,0)/v.length:null; }
-function coachEconomy(r){
-  const recent=coachInWin(r,28), prev=coachBetween(r,28,56);
-  const cadSel=a=>a.average_cadence?a.average_cadence*2:null, strSel=a=>a.average_stride||null;
-  const cadR=coachAvg(recent,cadSel), cadP=coachAvg(prev,cadSel), strR=coachAvg(recent,strSel), strP=coachAvg(prev,strSel);
-  if(cadR==null && strR==null){ setCoach('coach-economy','Ingen kadence-/skridt-data endnu.','Når dit ur sender kadence og skridtlængde med, læser jeg din løbeøkonomi og udvikling her.'); return; }
-  let head=[]; if(cadR!=null)head.push(`kadence ${Math.round(cadR)} spm ${coachArrow(cadR,cadP,true)}`); if(strR!=null)head.push(`skridtlængde ${strR.toFixed(2)} m ${coachArrow(strR,strP,true)}`);
-  let body=`Løbeøkonomi = hvor lidt du bruger ved en given fart; kadence og skridtlængde er de to håndtag. `;
-  if(cadR!=null&&cadP!=null){ const dc=cadR-cadP; body+= Math.abs(dc)<1?'Kadencen er stabil. ':(dc>0?`Kadencen er steget ${dc.toFixed(0)} spm — ofte lettere, mere elastisk fraspark. `:`Kadencen er faldet ${Math.abs(dc).toFixed(0)} spm — hold øje med oversteg på de trætte ture. `); }
-  if(strR!=null&&strP!=null){ const ds=strR-strP; if(Math.abs(ds)>=0.02) body+= ds>0?'Skridtlængden er vokset — typisk mere kraft/bedre form. ':'Skridtlængden er kortere — normalt i rolige/trætte perioder. '; }
-  body+='Styrketræningen du genoptog kan give ekstra økonomi hen over vinteren.';
-  setCoach('coach-economy',head.join(' · '),body);
-  aiCoachCard('coach-economy','economy',head.join(' · '),{dato:nowISO(),fokus:'løbeøkonomi (kadence og skridtlængde)',kontekst:runCtx(),kadence:{nu:cadR?Math.round(cadR):null,foer:cadP?Math.round(cadP):null},skridtlaengde:{nu:strR?+strR.toFixed(2):null,foer:strP?+strP.toFixed(2):null}});
-}
-function coachInsights(r){
-  const acute=coachKm(coachInWin(r,7));
-  const chronic=coachKm(coachInWin(r,28))/4;
-  const nWk=coachInWin(r,28).length/4;
-  if(coachInWin(r,28).length===0){ setCoach('coach-insights','For lidt data til belastnings-analyse.','Når der er et par ugers løb, viser jeg din akut/kronisk-belastning (skadesrisiko) og udvikling her.'); return; }
-  const acwr = chronic>0 ? acute/chronic : null;
-  let headline = acwr!=null?`Belastning (akut/kronisk) ${acwr.toFixed(2)}`:`~${acute.toFixed(0)} km denne uge`;
-  let body=`Akut (7 dage) vs. kronisk (4-ugers snit) belastning viser om du bygger op i et sikkert tempo — din historiske akilleshæl er afbrydelser, så det her er relevant. `;
-  if(acwr!=null){
-    if(acwr>1.5) body+=`${acwr.toFixed(2)} er et øget spring — pas på med at trappe for hurtigt op; hold næste par uger jævne. `;
-    else if(acwr<0.8) body+=`${acwr.toFixed(2)} er lavt — du bygger base op efter en roligere periode, hvilket er fint; øg gradvist. `;
-    else body+=`${acwr.toFixed(2)} ligger i det trygge område (~0,8–1,3) — fornuftig progression. `;
-  }
-  body+=`Ca. ${nWk.toFixed(1)} løb/uge de sidste 4 uger.`;
-  setCoach('coach-insights',headline,body);
-  aiCoachCard('coach-insights','insights',headline,{dato:nowISO(),fokus:'belastning (akut/kronisk) og skadesrisiko',kontekst:runCtx(),acwr:acwr,akut_km_7d:+acute.toFixed(1),kronisk_uge_km:+chronic.toFixed(1),loeb_pr_uge:+nWk.toFixed(1)});
-}
 function renderCoach(page, fr){
   try{
     // Coach kun to steder: Overblik + Løb-analyse (det enkelte løb). Mål/Dagsform/Indsigter/Løbeøkonomi er fravalgt (12/10).
@@ -1479,7 +991,6 @@ function renderOverview(r) {
   renderPaceChart(r);
   renderHRChart(r);
   renderZones(r);
-  renderACWRAlert(r);
   renderPRs(r);
 }
 
@@ -1527,544 +1038,19 @@ function renderZones(r) {
   }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:'#8b8fa3',padding:10,font:{size:11}} } } } });
 }
 
-// ---- MÅL ----
-function renderGoals(r, w) {
-  const allRuns = runs(activities); // Always use ALL runs, not filtered
-  renderHmSub145(allRuns);
-  renderHmPrognose(allRuns);
-  renderLongRunsProgression(allRuns);
-  renderRacePaceZone(allRuns);
-  renderDecoupling(allRuns);
-  renderPrePauseBaseline(allRuns, wellness);
-  renderProjection(allRuns);
-  renderZ2Guide(allRuns, w);
-  renderConsistencyGoal(allRuns, w);
-  renderRunsPerWeekChart(allRuns);
-}
 
-function renderHmSub145(allRuns) {
-  // Days until Sept 20, 2026
-  const target = new Date('2026-09-20T00:00:00');
-  const today = new Date();
-  const days = Math.max(0, Math.ceil((target - today) / (1000 * 60 * 60 * 24)));
-  const el = document.getElementById('hm-days-left');
-  if (el) el.textContent = days > 0 ? days + ' dage' : '—';
-  renderCheckpointStatus(allRuns);
-}
 
-// Auto-status of the 5 sub-1:45 checkpoints
-function renderCheckpointStatus(allRuns) {
-  const box = document.getElementById('goalMarkers');
-  if (!box) return;
-  const now = new Date();
-  const runs = (allRuns || []).filter(a => ['Run','VirtualRun','TrailRun'].includes(a.type));
-  const dOf = a => new Date(a.start_date_local || a.start_date);
-  const inWin = (a,d0,d1) => { const t = dOf(a); return t >= d0 && t < d1; };
-  const ago = n => new Date(now.getTime() - n*864e5);
-  const w4=ago(28), w8=ago(56), w6=ago(42), w12=ago(84);
-  const last4 = runs.filter(a => inWin(a,w4,now));
-  const prev4 = runs.filter(a => inWin(a,w8,w4));
-  const perWk = last4.length/4;
-  const km4 = last4.reduce((s,a)=>s+(a.distance||0)/1000,0)/4;
-  const kmPrev = prev4.reduce((s,a)=>s+(a.distance||0)/1000,0)/4;
-  const longest = last4.reduce((m,a)=>Math.max(m,(a.distance||0)/1000),0);
-  const ef = arr => { const g = arr.filter(a=>a.average_heartrate>=130&&a.average_heartrate<=165&&a.moving_time>1200&&a.average_speed); return g.length ? g.reduce((s,a)=>s+(a.average_speed*60)/a.average_heartrate,0)/g.length : null; };
-  const efNow = ef(runs.filter(a=>inWin(a,w6,now))), efPrev = ef(runs.filter(a=>inWin(a,w12,w6)));
-  const qsec = last4.reduce((s,a)=>{ const z=a.pace_zone_times; if(Array.isArray(z)) for(let i=3;i<z.length;i++) s+=(z[i]||0); return s; },0);
-  const qmin = Math.round(qsec/60);
-  const arrow = (n_,p_) => (p_==null||n_==null)?'':(n_>p_*1.01?'▲':(n_<p_*0.99?'▼':'→'));
-  const tag = (t,c)=>`<span class="tag ${c}">${t}</span>`;
-  const rows = [
-    ['Konsistens', perWk.toFixed(1)+' løb/uge', '', perWk>=3.5?tag('På sporet','tag-good'):(perWk>=2.5?tag('Bygger','tag-ok'):tag('Følg op','tag-ok'))],
-    ['Ugentlig volumen', Math.round(km4)+' km/uge', arrow(km4,kmPrev), km4>=kmPrev?tag('Stigende','tag-good'):tag('Holder','tag-ok')],
-    ['Længste tur (28 dage)', longest.toFixed(1)+' km', '', longest>=16?tag('På sporet','tag-good'):tag('Bygger','tag-ok')],
-    ['Løbeøkonomi (fart/puls)', efNow?efNow.toFixed(3):'–', arrow(efNow,efPrev), (efNow&&efPrev&&efNow>=efPrev)?tag('Stigende','tag-good'):tag('Følg','tag-ok')],
-    ['Målpace-arbejde (28 dage)', qmin+' min ved tærskel+', '', qmin>=15?tag('Aktiv','tag-good'):tag('Bygger','tag-ok')]
-  ];
-  box.innerHTML = rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
-}
 
-function renderHmPrognose(allRuns) {
-  // For each run: derive (distance_km, time_sec) pairs from any run >= 3km that was likely sub-LTHR (avg HR not maxed)
-  // Score per distance bucket (5k, 8k, 10k, 15k+) over 30-day rolling window — fastest pace wins.
-  const RIEGEL = 1.06;
-  const HM_KM = 21.0975;
-  const TARGET_SEC = 1*3600 + 46*60 + 59; // 1:46:59 — primært mål (sub 1:47). Stretch sub 1:45 = 1:44:59.
-  const today = new Date();
 
-  function projectHm(distKm, timeSec) {
-    return timeSec * Math.pow(HM_KM / distKm, RIEGEL);
-  }
-  function fmtHms(sec) {
-    if (!isFinite(sec) || sec <= 0) return '--:--:--';
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = Math.round(sec % 60);
-    return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  }
-  function fmtMs(sec) {
-    const m = Math.floor(Math.abs(sec) / 60);
-    const s = Math.round(Math.abs(sec) % 60);
-    return (sec < 0 ? '-' : '+') + m + ':' + String(s).padStart(2,'0');
-  }
 
-  function bestProjectionsForWindow(endDate) {
-    const start = new Date(endDate.getTime() - 30 * 86400000);
-    const buckets = { '5k': [4500, 5500], '8k': [7500, 8500], '10k': [9500, 11000], '15k+': [14500, 22500] };
-    const best = {}; // bucket -> { pace, pred, time, dist, date }
-    allRuns.forEach(a => {
-      const dt = new Date(a.start_date_local || a.start_date);
-      if (dt < start || dt > endDate) return;
-      const distM = a.distance || 0;
-      const time = a.moving_time || 0;
-      if (distM < 3000 || time < 600) return;
-      // Skip runs that were clearly maxed-out / noisy: still allow tempo. Only skip if HR > 95% of max
-      const distKm = distM / 1000;
-      const pred = projectHm(distKm, time);
-      for (const [b, [lo, hi]] of Object.entries(buckets)) {
-        if (distM >= lo && distM <= hi) {
-          if (!best[b] || pred < best[b].pred) {
-            best[b] = { pace: time / 60 / distKm, pred, time, distKm, date: (a.start_date_local||a.start_date).substring(0,10) };
-          }
-        }
-      }
-    });
-    return best;
-  }
 
-  const currentBest = bestProjectionsForWindow(today);
-  const projections = Object.values(currentBest).map(b => b.pred);
-  const fastest = projections.length ? Math.min(...projections) : null;
-  const sourceCount = projections.length;
 
-  const curEl = document.getElementById('hm-prognose-current');
-  const gapEl = document.getElementById('hm-prognose-gap');
-  const gapHintEl = document.getElementById('hm-prognose-gap-hint');
-  const srcEl = document.getElementById('hm-prognose-source');
-  const cntEl = document.getElementById('hm-prognose-count');
-
-  if (fastest) {
-    if (curEl) curEl.textContent = fmtHms(fastest);
-    const gap = fastest - TARGET_SEC;
-    if (gapEl) {
-      gapEl.textContent = fmtMs(gap);
-      gapEl.style.color = gap <= 0 ? 'var(--green)' : gap < 120 ? 'var(--orange)' : 'var(--red)';
-    }
-    if (gapHintEl) gapHintEl.textContent = gap <= 0 ? 'Allerede under sub 1:47-pace!' : 'Sekunder bagud sub 1:47';
-    // Build source string
-    const src = Object.entries(currentBest).sort((a,b) => a[1].pred - b[1].pred)[0];
-    if (srcEl && src) srcEl.textContent = `${src[0]} fra ${src[1].date} → ${fmtHms(src[1].pred)}`;
-    if (cntEl) cntEl.textContent = sourceCount + (sourceCount === 1 ? ' bucket' : ' buckets');
-  } else {
-    if (curEl) curEl.textContent = '--:--:--';
-    if (gapEl) gapEl.textContent = '--';
-    if (gapHintEl) gapHintEl.textContent = 'Mangler nyere tempo/race-data';
-    if (srcEl) srcEl.textContent = 'Ingen indsatser ≥3 km i de seneste 30 dage';
-    if (cntEl) cntEl.textContent = '0';
-  }
-
-  // 12-week rolling chart
-  const labels = [];
-  const data = [];
-  for (let i = 11; i >= 0; i--) {
-    const end = new Date(today.getTime() - i * 7 * 86400000);
-    const b = bestProjectionsForWindow(end);
-    const projs = Object.values(b).map(x => x.pred);
-    labels.push(end.toISOString().substring(0,10));
-    data.push(projs.length ? Math.min(...projs) / 60 : null); // minutes
-  }
-  const targetMin = TARGET_SEC / 60;
-
-  mkChart('cHmPrognose', {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'HM-prognose (min)', data, borderColor: 'rgba(129,140,248,1)', backgroundColor: 'rgba(129,140,248,0.1)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: 'rgba(129,140,248,1)', spanGaps: true },
-        { label: 'Sub 1:47 mål', data: labels.map(()=>targetMin), borderColor: 'rgba(34,197,94,0.7)', borderDash: [6,4], pointRadius: 0, fill: false, borderWidth: 2 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: '#8b8fa3' } },
-        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y ? fmtHms(ctx.parsed.y * 60) : 'mangler data') } }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3', maxTicksLimit: 6 } },
-        y: { reverse: false, title: { display: true, text: 'HM-tid (min)', color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3', callback: v => fmtHms(v * 60) } }
-      }
-    }
-  });
-}
-
-// ---- Lange ture progression ----
-function renderLongRunsProgression(allRuns) {
-  const today = new Date();
-  const raceDate = new Date('2026-09-20');
-  // Last 20 weeks back + projection forward to race week
-  const startBack = new Date(today.getTime() - 20 * 7 * 86400000);
-
-  // Map week-Monday-iso -> longest run km
-  function mondayOf(dt) {
-    const d = new Date(dt);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-  }
-  const longestByWeek = {};
-  allRuns.forEach(a => {
-    const dt = new Date(a.start_date_local || a.start_date);
-    if (dt < startBack || dt > today) return;
-    const wk = mondayOf(dt).toISOString().substring(0,10);
-    const km = (a.distance||0)/1000;
-    if (km < 1) return;
-    if (!longestByWeek[wk] || km > longestByWeek[wk]) longestByWeek[wk] = km;
-  });
-
-  // Build full label list across past 20 weeks + projection to race week (~7 sept 2026 = peak)
-  const labels = [];
-  const actualSeries = [];
-  const targetSeries = [];
-
-  // Determine current longest (latest week with data)
-  const currentWeekIso = mondayOf(today).toISOString().substring(0,10);
-  const currentLongest = longestByWeek[currentWeekIso] || (() => {
-    // Find most recent week with data
-    const wks = Object.keys(longestByWeek).sort();
-    return wks.length ? longestByWeek[wks[wks.length-1]] : 8;
-  })();
-
-  // Race-2-week peak target = 20 km
-  const peakWeek = mondayOf(new Date('2026-09-07'));
-  const totalWeeksFromCurrentToPeak = Math.max(1, Math.ceil((peakWeek - mondayOf(today)) / (7 * 86400000)));
-
-  // Past weeks
-  for (let i = 19; i >= 0; i--) {
-    const monday = mondayOf(new Date(today.getTime() - i * 7 * 86400000));
-    const iso = monday.toISOString().substring(0,10);
-    labels.push(iso);
-    actualSeries.push(longestByWeek[iso] !== undefined ? +longestByWeek[iso].toFixed(1) : null);
-    targetSeries.push(null);
-  }
-  // Add current week target = currentLongest
-  // Future weeks until peak
-  let stepIdx = 0;
-  for (let w = 1; w <= totalWeeksFromCurrentToPeak; w++) {
-    const monday = new Date(mondayOf(today).getTime() + w * 7 * 86400000);
-    const iso = monday.toISOString().substring(0,10);
-    labels.push(iso);
-    actualSeries.push(null);
-    const t = currentLongest + (20 - currentLongest) * (w / totalWeeksFromCurrentToPeak);
-    targetSeries.push(+t.toFixed(1));
-  }
-  // Set target for current week start
-  targetSeries[19] = +currentLongest.toFixed(1);
-
-  mkChart('cLongRuns', {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Faktisk længste tur (km)', data: actualSeries, borderColor: 'rgba(129,140,248,1)', backgroundColor: 'rgba(129,140,248,0.1)', fill: true, tension: 0.3, pointRadius: 4, spanGaps: false },
-        { label: 'Mål-kurve mod 20 km', data: targetSeries, borderColor: 'rgba(34,197,94,0.8)', borderDash: [6,4], pointRadius: 0, fill: false, borderWidth: 2, spanGaps: true }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8b8fa3' } } },
-      scales: {
-        x: { grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3', maxTicksLimit: 8 } },
-        y: { title: { display: true, text: 'km', color: '#8b8fa3' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, beginAtZero: true, suggestedMax: 22 }
-      }
-    }
-  });
-}
-
-// ---- Race-pace zone tracker (4:50-5:05/km) ----
-function renderRacePaceZone(allRuns) {
-  const today = new Date();
-  const startBack = new Date(today.getTime() - 12 * 7 * 86400000);
-  function mondayOf(dt) { const d = new Date(dt); const day = d.getDay(); const diff = day === 0 ? -6 : 1 - day; d.setDate(d.getDate()+diff); d.setHours(0,0,0,0); return d; }
-
-  // Per week, sum minutes in pace 4:50-5:05/km
-  const minsByWeek = {};
-  let approximated = false;
-  allRuns.forEach(a => {
-    const dt = new Date(a.start_date_local || a.start_date);
-    if (dt < startBack || dt > today) return;
-    const wk = mondayOf(dt).toISOString().substring(0,10);
-    if (!(wk in minsByWeek)) minsByWeek[wk] = 0;
-    // Try icu_pace_zone_times if present
-    if (Array.isArray(a.pace_zone_times) && a.pace_zone_times.length > 0) {
-      // pace zones don't always map to 4:50-5:05 exactly — approximate by checking avg pace
-      // Fallback to avg pace heuristic
-    }
-    const p = pace(a);
-    if (p && p >= 4.83 && p <= 5.08) {
-      // the whole run was in race-pace band (rare for easy runs, common for tempo)
-      minsByWeek[wk] += (a.moving_time || 0) / 60;
-      approximated = true;
-    } else if (p && p >= 4.6 && p <= 5.3 && /tempo|interval|race|kapløb|tærskel|threshold/i.test(a.name||'')) {
-      // partial credit: assume ~50% of duration in race-pace band
-      minsByWeek[wk] += ((a.moving_time || 0) / 60) * 0.5;
-      approximated = true;
-    }
-  });
-
-  const labels = [];
-  const data = [];
-  for (let i = 11; i >= 0; i--) {
-    const monday = mondayOf(new Date(today.getTime() - i * 7 * 86400000)).toISOString().substring(0,10);
-    labels.push(monday);
-    data.push(+(minsByWeek[monday] || 0).toFixed(1));
-  }
-
-  mkChart('cRacePace', {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Min i HM-pace-zone', data, backgroundColor: 'rgba(99,102,241,.6)', borderColor: 'rgba(99,102,241,1)', borderRadius: 4 }] },
-    options: opts({ y: { title: { display: true, text: 'Minutter (approx.)' }, beginAtZero: true } })
-  });
-  const helpEl = document.getElementById('race-pace-help');
-  if (helpEl && approximated) {
-    helpEl.innerHTML = 'Specificitet — minutter løbet i HM-race-pace per uge. <strong>Begrænset data — viser approximation</strong> (vurderet ud fra gns. pace + workout-navn, ikke per-stream pace-fordeling). Stiger som race nærmer sig.';
-  }
-}
-
-// ---- Aerob decoupling (simplified) ----
-function renderDecoupling(allRuns) {
-  // Simplified version: long runs (>=10 km) — flag those where avg HR was higher than expected for the (grade-adjusted) pace.
-  // We compare each long run's HR/pace ratio to the median HR/pace ratio of all easy/long runs in the period.
-  const today = new Date();
-  const startBack = new Date(today.getTime() - 12 * 7 * 86400000);
-  const longRuns = allRuns.filter(a => {
-    const dt = new Date(a.start_date_local || a.start_date);
-    return dt >= startBack && dt <= today && (a.distance||0) >= 10000 && a.average_heartrate && pace(a);
-  });
-
-  if (longRuns.length === 0) {
-    mkEmpty('cDecoupling', 'Ingen lange ture (≥10 km) de seneste 12 uger.');
-    const h = document.getElementById('decoupling-help');
-    if (h) h.innerHTML = 'Lavt decoupling = du kan holde pacen — vigtigt for HM-mål. <strong>Ingen lange ture endnu</strong> — kommer på plads når du registrerer en ≥10 km tur.';
-    return;
-  }
-
-  // Calculate HR/pace efficiency proxy. Approximate decoupling: deviation from baseline (median HR/pace_speed)
-  // Lower HR for same pace = better fitness (negative decoupling). Higher = positive decoupling.
-  const ratios = longRuns.map(a => {
-    const p = pace(a); // min/km
-    const speed = 1 / p; // km/min
-    return a.average_heartrate / speed; // bpm * min/km
-  });
-  // Use the FASTEST (best) baseline as reference (lowest HR/pace ratio)
-  const baseline = Math.min(...ratios);
-
-  const points = longRuns.map((a, i) => {
-    const dt = (a.start_date_local || a.start_date).substring(0,10);
-    const decoupling = ((ratios[i] - baseline) / baseline) * 100;
-    return { x: dt, y: +decoupling.toFixed(1), name: a.name || 'Lang tur' };
-  }).sort((a,b) => a.x.localeCompare(b.x));
-
-  mkChart('cDecoupling', {
-    type: 'line',
-    data: {
-      labels: points.map(p => p.x),
-      datasets: [
-        { label: 'Decoupling % (approx.)', data: points.map(p => p.y), borderColor: 'rgba(129,140,248,1)', backgroundColor: 'rgba(129,140,248,0.1)', fill: false, tension: 0.3, pointRadius: 5, pointBackgroundColor: points.map(p => p.y < 5 ? 'rgba(34,197,94,1)' : p.y > 10 ? 'rgba(239,68,68,1)' : 'rgba(245,158,11,1)') },
-        { label: 'Mål <5%', data: points.map(()=>5), borderColor: 'rgba(34,197,94,0.4)', borderDash: [4,4], pointRadius: 0, fill: false, borderWidth: 1 },
-        { label: 'Advarsel >10%', data: points.map(()=>10), borderColor: 'rgba(239,68,68,0.4)', borderDash: [4,4], pointRadius: 0, fill: false, borderWidth: 1 }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: '#8b8fa3' } },
-        tooltip: { callbacks: { afterLabel: ctx => points[ctx.dataIndex] ? points[ctx.dataIndex].name : '' } }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3' } },
-        y: { title: { display: true, text: 'Decoupling % (proxy)', color: '#8b8fa3' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } }
-      }
-    }
-  });
-  const h = document.getElementById('decoupling-help');
-  if (h) h.innerHTML = 'Lavt decoupling = du kan holde pacen — vigtigt for HM-mål. <strong>Begrænset data — viser approximation</strong> (HR/pace-ratio relativt til din bedste tur, ikke per-halvdel-stream). Grøn zone &lt;5% = god aerob form, rød zone &gt;10% = mangler udholdenhed.';
-}
-
-// ---- Pre-pause baseline (jun-sept 2025) ----
-function renderPrePauseBaseline(allRuns, allWellness) {
-  const grid = document.getElementById('prepause-grid');
-  if (!grid) return;
-  const baseStart = '2025-06-01';
-  const baseEnd = '2025-09-30';
-  const recentDays = 30;
-  const today = new Date();
-  const recentStart = new Date(today.getTime() - recentDays * 86400000);
-
-  const baseline = allRuns.filter(a => { const dt = (a.start_date_local || a.start_date).substring(0,10); return dt >= baseStart && dt <= baseEnd; });
-  const recent = allRuns.filter(a => { const dt = new Date(a.start_date_local || a.start_date); return dt >= recentStart; });
-
-  // Z2 pace (HR ~143-160) — use HR 145-160 as easy band
-  function avgPaceInHR(arr, lo, hi) {
-    const xs = arr.filter(a => a.average_heartrate && a.average_heartrate >= lo && a.average_heartrate <= hi && pace(a)).map(a => pace(a));
-    return xs.length ? avg(xs) : null;
-  }
-  // Tempo pace (HR > 165, distance >= 3km)
-  function avgTempoPace(arr) {
-    const xs = arr.filter(a => a.average_heartrate && a.average_heartrate > 165 && (a.distance||0) >= 3000 && pace(a)).map(a => pace(a));
-    return xs.length ? avg(xs) : null;
-  }
-  // Threshold estimate: best 10K-equivalent pace via Riegel, projected from any run >= 5km in window
-  function thresholdEst(arr) {
-    let bestPace = null;
-    arr.forEach(a => {
-      if ((a.distance||0) < 5000) return;
-      const p = pace(a);
-      if (!p) return;
-      if (bestPace === null || p < bestPace) bestPace = p;
-    });
-    return bestPace;
-  }
-
-  const z2BaseT = avgPaceInHR(baseline, 145, 160);
-  const z2NowT = avgPaceInHR(recent, 145, 160);
-  const tempoBaseT = avgTempoPace(baseline);
-  const tempoNowT = avgTempoPace(recent);
-  const thrBaseT = thresholdEst(baseline);
-  const thrNowT = thresholdEst(recent);
-
-  // CTL — find peak CTL in baseline window from wellness (or fallback 26.6 per memory)
-  const ctlBase = (() => {
-    const wInRange = allWellness.filter(w => w.id >= baseStart && w.id <= baseEnd && w.ctl);
-    return wInRange.length ? Math.max(...wInRange.map(w => w.ctl)) : 26.6;
-  })();
-  const ctlNow = (() => {
-    const wRecent = allWellness.filter(w => w.ctl).sort((a,b) => b.id.localeCompare(a.id));
-    return wRecent.length ? wRecent[0].ctl : null;
-  })();
-
-  function pctBack(now, base, lowerIsBetter) {
-    if (now == null || base == null) return null;
-    if (lowerIsBetter) {
-      // For pace: 100% means now == base. <100% means slower than base, >100% means faster.
-      return Math.round((base / now) * 100);
-    }
-    return Math.round((now / base) * 100);
-  }
-
-  function box(label, baseVal, nowVal, fmt, pct) {
-    const color = pct == null ? 'var(--muted)' : pct >= 100 ? 'var(--green)' : pct >= 90 ? 'var(--orange)' : 'var(--red)';
-    return `<div class="card">
-      <div class="goal-label">${label}</div>
-      <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px;">
-        <div><div style="font-size:11px;color:var(--muted)">Nu</div><div class="goal-value" style="font-size:18px;">${nowVal}</div></div>
-        <div><div style="font-size:11px;color:var(--muted)">Pre-pause</div><div class="goal-value" style="font-size:18px;color:var(--muted)">${baseVal}</div></div>
-        <div style="margin-left:auto;text-align:right;"><div style="color:${color};font-size:22px;font-weight:700;">${pct != null ? pct + ' %' : '–'}</div><div style="font-size:10px;color:var(--muted)">af peak</div></div>
-      </div>
-    </div>`;
-  }
-
-  grid.innerHTML = [
-    box('Z2 pace ved HR ~150', z2BaseT ? fmtPace(z2BaseT)+'/km' : '–', z2NowT ? fmtPace(z2NowT)+'/km' : '–', null, pctBack(z2NowT, z2BaseT, true)),
-    box('Tempo pace (HR >165)', tempoBaseT ? fmtPace(tempoBaseT)+'/km' : '–', tempoNowT ? fmtPace(tempoNowT)+'/km' : '–', null, pctBack(tempoNowT, tempoBaseT, true)),
-    box('CTL (peak)', ctlBase ? Math.round(ctlBase) : '–', ctlNow ? Math.round(ctlNow) : '–', null, pctBack(ctlNow, ctlBase, false)),
-    box('Threshold pace (estimat)', thrBaseT ? fmtPace(thrBaseT)+'/km' : '–', thrNowT ? fmtPace(thrNowT)+'/km' : '–', null, pctBack(thrNowT, thrBaseT, true))
-  ].join('');
-}
 
 // --- Goal persistence ---
 // (Old goal editor removed — replaced by Sub-20 Projektion)
 
-function fmtTime(min) {
-  const T = Math.round(min * 60);
-  const m = Math.floor(T / 60);
-  const s = T % 60;
-  return m + ':' + String(s).padStart(2, '0');
-}
 
-function renderConsistencyGoal(r, w) {
-  // Calculate runs per week (last 4 weeks)
-  const now = new Date();
-  const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
-  const recent = r.filter(a => new Date(a.start_date_local || a.start_date) >= fourWeeksAgo);
-  const runsPerWeek = Math.round((recent.length / 4) * 10) / 10;
 
-  // Helper: local YYYY-MM-DD string (avoids UTC shift from toISOString)
-  const localDateStr = (dt) => dt.getFullYear() + '-' +
-    String(dt.getMonth()+1).padStart(2,'0') + '-' +
-    String(dt.getDate()).padStart(2,'0');
-
-  // Calculate current streak (weeks start on Monday)
-  let streak = 0;
-  const weekRuns = {};
-  const mondayStart = (dt) => {
-    const d = new Date(dt);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Sunday → back 6 days, else back to Monday
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-  };
-  r.forEach(a => {
-    const d = new Date(a.start_date_local || a.start_date);
-    const wk = localDateStr(mondayStart(d));
-    weekRuns[wk] = (weekRuns[wk]||0) + 1;
-  });
-
-  // Determine the start of the current (incomplete) week so we can skip it
-  const currentWeekKey = localDateStr(mondayStart(now));
-
-  const sortedWeeks = Object.entries(weekRuns)
-    .filter(([wk]) => wk !== currentWeekKey) // skip incomplete current week
-    .sort((a,b) => new Date(b[0]) - new Date(a[0]));
-  for (let i = 0; i < sortedWeeks.length; i++) {
-    if (sortedWeeks[i][1] >= 3) streak++;
-    else break;
-  }
-
-  document.getElementById('runs-per-week').textContent = runsPerWeek.toFixed(1);
-  document.getElementById('run-streak').textContent = streak + ' uge';
-}
-
-function renderRunsPerWeekChart(r) {
-  const weeks = {};
-  r.forEach(a => {
-    const d = new Date(a.start_date_local || a.start_date);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    const weekStart = new Date(d);
-    weekStart.setDate(d.getDate() + diff);
-    const wk = weekStart.toISOString().substring(0,10);
-    weeks[wk] = (weeks[wk]||0) + 1;
-  });
-
-  const sorted = Object.entries(weeks).sort((a,b) => new Date(a[0]) - new Date(b[0])).slice(-26); // Last 26 weeks
-
-  mkChart('cRunsPerWeek', {
-    type: 'bar',
-    data: {
-      labels: sorted.map(w => w[0]),
-      datasets: [{
-        label: 'Løb pr. uge',
-        data: sorted.map(w => w[1]),
-        backgroundColor: 'var(--accent)',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'x',
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { type: 'time', time: { unit:'week' }, ticks: { color:'#8b8fa3' } },
-        y: { beginAtZero: true, ticks: { color:'#8b8fa3', stepSize: 1 } }
-      }
-    }
-  });
-}
 
 // ---- POLARIZATION & Z2 ----
 function getMaxHR() {
@@ -2087,437 +1073,7 @@ function getZ2Range() {
   return { low: Math.round(restHR + 0.60 * hrr), high: Math.round(restHR + 0.70 * hrr), maxHR, restHR };
 }
 
-function renderProjection(allRuns) {
-  // === 1. Build 2024 trajectory (Apr-Dec 2024) ===
-  // Calculate weekly average pace for 2024 buildup
-  const ref2024Start = new Date('2024-04-01');
-  const ref2024End = new Date('2024-12-31');
-  const runs2024 = allRuns.filter(a => {
-    const dt = new Date(a.start_date_local || a.start_date);
-    return dt >= ref2024Start && dt <= ref2024End;
-  });
 
-  // Group by week offset from start
-  function weeklyPace(runList, startDate) {
-    const weeks = {};
-    runList.forEach(a => {
-      const dt = new Date(a.start_date_local || a.start_date);
-      const weekNum = Math.floor((dt - startDate) / (7 * 24 * 3600 * 1000));
-      if (!weeks[weekNum]) weeks[weekNum] = { totalTime: 0, totalDist: 0, count: 0 };
-      weeks[weekNum].totalTime += (a.moving_time || 0);
-      weeks[weekNum].totalDist += (a.distance || 0) / 1000;
-      weeks[weekNum].count++;
-    });
-    return weeks;
-  }
-
-  function weeklyVolume(runList, startDate, numWeeks) {
-    const result = [];
-    for (let w = 0; w < numWeeks; w++) {
-      const wStart = new Date(startDate.getTime() + w * 7 * 24 * 3600 * 1000);
-      const wEnd = new Date(wStart.getTime() + 7 * 24 * 3600 * 1000);
-      let km = 0, count = 0;
-      runList.forEach(a => {
-        const dt = new Date(a.start_date_local || a.start_date);
-        if (dt >= wStart && dt < wEnd) {
-          km += (a.distance || 0) / 1000;
-          count++;
-        }
-      });
-      result.push({ week: w + 1, km: Math.round(km * 10) / 10, runs: count });
-    }
-    return result;
-  }
-
-  // Estimate 5K time from average pace (using Riegel formula factor)
-  function est5kFromPace(paceMinPerKm) {
-    return paceMinPerKm * 5 * 0.92; // 0.92 factor: race effort vs training pace
-  }
-
-  // 2024 weekly rolling 5K estimate
-  const weeks2024 = weeklyPace(runs2024, ref2024Start);
-  const data2024 = [];
-  Object.keys(weeks2024).sort((a,b) => a-b).forEach(w => {
-    const wk = weeks2024[w];
-    if (wk.totalDist > 0) {
-      const pace = (wk.totalTime / 60) / wk.totalDist;
-      data2024.push({ week: parseInt(w) + 1, pace, est5k: est5kFromPace(pace) });
-    }
-  });
-
-  // === 2. Build current trajectory (Feb 2026 onwards) ===
-  const currentStart = new Date('2026-02-01');
-  const now = new Date();
-  const currentRuns = allRuns.filter(a => {
-    const dt = new Date(a.start_date_local || a.start_date);
-    return dt >= currentStart;
-  });
-  const weeksCurrent = weeklyPace(currentRuns, currentStart);
-  const dataCurrent = [];
-  Object.keys(weeksCurrent).sort((a,b) => a-b).forEach(w => {
-    const wk = weeksCurrent[w];
-    if (wk.totalDist > 0) {
-      const pace = (wk.totalTime / 60) / wk.totalDist;
-      dataCurrent.push({ week: parseInt(w) + 1, pace, est5k: est5kFromPace(pace) });
-    }
-  });
-
-  // === 3. Projection line from current to sub-20 ===
-  const currentWeek = Math.floor((now - currentStart) / (7 * 24 * 3600 * 1000)) + 1;
-  const latestEst = dataCurrent.length > 0 ? dataCurrent[dataCurrent.length - 1].est5k : 26;
-  const projectionData = [];
-  // Project from current level to sub-20 over ~18 months (78 weeks from start)
-  // Phase 1: Back to PR (22.4 min) by week ~16 (July 2026)
-  // Phase 2: PR to sub-20 over next ~52 weeks
-  const prLevel = 22.42; // 22:25
-  const sub20 = 20.0;
-  const prWeek = 20; // ~July 2026 from Feb start
-  const sub20Week = 72; // ~18 months from start
-
-  for (let w = currentWeek; w <= sub20Week; w++) {
-    let est;
-    if (w <= prWeek) {
-      // Linear interpolation current → PR
-      const progress = (w - currentWeek) / (prWeek - currentWeek);
-      est = latestEst - (latestEst - prLevel) * progress;
-    } else {
-      // Slower curve PR → sub-20
-      const progress = (w - prWeek) / (sub20Week - prWeek);
-      est = prLevel - (prLevel - sub20) * Math.pow(progress, 0.7); // Diminishing returns
-    }
-    projectionData.push({ week: w, est5k: est });
-  }
-
-  // === 4. Status indicator ===
-  const statusEl = document.getElementById('projection-status');
-  const last4Weeks = [];
-  for (let w = 0; w < 4; w++) {
-    const wStart = new Date(now.getTime() - (4 - w) * 7 * 24 * 3600 * 1000);
-    const wEnd = new Date(wStart.getTime() + 7 * 24 * 3600 * 1000);
-    let km = 0, count = 0;
-    currentRuns.forEach(a => {
-      const dt = new Date(a.start_date_local || a.start_date);
-      if (dt >= wStart && dt < wEnd) { km += (a.distance || 0) / 1000; count++; }
-    });
-    last4Weeks.push({ km, count });
-  }
-  const avgRuns = last4Weeks.reduce((s, w) => s + w.count, 0) / 4;
-  const avgKm = last4Weeks.reduce((s, w) => s + w.km, 0) / 4;
-
-  // Compare to where 2024 was at the same relative week
-  const ref2024Week = data2024.find(d => d.week === currentWeek);
-  const ref2024Est = ref2024Week ? ref2024Week.est5k : null;
-
-  let statusClass, statusIcon, statusText, statusDetail;
-  if (avgRuns >= 3 && avgKm >= 25) {
-    statusClass = 'good';
-    statusIcon = '\u2705';
-    statusText = 'On track';
-    statusDetail = `${avgRuns.toFixed(1)} løb/uge og ${avgKm.toFixed(0)} km/uge — du rammer den konsistens, der skal til.`;
-  } else if (avgRuns >= 2 && avgKm >= 15) {
-    statusClass = 'ok';
-    statusIcon = '\u26a0\ufe0f';
-    statusText = 'Næsten';
-    statusDetail = `${avgRuns.toFixed(1)} løb/uge og ${avgKm.toFixed(0)} km/uge — tæt på, men du skal op på 3-4 løb og 25+ km/uge for at følge planen.`;
-  } else {
-    statusClass = 'bad';
-    statusIcon = '\u274c';
-    statusText = 'Off track';
-    statusDetail = `${avgRuns.toFixed(1)} løb/uge og ${avgKm.toFixed(0)} km/uge — for lavt volumen. Du skal op på 3-4 løb og 25+ km/uge.`;
-  }
-
-  statusEl.innerHTML = `<div class="verdict ${statusClass}" style="margin-bottom:16px;">
-    <h2>${statusIcon} Træningsstatus: ${statusText}</h2>
-    <div class="explain">${statusDetail}
-    ${ref2024Est ? `<br><strong>Samme uge i 2024-opbygningen:</strong> estimeret 5K var ${fmtTime(ref2024Est)} — du er nu på ca. ${fmtTime(latestEst)}.` : ''}
-    </div>
-  </div>`;
-
-  // === 5. Current 5K estimate display ===
-  document.getElementById('proj-current').textContent = fmtTime(latestEst);
-
-  // Latest Garmin prediction
-  if (typeof GARMIN_DATA !== 'undefined' && GARMIN_DATA.racePredictions && GARMIN_DATA.racePredictions.length > 0) {
-    const latest = GARMIN_DATA.racePredictions[GARMIN_DATA.racePredictions.length - 1];
-    if (latest['5k']) {
-      const garminEst = latest['5k'] / 60;
-      document.getElementById('proj-current').textContent = fmtTime(garminEst);
-      document.getElementById('proj-current-hint').textContent = `Garmin: ${fmtTime(garminEst)} | Træningspace: ${fmtTime(latestEst)}`;
-    }
-  }
-
-  // === 6. Projection chart ===
-  const projDatasets = [];
-
-  // 2024 reference (green)
-  if (data2024.length > 0) {
-    projDatasets.push({
-      label: '2024-opbygning (reference)',
-      data: data2024.map(d => ({ x: d.week, y: d.est5k })),
-      borderColor: 'rgba(34,197,94,0.8)',
-      backgroundColor: 'rgba(34,197,94,0.05)',
-      fill: false, tension: 0.3, pointRadius: 3,
-      pointBackgroundColor: 'rgba(34,197,94,1)',
-      borderWidth: 2
-    });
-  }
-
-  // Current trajectory (purple)
-  if (dataCurrent.length > 0) {
-    projDatasets.push({
-      label: 'Nuværende progression',
-      data: dataCurrent.map(d => ({ x: d.week, y: d.est5k })),
-      borderColor: 'rgba(129,140,248,1)',
-      backgroundColor: 'rgba(129,140,248,0.1)',
-      fill: false, tension: 0.3, pointRadius: 5,
-      pointBackgroundColor: 'rgba(129,140,248,1)',
-      borderWidth: 3
-    });
-  }
-
-  // Projected path (orange dashed)
-  projDatasets.push({
-    label: 'Projiceret vej (3-4x/uge)',
-    data: projectionData.map(d => ({ x: d.week, y: d.est5k })),
-    borderColor: 'rgba(245,158,11,0.6)',
-    borderDash: [8, 4],
-    fill: false, tension: 0.3, pointRadius: 0,
-    borderWidth: 2
-  });
-
-  // Sub-20 target line (red)
-  const maxWeek = Math.max(sub20Week, ...data2024.map(d => d.week), ...dataCurrent.map(d => d.week));
-  projDatasets.push({
-    label: 'Sub-20 mål',
-    data: [{ x: 1, y: 20 }, { x: maxWeek, y: 20 }],
-    borderColor: 'rgba(239,68,68,0.6)',
-    borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 1
-  });
-
-  // 22:30 milestone line (orange thin)
-  projDatasets.push({
-    label: 'Milepæl 22:30 (PR-nærhed)',
-    data: [{ x: 1, y: 22.5 }, { x: maxWeek, y: 22.5 }],
-    borderColor: 'rgba(245,158,11,0.4)',
-    borderDash: [3, 3], pointRadius: 0, fill: false, borderWidth: 1
-  });
-
-  mkChart('cProjection', {
-    type: 'line',
-    data: { datasets: projDatasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: true, labels: { color: '#8b8fa3', font: { size: 11 } } },
-        tooltip: {
-          callbacks: {
-            title: items => `Uge ${items[0].parsed.x}`,
-            label: item => `${item.dataset.label}: ${fmtTime(item.parsed.y)}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          type: 'linear',
-          title: { display: true, text: 'Uger fra start', color: '#8b8fa3' },
-          ticks: { color: '#8b8fa3' },
-          grid: { color: 'rgba(42,46,61,.5)' }
-        },
-        y: {
-          reverse: false,
-          title: { display: true, text: 'Estimeret 5K tid (min)', color: '#8b8fa3' },
-          ticks: {
-            color: '#8b8fa3',
-            callback: v => { const T = Math.round(v * 60); const m = Math.floor(T / 60); const s = T % 60; return m + ':' + String(s).padStart(2, '0'); }
-          },
-          grid: { color: 'rgba(42,46,61,.5)' },
-          suggestedMin: 18, suggestedMax: 32
-        }
-      }
-    }
-  });
-
-  // === 7. Volume comparison chart ===
-  // ISO week number helper
-  function getISOWeek(d) {
-    const dt = new Date(d.getTime());
-    dt.setHours(0,0,0,0);
-    dt.setDate(dt.getDate() + 3 - (dt.getDay() + 6) % 7);
-    const w1 = new Date(dt.getFullYear(), 0, 4);
-    return 1 + Math.round(((dt.getTime() - w1.getTime()) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
-  }
-
-  const numWeeks = 26;
-  const vol2024 = weeklyVolume(runs2024, ref2024Start, numWeeks);
-  const volCurrent = weeklyVolume(currentRuns, currentStart, Math.min(numWeeks, currentWeek + 1));
-
-  // Calendar week labels based on currentStart
-  const volumeLabels = Array.from({ length: numWeeks }, (_, i) => {
-    const mid = new Date(currentStart.getTime() + (i * 7 + 3) * 24 * 3600 * 1000);
-    return `Uge ${getISOWeek(mid)}`;
-  });
-
-  mkChart('cVolumeCompare', {
-    type: 'bar',
-    data: {
-      labels: volumeLabels,
-      datasets: [
-        {
-          label: '2024-opbygning (km/uge)',
-          data: vol2024.map(v => v.km),
-          backgroundColor: 'rgba(34,197,94,0.4)',
-          borderColor: 'rgba(34,197,94,0.8)',
-          borderWidth: 1, borderRadius: 3
-        },
-        {
-          label: 'Nuværende (km/uge)',
-          data: volCurrent.map(v => v.km),
-          backgroundColor: 'rgba(129,140,248,0.6)',
-          borderColor: 'rgba(129,140,248,1)',
-          borderWidth: 1, borderRadius: 3
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: '#8b8fa3' } } },
-      scales: {
-        x: { ticks: { color: '#8b8fa3', font: { size: 10 } }, grid: { color: 'rgba(42,46,61,.3)' } },
-        y: { title: { display: true, text: 'km', color: '#8b8fa3' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } }
-      }
-    }
-  });
-
-  // === 8. VO2max projection chart ===
-  if (typeof GARMIN_DATA !== 'undefined' && GARMIN_DATA.fitnessAge) {
-    // 2024 VO2max (mapped to weeks from Apr 2024)
-    const vo2_2024 = GARMIN_DATA.fitnessAge
-      .filter(f => f.date >= '2024-04-01' && f.date <= '2024-12-31' && f.vo2max)
-      .map(f => {
-        const wk = Math.floor((new Date(f.date) - ref2024Start) / (7 * 24 * 3600 * 1000)) + 1;
-        return { x: wk, y: f.vo2max };
-      });
-    // Downsample to weekly
-    const vo2_2024_weekly = {};
-    vo2_2024.forEach(d => { if (!vo2_2024_weekly[d.x] || d.y > vo2_2024_weekly[d.x]) vo2_2024_weekly[d.x] = d.y; });
-    const vo2_2024_data = Object.entries(vo2_2024_weekly).map(([w, v]) => ({ x: parseInt(w), y: v })).sort((a, b) => a.x - b.x);
-
-    // Current VO2max (mapped to weeks from Feb 2026)
-    const vo2_current = GARMIN_DATA.fitnessAge
-      .filter(f => f.date >= '2026-02-01' && f.vo2max)
-      .map(f => {
-        const wk = Math.floor((new Date(f.date) - currentStart) / (7 * 24 * 3600 * 1000)) + 1;
-        return { x: wk, y: f.vo2max };
-      });
-    const vo2_current_weekly = {};
-    vo2_current.forEach(d => { if (!vo2_current_weekly[d.x] || d.y > vo2_current_weekly[d.x]) vo2_current_weekly[d.x] = d.y; });
-    const vo2_current_data = Object.entries(vo2_current_weekly).map(([w, v]) => ({ x: parseInt(w), y: v })).sort((a, b) => a.x - b.x);
-
-    const vo2MaxWeek = Math.max(sub20Week, ...vo2_2024_data.map(d => d.x));
-
-    mkChart('cVo2Projection', {
-      type: 'line',
-      data: {
-        datasets: [
-          {
-            label: '2024-opbygning VO2max',
-            data: vo2_2024_data,
-            borderColor: 'rgba(34,197,94,0.8)',
-            pointRadius: 2, tension: 0.3, fill: false, borderWidth: 2
-          },
-          {
-            label: 'Nuværende VO2max',
-            data: vo2_current_data,
-            borderColor: 'rgba(129,140,248,1)',
-            pointRadius: 3, tension: 0.3, fill: false, borderWidth: 3
-          },
-          {
-            label: 'Sub-20 krav (~50)',
-            data: [{ x: 1, y: 50 }, { x: vo2MaxWeek, y: 50 }],
-            borderColor: 'rgba(239,68,68,0.5)',
-            borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 1
-          }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: true, labels: { color: '#8b8fa3' } } },
-        scales: {
-          x: {
-            type: 'linear',
-            title: { display: true, text: 'Uger fra start', color: '#8b8fa3' },
-            ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }
-          },
-          y: {
-            title: { display: true, text: 'VO2max', color: '#8b8fa3' },
-            ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' },
-            suggestedMin: 38, suggestedMax: 52
-          }
-        }
-      }
-    });
-  }
-}
-
-function renderZ2Guide(r, w) {
-  const z2 = getZ2Range();
-
-  // Find pace at Z2 HR from historical data
-  const z2Runs = r.filter(a => {
-    const hr = a.average_heartrate || 0;
-    return hr >= z2.low - 10 && hr <= z2.high + 5 && (a.distance||0) > 2000;
-  });
-  let z2PaceText = '~7:00-7:30/km';
-  if (z2Runs.length > 0) {
-    const paces = z2Runs.map(a => pace(a)).filter(Boolean);
-    if (paces.length > 0) {
-      const avgZ2Pace = avg(paces);
-      z2PaceText = fmtPace(avgZ2Pace) + '/km';
-    }
-  }
-
-  // Count recent polarization
-  const recent = r.slice(-10);
-  const easyCount = recent.filter(a => (a.average_heartrate||0) <= z2.high && (a.average_heartrate||0) > 0).length;
-  const hardCount = recent.filter(a => (a.average_heartrate||0) > z2.high).length;
-  const totalWithHR = easyCount + hardCount;
-  const easyPct = totalWithHR > 0 ? Math.round(easyCount / totalWithHR * 100) : 0;
-
-  const balanceColor = easyPct >= 70 ? 'good' : easyPct >= 40 ? 'ok' : 'bad';
-  const balanceEmoji = easyPct >= 70 ? '\u2705' : easyPct >= 40 ? '\ud83d\udfe1' : '\ud83d\udfe5';
-
-  document.getElementById('z2-info').innerHTML = `
-    <div class="grid g3" style="margin-bottom:16px;">
-      <div>
-        <div class="goal-label">Din Zone 2 pulszone</div>
-        <div class="goal-value" style="color:var(--green)">${z2.low}-${z2.high} bpm</div>
-        <div class="goal-hint">Baseret p\u00e5 max HR ${z2.maxHR} &amp; hvile ${z2.restHR}</div>
-      </div>
-      <div>
-        <div class="goal-label">Ansl\u00e5et Z2 pace</div>
-        <div class="goal-value" style="color:var(--blue)">${z2PaceText}</div>
-        <div class="goal-hint">Hold denne pace og lad pulsen styre</div>
-      </div>
-      <div>
-        <div class="goal-label">80/20 balance (seneste 10)</div>
-        <div class="goal-value" style="color:var(--${balanceColor === 'good' ? 'green' : balanceColor === 'ok' ? 'orange' : 'red'})">${balanceEmoji} ${easyPct}% let</div>
-        <div class="goal-hint">${easyCount} lette / ${hardCount} h\u00e5rde l\u00f8b</div>
-      </div>
-    </div>
-    <div class="info">
-      <strong>S\u00e5dan l\u00f8ber du Zone 2:</strong>
-      <div style="margin-top:8px; font-size:13px; line-height:1.7;">
-        Hold pulsen mellem <strong>${z2.low} og ${z2.high} bpm</strong>. Det betyder:
-        <ul style="margin:8px 0 0 20px;">
-          <li>Du skal kunne f\u00f8re en samtale uden at v\u00e6re forpustet</li>
-          <li>Det f\u00f8les \u201dfor langsomt\u201d \u2014 det er meningen! T\u00e6nk p\u00e5 det som en investering</li>
-          <li>Brug ur-alarm p\u00e5 ${z2.high} bpm \u2014 g\u00e5 ned i tempo n\u00e5r den bipper</li>
-          <li>Ignor\u00e9r pace-tallet, f\u00f8lg kun pulsen. Bakker og vind g\u00f8r pace irrelevant</li>
-          <li>4 ud af 5 l\u00f8b b\u00f8r v\u00e6re i dette tempo. Kun 1 om ugen er h\u00e5rdt</li>
-        </ul>
-      </div>
-    </div>`;
-}
 
 // ---- DAGSFORM ----
 function renderDagsform(r, w) {
@@ -2594,8 +1150,6 @@ function renderDagsform(r, w) {
     <div class="card"><div class="lbl">Hvilepuls</div><div class="val" style="color:var(--pink)">${dayWell.restingHR||'-'}</div><div class="sub">bpm</div></div>
     <div class="card"><div class="lbl">S&oslash;vn</div><div class="val" style="color:var(--purple)">${h||'-'}</div><div class="sub">${h?'timer':''}${dayWell.sleepScore?' \u00b7 score '+dayWell.sleepScore:''}</div></div>
     <div class="card"><div class="lbl">Skridt</div><div class="val" style="color:var(--green)">${dayWell.steps?dayWell.steps.toLocaleString():'-'}</div><div class="sub">i dag</div></div>
-    <div class="card"><div class="lbl">Fitness (CTL)</div><div class="val" style="color:var(--blue)">${dayWell.ctl?Math.round(dayWell.ctl):'-'}</div><div class="sub">langsigtet form</div></div>
-    <div class="card"><div class="lbl">Tr&aelig;thed (ATL)</div><div class="val" style="color:var(--red)">${dayWell.atl?Math.round(dayWell.atl):'-'}</div><div class="sub">akut belastning</div></div>
   `;
 
   // Training recommendations removed — Sofie follows her coach's plan.
@@ -2629,191 +1183,19 @@ function renderDagsform(r, w) {
   }
 
   // 14 day readiness chart
-  renderDf14(allW);
-
-  // 7 day wellness trend
-  renderDf7(allW);
-
-  // Recent activities
-  renderDfRecent(allRuns);
 }
 
-function renderDf14(w) {
-  const today = new Date();
-  const dates = [];
-  for (let i = 13; i >= 0; i--) {
-    const dt = new Date(today); dt.setDate(dt.getDate() - i);
-    dates.push(dt.toISOString().substring(0,10));
-  }
 
-  const wMap = {};
-  w.forEach(x => wMap[x.id] = x);
-  const scores = dates.map(dt => {
-    const r = calcReadiness(wMap[dt], w, activities);
-    return r ? r.score : null;
-  });
 
-  const colors = scores.map(s => s === null ? 'rgba(42,46,61,.5)' : s >= 70 ? 'rgba(34,197,94,.6)' : s >= 40 ? 'rgba(245,158,11,.6)' : 'rgba(239,68,68,.6)');
 
-  mkChart('cDf14', { type:'bar',
-    data:{ labels: dates.map(dt => dt.substring(5)), datasets:[{
-      data: scores, backgroundColor: colors, borderRadius:3
-    }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3',font:{size:11}}},
-        y:{min:0,max:100,grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'},title:{display:true,text:'Score',color:'#8b8fa3'}}
-      }
-    }
-  });
-}
-
-function renderDf7(w) {
-  const today = new Date();
-  const dates = [];
-  for (let i = 6; i >= 0; i--) {
-    const dt = new Date(today); dt.setDate(dt.getDate() - i);
-    dates.push(dt.toISOString().substring(0,10));
-  }
-
-  const wMap = {};
-  w.forEach(x => wMap[x.id] = x);
-  const labels = dates.map((dt,i) => i === dates.length-1 ? 'I dag' : dt.substring(5));
-  const ds = [];
-
-  const hrvData = dates.map(dt => wMap[dt]?.hrv || null);
-  const rhrData = dates.map(dt => wMap[dt]?.restingHR || null);
-  const ssData = dates.map(dt => wMap[dt]?.sleepScore || null);
-
-  if (hrvData.some(Boolean)) ds.push({ label:'HRV (ms)', data:hrvData, borderColor:'rgba(6,182,212,.8)', tension:.3, pointRadius:5, pointBackgroundColor:'rgba(6,182,212,1)', yAxisID:'y' });
-  if (rhrData.some(Boolean)) ds.push({ label:'Hvilepuls', data:rhrData, borderColor:'rgba(236,72,153,.8)', tension:.3, pointRadius:5, pointBackgroundColor:'rgba(236,72,153,1)', yAxisID:'y1' });
-  if (ssData.some(Boolean)) ds.push({ label:'S\u00f8vnscore', data:ssData, borderColor:'rgba(168,85,247,.8)', tension:.3, pointRadius:5, pointBackgroundColor:'rgba(168,85,247,1)', yAxisID:'y' });
-
-  if (ds.length === 0) { mkEmpty('cDf7', 'Ingen data de seneste 7 dage'); return; }
-
-  mkChart('cDf7', { type:'line', data:{ labels, datasets:ds },
-    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-      scales:{
-        x:{grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'}},
-        y:{position:'left',grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'}},
-        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#8b8fa3'}}
-      },
-      plugins:{legend:{labels:{color:'#8b8fa3',font:{size:11}}}}
-    }
-  });
-}
-
-function renderDfRecent(r) {
-  const today = new Date();
-  const d7 = new Date(today); d7.setDate(d7.getDate() - 7);
-  const recent = r.filter(a => new Date(a.start_date_local || a.start_date) >= d7)
-    .sort((a,b) => (b.start_date_local||b.start_date).localeCompare(a.start_date_local||a.start_date));
-
-  const el = document.getElementById('df-recent');
-  if (recent.length === 0) {
-    el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:12px 0;">Ingen l\u00f8b de seneste 7 dage.</p>';
-    return;
-  }
-
-  el.innerHTML = '<table><thead><tr><th>Dato</th><th>Navn</th><th>Distance</th><th>Pace</th><th>Puls</th><th>Belastning</th></tr></thead><tbody>' +
-    recent.map(a => {
-      const km = ((a.distance||0)/1000).toFixed(1);
-      const p = pace(a);
-      return '<tr><td>' + d(a) + '</td><td>' + (a.name||'-') + '</td><td>' + km + ' km</td><td>' + (p?fmtPace(p):'-') + '</td><td>' + (a.average_heartrate?Math.round(a.average_heartrate):'-') + '</td><td>' + (a.icu_training_load?Math.round(a.icu_training_load):'-') + '</td></tr>';
-    }).join('') + '</tbody></table>';
-}
-
-// ---- INSIGHTS ----
-function renderInsights(r, w) {
-  const wMap = {};
-  w.forEach(x => wMap[x.id] = x);
-
-  // Build paired data: run + wellness from same day
-  const pairs = r.map(a => {
-    const day = d(a);
-    const wl = wMap[day];
-    return { act: a, well: wl, pace: pace(a), efVal: ef(a), day };
-  }).filter(p => p.pace && p.pace > 0);
-
-  // Calculate rest days before each run
-  const runDates = r.map(a => d(a)).sort();
-  pairs.forEach(p => {
-    const idx = runDates.indexOf(p.day);
-    if (idx > 0) {
-      const prev = new Date(runDates[idx-1]);
-      const curr = new Date(p.day);
-      p.restDays = Math.round((curr - prev) / 86400000) - 1;
-    }
-  });
-
-  // Generate insights
-  const insights = [];
-
-  // ---- Composite readiness score (HRV + RHR + sleep, 0-100) ----
-  // Use calcReadiness for each run-day to ensure consistency across the dashboard
-  const readyPairs = pairs.filter(p => p.well && p.efVal).map(p => {
-    const r = calcReadiness(p.well, w, activities);
-    return r ? { x: r.score, y: +p.efVal.toFixed(3), date: p.day } : null;
-  }).filter(Boolean);
-
-  if (readyPairs.length >= 5) {
-    const corr = correlation(readyPairs.map(p => p.x), readyPairs.map(p => p.y));
-    const dir = corr > 0.15 ? 'H\u00f8jere readiness = bedre efficiency p\u00e5 l\u00f8bet'
-              : corr < -0.15 ? 'H\u00f8jere readiness = lavere efficiency (overraskende!)'
-              : 'Ingen klar sammenh\u00e6ng (endnu)';
-    insights.push({ title: 'Readiness & Efficiency', finding: dir, detail: `Korrelation: ${corr.toFixed(2)}. Baseret p\u00e5 ${readyPairs.length} l\u00f8b med fuld wellness-data.`, color: corr > 0.15 ? 'var(--green)' : corr < -0.15 ? 'var(--orange)' : 'var(--muted)' });
-
-    mkChart('cReadinessVsEF', {
-      type: 'scatter',
-      data: { datasets: [{
-        label: 'L\u00f8b',
-        data: readyPairs.map(p => ({ x: p.x, y: p.y })),
-        backgroundColor: 'rgba(99,102,241,.7)',
-        pointRadius: 6, pointHoverRadius: 8
-      }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => readyPairs[ctx.dataIndex] ? `${readyPairs[ctx.dataIndex].date}: readiness ${ctx.parsed.x}, EF ${ctx.parsed.y}` : '' } }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Readiness-score (0-100)', color: '#8b8fa3' }, min: 0, max: 100, grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3' } },
-          y: { title: { display: true, text: 'Efficiency Factor (hastighed/puls)', color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, ticks: { color: '#8b8fa3' } }
-        }
-      }
-    });
-  } else {
-    mkEmpty('cReadinessVsEF', 'Ikke nok parrede l\u00f8b + wellness-data endnu');
-  }
-
-  // Render insight cards
-  document.getElementById('insight-cards').innerHTML = insights.length ? insights.map(i => `
-    <div class="insight">
-      <h3>${i.title}</h3>
-      <div class="finding" style="color:${i.color}">${i.finding}</div>
-      <p>${i.detail}</p>
-    </div>
-  `).join('') : '<div class="insight full"><h3>Indsigter</h3><p>Der er brug for wellness-data (s\u00f8vn, HRV, hvilepuls) p\u00e5 dine l\u00f8bedage for at beregne sammenh\u00e6nge. S\u00f8rg for at din Garmin synkroniserer wellness-data til Intervals.icu.</p></div>';
-
-  // VO2max chart (moved from old Garmin tab)
-  renderVo2maxChart();
-
-  // Training load chart
-  renderLoadChart();
-  renderTimeOfDay(r);
-  renderConsistency(r);
-  renderACWRChart(r);
-}
 
 // VO2max chart from Garmin export (now lives on Indsigter)
 function renderVo2maxChart() {
-  // Ny fuld historik (Garmin-eksport 17-07-2026) — VO2max pr. løb frem til i dag; fald tilbage til gammel GARMIN_DATA hvis nødvendigt.
-  let data = (window.GARMIN_HISTORY || []).filter(a => a.vo2max).map(a => ({ date: a.start_date_local.substring(0,10), vo2max: a.vo2max }));
-  if ((!data || data.length === 0) && typeof GARMIN_DATA !== 'undefined' && GARMIN_DATA.vo2max) data = GARMIN_DATA.vo2max;
+  // VO2max pr. løb fra de flettede Garmin-løb (garmin_activities + historik), frem til i dag.
+  const data = activities.filter(a => a.vo2max).map(a => ({ date: a.start_date_local.substring(0,10), vo2max: a.vo2max }))
+    .sort((x, y) => x.date.localeCompare(y.date));
   if (!data || data.length === 0) {
-    mkEmpty('ch-vo2', 'Ingen VO2max-data fra Garmin-eksport');
+    mkEmpty('ch-vo2', 'Ingen VO2max-data endnu');
     return;
   }
   const vals = data.map(v => v.vo2max);
@@ -2841,16 +1223,6 @@ function renderVo2maxChart() {
   });
 }
 
-function renderLoadChart() {
-  const w = fil(wellness, 'id').filter(x => x.ctl || x.atl).sort((a,b) => a.id.localeCompare(b.id));
-  if (w.length === 0) { mkEmpty('cLoad', 'Ingen CTL/ATL data'); return; }
-  const ds = [];
-  if (w.some(x=>x.ctl)) ds.push({ label:'Fitness (CTL)', data:w.filter(x=>x.ctl).map(x=>({x:x.id,y:x.ctl})), borderColor:'rgba(34,197,94,.8)', backgroundColor:'rgba(34,197,94,.05)', fill:true, tension:.3, pointRadius:0 });
-  if (w.some(x=>x.atl)) ds.push({ label:'Tr\u00e6thed (ATL)', data:w.filter(x=>x.atl).map(x=>({x:x.id,y:x.atl})), borderColor:'rgba(239,68,68,.8)', backgroundColor:'rgba(239,68,68,.05)', fill:true, tension:.3, pointRadius:0 });
-  mkChart('cLoad', { type:'line', data:{datasets:ds}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-    scales:{ x:{type:'time',time:{unit:'week'},grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3',maxTicksLimit:12}}, y:{grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'}} },
-    plugins:{legend:{labels:{color:'#8b8fa3'}}} } });
-}
 
 // ---- WELLNESS ----
 function renderWellness(w) {
@@ -2861,12 +1233,6 @@ function renderWellness(w) {
   const latestBB = getBB(latest);
   const avgBB = avg(w.map(x=>getBB(x)).filter(Boolean));
 
-  // Discover all wellness fields from first record with most data
-  const richRecord = [...w].sort((a,b) => Object.keys(b).length - Object.keys(a).length)[0] || {};
-  const knownFields = ['id','ctl','atl','rampRate','ctlLoad','atlLoad'];
-  const extraFields = Object.keys(richRecord).filter(k => !knownFields.includes(k) && richRecord[k] !== null && richRecord[k] !== undefined && richRecord[k] !== '');
-  console.log('Wellness fields found:', extraFields, 'Sample record:', richRecord);
-
   document.getElementById('wellness-summary').innerHTML = `
     <div class="card"><div class="lbl">Seneste hvilepuls</div><div class="val" style="color:var(--pink)">${latest.restingHR||'-'}</div><div class="sub">Gns: ${avgRHR?Math.round(avgRHR):'-'} bpm</div></div>
     <div class="card"><div class="lbl">Seneste HRV</div><div class="val" style="color:var(--cyan)">${latest.hrv||'-'}</div><div class="sub">Gns: ${avgHRV?Math.round(avgHRV):'-'} ms</div></div>
@@ -2875,15 +1241,6 @@ function renderWellness(w) {
     <div class="card"><div class="lbl">Skridt i dag</div><div class="val" style="color:var(--green)">${latest.steps?latest.steps.toLocaleString():'-'}</div><div class="sub">daglig aktivitet</div></div>
     <div class="card"><div class="lbl">Seneste v&aelig;gt</div><div class="val" style="color:var(--orange)">${latest.weight||'-'}</div><div class="sub">kg</div></div>
   `;
-
-  // Show available wellness fields for debugging
-  const debugEl = document.getElementById('wellness-fields');
-  if (debugEl) {
-    debugEl.innerHTML = '<summary style="cursor:pointer;color:var(--muted);font-size:12px;">Tilg\u00e6ngelige wellness-felter fra Intervals.icu (klik for at se)</summary>' +
-      '<div style="padding:12px;font-size:11px;color:var(--muted);font-family:monospace;line-height:1.8;">' +
-      extraFields.map(k => '<strong style="color:var(--text);">' + k + '</strong>: ' + JSON.stringify(richRecord[k])).join('<br>') +
-      '</div>';
-  }
 
   // RHR + HRV chart
   const ds = [];
@@ -2909,48 +1266,6 @@ function renderWellness(w) {
   const wW = w.filter(x=>x.weight).sort((a,b)=>a.id.localeCompare(b.id));
   if (wW.length) {
     mkChart('cWeight', { type:'line', data:{ labels:wW.map(x=>x.id), datasets:[{ data:wW.map(x=>x.weight), borderColor:'rgba(245,158,11,.8)', backgroundColor:'rgba(245,158,11,.1)', fill:true, tension:.3, pointRadius:2 }] }, options:opts({y:{title:{display:true,text:'kg'}}}) });
-  }
-
-  // Readiness Score chart
-  const allWell = fil(wellness, 'id');
-  const today = new Date().toISOString().substring(0,10);
-  const readinessData = w.filter(day => day.id <= today).sort((a,b)=>a.id.localeCompare(b.id)).map(day => {
-    const r = calcReadiness(day, allWell, activities);
-    return r ? { date: day.id, score: r.score, factors: r.factors } : null;
-  }).filter(Boolean);
-
-  if (readinessData.length > 3) {
-    const colors = readinessData.map(r => r.score >= 70 ? 'rgba(34,197,94,.6)' : r.score >= 40 ? 'rgba(245,158,11,.6)' : 'rgba(239,68,68,.6)');
-    mkChart('cReadiness', { type:'bar',
-      data:{ labels: readinessData.map(r=>r.date), datasets:[{
-        data: readinessData.map(r=>r.score), backgroundColor: colors, borderRadius:2
-      }] },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{
-          x:{grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3',maxRotation:45,maxTicksLimit:20,font:{size:10}}},
-          y:{min:0,max:100,grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'},title:{display:true,text:'Score (0-100)',color:'#8b8fa3'}}
-        }
-      }
-    });
-
-    // Show latest readiness breakdown
-    const latest = readinessData[readinessData.length - 1];
-    const todayEl = document.getElementById('readiness-today');
-    if (todayEl && latest) {
-      const cls = latest.score >= 70 ? 'good' : latest.score >= 40 ? 'ok' : 'bad';
-      const emoji = latest.score >= 70 ? '\u2705' : latest.score >= 40 ? '\u26a0\ufe0f' : '\ud83d\udfe5';
-      todayEl.innerHTML = `
-        <div class="verdict ${cls}">
-          <h2>${emoji} Seneste Readiness Score: ${latest.score}/100</h2>
-          <div class="explain">
-            ${latest.factors.map(f => {
-              const color = f.score >= 70 ? 'var(--green)' : f.score >= 40 ? 'var(--orange)' : 'var(--red)';
-              return '<p><strong style="color:'+color+'">' + f.name + ': ' + f.score + '/100</strong> (' + f.val + ') &mdash; ' + f.explain + '</p>';
-            }).join('')}
-          </div>
-        </div>`;
-    }
   }
 }
 
@@ -3256,31 +1571,6 @@ function renderHistorik() {
       options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:Cc.muted},grid:{display:false}},y:{ticks:{color:Cc.muted},grid:{color:Cc.grid}}}}});
   })();
 
-  // cumulative
-  (function(){
-    const sorted=[...H].sort((a,b)=>a.start_date_local.localeCompare(b.start_date_local));
-    let cum=0;const pts=sorted.map(a=>{cum+=(a.distance||0)/1000;return{x:new Date(a.start_date_local).getTime(),y:Math.round(cum)};});
-    mkChart('hCum',{type:'line',data:{datasets:[{data:pts,borderColor:Cc.green,backgroundColor:'rgba(63,185,132,.12)',fill:true,pointRadius:0,tension:.2}]},
-      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{type:'linear',ticks:{callback:v=>new Date(v).getFullYear(),color:Cc.muted,maxTicksLimit:10},grid:{color:Cc.grid}},y:{ticks:{color:Cc.muted},grid:{color:Cc.grid}}}}});
-    const t=Math.round(cum);
-    document.getElementById('hCumNote').innerHTML=`I alt <b style="color:#e7eef5">${t.toLocaleString('da-DK')} km</b> &mdash; Danmarks længde (490 km) <b>${(t/490).toFixed(1)}×</b> eller ${(t/40075*100).toFixed(1)}% rundt om jorden.`;
-  })();
-
-  // hour
-  (function(){
-    const hh=Array(24).fill(0);H.forEach(a=>{hh[new Date(a.start_date_local).getHours()]++;});
-    mkChart('hHour',{type:'bar',data:{labels:hh.map((_,i)=>i+''),datasets:[{data:hh,backgroundColor:'rgba(240,163,60,.65)'}]},
-      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:Cc.muted,maxTicksLimit:12},grid:{display:false}},y:{ticks:{color:Cc.muted},grid:{color:Cc.grid}}}}});
-  })();
-
-  // locations
-  (function(){
-    const loc={};H.forEach(a=>{if(a.location)loc[a.location]=(loc[a.location]||0)+1;});
-    const top=Object.entries(loc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    mkChart('hLoc',{type:'bar',data:{labels:top.map(t=>t[0]),datasets:[{data:top.map(t=>t[1]),backgroundColor:'rgba(192,108,240,.6)'}]},
-      options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:Cc.muted},grid:{color:Cc.grid}},y:{ticks:{color:Cc.muted},grid:{display:false}}}}});
-  })();
-
   // PRs
   (function(){
     const dk={'1 km':1,'1 mile':1.609,'5 km':5,'10 km':10,'HM':21.0975};
@@ -3310,12 +1600,6 @@ function mkChart(id, cfg) {
   charts[id] = new Chart(el, cfg);
 }
 
-function mkScatter(id, data, xLabel, yLabel, color, reverseY) {
-  mkChart(id, { type:'scatter', data:{ datasets:[{ data, backgroundColor:color, pointRadius:5, pointHoverRadius:7 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{title:{display:true,text:xLabel,color:'#8b8fa3'},grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'}},
-               y:{reverse:!!reverseY, title:{display:true,text:yLabel,color:'#8b8fa3'},grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'}} } } });
-}
 
 function mkEmpty(id, msg) {
   const el = document.getElementById(id);
@@ -3328,31 +1612,7 @@ function opts(extra={}) {
   return { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:s };
 }
 
-// ---- ACWR & PRs (Overview) ----
-function renderACWRAlert(r) {
-  const acwr = calcACWR(r);
-  const el = document.getElementById('acwr-alert');
-  if (!acwr) { el.innerHTML = ''; return; }
-  const ratio = acwr.ratio;
-  let cls = 'neutral', icon = '\u2705', msg = 'Din tr\u00e6ningsbelastning er i balance.';
-  if (ratio > 1.5) { cls = 'bad'; icon = '\ud83d\udea8'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 h\u00f8j risiko for skade! Du har \u00f8get tr\u00e6ningen for hurtigt. Overvej at sk\u00e6re ned.`; }
-  else if (ratio > 1.3) { cls = 'ok'; icon = '\u26a0\ufe0f'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 moderat risiko. Vær forsigtig med at \u00f8ge mere.`; }
-  else if (ratio < 0.8 && ratio > 0 && sickDays.some(d => d > hAdd(hIso(new Date()), -10))) { cls = 'ok'; icon = '\ud83e\udd12'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 lavt, fordi du har v\u00e6ret syg. Det er det rigtige at hvile. Start blidt igen (1 km t\u00e6ller) og byg op, n\u00e5r kroppen er med.`; }
-  else if (ratio < 0.8 && ratio > 0) { cls = 'ok'; icon = '\ud83d\udca4'; msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 du tr\u00e6ner mindre end normalt. Det er fint som restitution, men pas p\u00e5 med at miste fitness.`; }
-  else { msg = `ACWR er <strong>${ratio.toFixed(2)}</strong> \u2014 sund balance mellem ny og kronisk belastning.`; }
-  el.innerHTML = `<div class="verdict ${cls}" style="margin-bottom:20px"><h2>${icon} Skadesrisiko (ACWR)</h2><div class="explain"><p>${msg}</p><p style="margin-top:8px;font-size:12px;color:var(--muted)">Akut (7d): ${acwr.acute.toFixed(1)} km &middot; Kronisk (28d gns./uge): ${acwr.chronic.toFixed(1)} km</p></div></div>`;
-}
 
-function calcACWR(r) {
-  const now = new Date();
-  const d7 = new Date(now); d7.setDate(d7.getDate() - 7);
-  const d28 = new Date(now); d28.setDate(d28.getDate() - 28);
-  const acute = r.filter(a => new Date(a.start_date_local||a.start_date) >= d7).reduce((s,a) => s + (a.distance||0)/1000, 0);
-  const chronic28 = r.filter(a => new Date(a.start_date_local||a.start_date) >= d28).reduce((s,a) => s + (a.distance||0)/1000, 0);
-  const chronic = chronic28 / 4; // weekly avg over 4 weeks
-  if (chronic < 1) return null;
-  return { ratio: acute / chronic, acute, chronic };
-}
 
 function renderPRs(r) {
   const distances = [
@@ -3383,124 +1643,8 @@ function renderPRs(r) {
   }</tbody></table>`;
 }
 
-// ---- TIME OF DAY, CONSISTENCY, ACWR CHART (Insights) ----
-function renderTimeOfDay(r) {
-  const buckets = { 'Morgen (5-9)':[], 'Formiddag (9-12)':[], 'Eftermiddag (12-17)':[], 'Aften (17-21)':[], 'Nat (21-5)':[] };
-  r.forEach(a => {
-    const h = parseInt((a.start_date_local||'T12:').split('T')[1]?.substring(0,2)) || 12;
-    let bucket;
-    if (h >= 5 && h < 9) bucket = 'Morgen (5-9)';
-    else if (h >= 9 && h < 12) bucket = 'Formiddag (9-12)';
-    else if (h >= 12 && h < 17) bucket = 'Eftermiddag (12-17)';
-    else if (h >= 17 && h < 21) bucket = 'Aften (17-21)';
-    else bucket = 'Nat (21-5)';
-    const p = pace(a);
-    if (p) buckets[bucket].push(p);
-  });
 
-  const labels = Object.keys(buckets).filter(k => buckets[k].length > 0);
-  const vals = labels.map(k => avg(buckets[k]));
-  const counts = labels.map(k => buckets[k].length);
-  const colors = labels.map((k,i) => {
-    const best = Math.min(...vals);
-    return vals[i] === best ? 'rgba(34,197,94,.7)' : 'rgba(99,102,241,.5)';
-  });
 
-  const todMin = Math.min(...vals) - 0.3;
-  const todMax = Math.max(...vals) + 0.3;
-  mkChart('cTimeOfDay', { type:'bar',
-    data:{ labels: labels.map((l,i) => l + ' (' + counts[i] + ')'), datasets:[{
-      data: vals.map(v => v.toFixed(2)), backgroundColor: colors, borderRadius:4
-    }] },
-    options: opts({y:{reverse:true, min:todMin, max:todMax, title:{display:true,text:'Gns. pace (min/km)'}}})
-  });
-}
-
-function renderConsistency(r) {
-  // Group runs by week, then see if more runs/week correlates with better pace next week
-  const weeks = {};
-  r.forEach(a => {
-    const wk = weekKey(a);
-    if (!weeks[wk]) weeks[wk] = { count:0, paces:[] };
-    weeks[wk].count++;
-    const p = pace(a);
-    if (p) weeks[wk].paces.push(p);
-  });
-
-  const sorted = Object.entries(weeks).sort((a,b) => a[0].localeCompare(b[0]));
-  const points = [];
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const [, curr] = sorted[i];
-    const [, next] = sorted[i+1];
-    if (next.paces.length > 0) {
-      points.push({ x: curr.count, y: avg(next.paces) });
-    }
-  }
-
-  if (points.length < 3) { mkEmpty('cConsistency', 'Ikke nok data endnu'); return; }
-
-  // Group by count
-  const grouped = {};
-  points.forEach(p => {
-    const k = Math.min(p.x, 6);
-    if (!grouped[k]) grouped[k] = [];
-    grouped[k].push(p.y);
-  });
-
-  const labels = Object.keys(grouped).sort((a,b)=>a-b);
-  const vals = labels.map(k => avg(grouped[k]));
-
-  const cMin = Math.min(...vals) - 0.3;
-  const cMax = Math.max(...vals) + 0.3;
-  mkChart('cConsistency', { type:'bar',
-    data:{ labels: labels.map(l => l + ' l\u00f8b/uge'), datasets:[{
-      data: vals.map(v=>v.toFixed(2)), backgroundColor:'rgba(168,85,247,.5)', borderColor:'rgba(168,85,247,1)', borderWidth:1, borderRadius:4
-    }] },
-    options: opts({y:{reverse:true, min:cMin, max:cMax, title:{display:true,text:'Gns. pace n\u00e6ste uge (min/km)'}}})
-  });
-}
-
-function renderACWRChart(r) {
-  // Calculate rolling ACWR for each week
-  const allSorted = [...activities].filter(a => a.type==='Run'||a.type==='VirtualRun'||a.type==='TrailRun')
-    .sort((a,b) => (a.start_date_local||a.start_date).localeCompare(b.start_date_local||b.start_date));
-  if (allSorted.length < 5) { mkEmpty('cACWR', 'Ikke nok data'); return; }
-
-  const startDate = new Date(allSorted[0].start_date_local || allSorted[0].start_date);
-  startDate.setDate(startDate.getDate() + 28); // need 28 days history
-  const endDate = new Date();
-  const points = [];
-
-  for (let dt = new Date(startDate); dt <= endDate; dt.setDate(dt.getDate() + 7)) {
-    const d7 = new Date(dt); d7.setDate(d7.getDate() - 7);
-    const d28 = new Date(dt); d28.setDate(d28.getDate() - 28);
-    const acute = allSorted.filter(a => { const ad = new Date(a.start_date_local||a.start_date); return ad >= d7 && ad <= dt; }).reduce((s,a)=>s+(a.distance||0)/1000,0);
-    const chron = allSorted.filter(a => { const ad = new Date(a.start_date_local||a.start_date); return ad >= d28 && ad <= dt; }).reduce((s,a)=>s+(a.distance||0)/1000,0) / 4;
-    if (chron > 0) points.push({ x: dt.toISOString().substring(0,10), y: (acute/chron).toFixed(2) });
-  }
-
-  // Filter to selected period
-  const filtered = months === 0 ? points : (() => {
-    const c = new Date(); c.setMonth(c.getMonth() - months);
-    return points.filter(p => new Date(p.x) >= c);
-  })();
-
-  mkChart('cACWR', { type:'line',
-    data:{ labels: filtered.map(p=>p.x), datasets:[
-      { data: filtered.map(p=>p.y), borderColor:'rgba(99,102,241,.9)', backgroundColor:'rgba(99,102,241,.1)', fill:true, tension:.3, pointRadius:2 },
-      { data: filtered.map(()=>1.3), borderColor:'rgba(239,68,68,.4)', borderDash:[5,5], pointRadius:0, borderWidth:1 },
-      { data: filtered.map(()=>0.8), borderColor:'rgba(245,158,11,.4)', borderDash:[5,5], pointRadius:0, borderWidth:1 },
-    ] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, annotation: {} },
-      scales:{
-        x:{grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3',maxRotation:45,maxTicksLimit:12,font:{size:10}}},
-        y:{grid:{color:'rgba(42,46,61,.5)'},ticks:{color:'#8b8fa3'},
-          title:{display:true,text:'ACWR (0.8-1.3 = sikker zone)',color:'#8b8fa3'}}
-      }
-    }
-  });
-}
 
 // ---- RUN DETAIL ----
 let rdRuns = [], rdWellMap = {};
@@ -4131,23 +2275,7 @@ async function fetchIntervals(actId) {
   } catch(e) { console.error('Interval fetch failed:', e); return null; }
 }
 
-function detectWorkoutType(name) {
-  const n = (name || '').toLowerCase();
-  if (/stride|strides/i.test(n)) return 'strides';
-  if (/tempo/i.test(n)) return 'tempo';
-  if (/interval|fartlek|fartleg/i.test(n)) return 'interval';
-  if (/lang|long/i.test(n)) return 'lang';
-  if (/zone\s*[12]|easy|rolig|recovery|restitution/i.test(n)) return 'zone2';
-  if (/stigningsløb|hill|bakke/i.test(n)) return 'stigningsløb';
-  if (/tærskel|threshold/i.test(n)) return 'tærskel';
-  if (/\d+x\d+/i.test(n)) return 'interval';
-  return null;
-}
 
-function detectWorkoutTypeLabel(type) {
-  const labels = { strides:'Strides', tempo:'Tempo', interval:'Interval', lang:'Langtur', zone2:'Zone 2', stigningsløb:'Stigningsløb', tærskel:'Tærskel' };
-  return labels[type] || type || 'Ukendt';
-}
 
 async function renderIntervalSection(a) {
   const loadEl = document.getElementById('interval-loading');
@@ -4444,121 +2572,8 @@ const GR_ZD = { 1: 'Let / restitution', 2: 'Roligt aerobt', 3: 'Tempo', 4: 'Tær
 const grFmt = s => { if (s == null || !isFinite(s)) return '–'; const m = Math.floor(s / 60), x = Math.round(s % 60); return m + ':' + String(x).padStart(2, '0'); };
 let _grZoneCache = null, _grZoneBusy = false;
 
-// Beregn aktuel pace pr. pulszone korrekt: bin HR+pace-datapunkter fra streams (ikke aktivitets-gennemsnit)
-async function grComputeZonePaces() {
-  const ZBg = [156, 166, 175, 185, 190, 196, 205];
-  const zoneG = hr => { for (let i = 0; i < ZBg.length; i++) { if (hr < ZBg[i]) return i + 1; } return 7; };
-  const cut = new Date(new Date().toISOString().substring(0, 10)); cut.setDate(cut.getDate() - 70);
-  const runs = activities.filter(a => a.type === 'Run' && (a.distance || 0) > 1000 && new Date(a.start_date_local) >= cut);
-  const dist = {}, tim = {};
-  const streams = await Promise.all(runs.map(a =>
-    fetch(`${BASE}/activity/${a.id}/streams?types=heartrate,velocity_smooth`, { headers: hdr() })
-      .then(r => r.ok ? r.json() : null).catch(() => null)
-  ));
-  streams.forEach(st => {
-    if (!Array.isArray(st)) return;
-    const sd = {}; st.forEach(s => sd[s.type] = s.data);
-    const hr = sd.heartrate, vs = sd.velocity_smooth;
-    if (!hr || !vs) return;
-    const n = Math.min(hr.length, vs.length);
-    for (let i = 0; i < n; i++) { const h = hr[i], v = vs[i]; if (h == null || v == null || v < 0.5) continue; const z = zoneG(h); dist[z] = (dist[z] || 0) + v; tim[z] = (tim[z] || 0) + 1; }
-  });
-  const out = {};
-  Object.keys(tim).forEach(z => { if (tim[z] >= 180) out[z] = tim[z] / (dist[z] / 1000); }); // kræv >=3 min i zonen
-  return out;
-}
 
-function grPaintZones(cur) {
-  const b = document.getElementById('gr-zone-body'); if (!b) return;
-  b.innerHTML = [1, 2, 3, 4].map(z => {
-    const you = cur[z], gh = GHOST.zonePace[z];
-    let gap = '<span class="zd">–</span>';
-    if (you && gh) { const diff = you - gh; gap = diff > 0 ? `<span class="pos">+${grFmt(diff)}/km langsommere</span>` : `<span class="win">${grFmt(-diff)}/km hurtigere 🎉</span>`; }
-    else if (!you && gh) { gap = '<span class="zd">mangler nok data endnu</span>'; }
-    return `<tr><td><b>Z${z}</b> <span class="zd">${GR_ZD[z]}</span></td>` +
-      `<td class="num ${you ? 'you-c' : ''}">${you ? grFmt(you) : '–'}</td>` +
-      `<td class="num ${gh ? 'gh-c' : ''}">${gh ? grFmt(gh) : '–'}</td>` +
-      `<td class="num">${gap}</td></tr>`;
-  }).join('');
-}
 
-function renderGhost() {
-  const ZBg = [156, 166, 175, 185, 190, 196, 205];
-  const ZDg = { 1: 'Let / restitution', 2: 'Roligt aerobt', 3: 'Tempo', 4: 'Tærskel', 5: 'VO2', 6: 'Anaerob', 7: 'Maks' };
-  const zoneG = hr => { for (let i = 0; i < ZBg.length; i++) { if (hr < ZBg[i]) return i + 1; } return 7; };
-  const efG = a => { const d = a.distance, t = a.moving_time, hr = a.average_heartrate; if (!(d && t && hr)) return null; return (d / t * 60) / hr; };
-  const paceG = a => a.moving_time / (a.distance / 1000);
-  const fmtG = s => { if (s == null || !isFinite(s)) return '–'; const m = Math.floor(s / 60), x = Math.round(s % 60); return m + ':' + String(x).padStart(2, '0'); };
-  const dago = n => { const d = new Date(); d.setDate(d.getDate() - n); return new Date(d.toISOString().substring(0, 10)); };
-
-  const allRuns = activities.filter(a => a.type === 'Run' && a.distance && a.moving_time && a.average_heartrate);
-  const recent = allRuns.filter(a => new Date(a.start_date_local) >= dago(60));
-  const easy = recent.filter(a => a.average_heartrate >= 148 && a.average_heartrate <= 163 && a.distance >= 2000);
-  const efv = easy.map(efG).filter(v => v);
-  const curEFbest = efv.length ? Math.max(...efv) : null;
-  const curEFavg = efv.length ? efv.reduce((a, b) => a + b, 0) / efv.length : null;
-  const ctlS = wellness.filter(w => w.ctl != null).sort((a, b) => a.id < b.id ? -1 : 1);
-  const curCTL = ctlS.length ? ctlS[ctlS.length - 1].ctl : null;
-  const curATL = ctlS.length ? ctlS[ctlS.length - 1].atl : null;
-  const recent90 = allRuns.filter(a => new Date(a.start_date_local) >= dago(90));
-  const curLongest = recent90.length ? Math.max(...recent90.map(a => a.distance)) / 1000 : 0;
-
-  const zruns = allRuns.filter(a => new Date(a.start_date_local) >= dago(70) && a.distance >= 1500);
-  const zbin = {}; zruns.forEach(a => { const z = zoneG(a.average_heartrate); (zbin[z] = zbin[z] || []).push(paceG(a)); });
-  const curZone = {}; Object.keys(zbin).forEach(z => curZone[z] = zbin[z].reduce((a, b) => a + b, 0) / zbin[z].length);
-
-  const efPct = curEFbest ? Math.min(100, curEFbest / GHOST.ef * 100) : 0;
-  const ctlPct = curCTL ? Math.min(100, curCTL / GHOST.ctl * 100) : 0;
-
-  const dc = (title, you, gh, pct, gap, desc) => `<div class="gr-duel"><div class="gr-t">${title}</div>` +
-    `<div class="gr-row"><span class="gr-who you">Dig nu</span><span class="gr-val you">${you}</span></div>` +
-    `<div class="gr-bar"><div class="gr-fill" style="width:${pct}%"></div><div class="gr-mark"></div></div>` +
-    `<div class="gr-row" style="margin-top:6px"><span class="gr-who gh">Spøgelset 2024</span><span class="gr-val gh">${gh}</span></div>` +
-    `<div class="gr-gap">${gap}</div><div class="gr-desc">${desc}</div></div>`;
-
-  document.getElementById('gr-duels').innerHTML = [
-    dc('Form (CTL)', curCTL ? curCTL.toFixed(1) : '–', GHOST.ctl.toFixed(1), ctlPct,
-      curCTL ? `Du er på <b>${Math.round(ctlPct)}%</b> af spøgelsets peak — gab på <b>${(GHOST.ctl - curCTL).toFixed(1)}</b>` : '',
-      'Træningsbelastning over tid. Det største gab — ren volumen og kontinuitet.'),
-    dc('Effektivitet (EF)', curEFbest ? curEFbest.toFixed(2) : '–', GHOST.ef.toFixed(2), efPct,
-      curEFbest ? `Du er på <b>${Math.round(efPct)}%</b> af spøgelsets peak — motoren vender hurtigt tilbage` : '',
-      'Meter pr. minut pr. pulsslag på rolige ture. Snit nu: ' + (curEFavg ? curEFavg.toFixed(2) : '–') + '.'),
-    dc('Længste tur', curLongest ? curLongest.toFixed(1) + '<small> km</small>' : '–', GHOST.longest.toFixed(1) + ' km',
-      Math.min(100, curLongest / GHOST.longest * 100), 'Spøgelset løb fuld HM-distance i træning',
-      'Udholdenheds-rækkevidde de sidste 90 dage.')
-  ].join('');
-
-  const _zb = document.getElementById('gr-zone-body');
-  if (_grZoneCache) grPaintZones(_grZoneCache);
-  else {
-    _zb.innerHTML = '<tr><td colspan="4" class="zd">Beregner pace pr. pulszone fra streams…</td></tr>';
-    if (!_grZoneBusy) {
-      _grZoneBusy = true;
-      grComputeZonePaces().then(c => { _grZoneCache = c; _grZoneBusy = false; grPaintZones(c); })
-        .catch(() => { _grZoneBusy = false; const b = document.getElementById('gr-zone-body'); if (b) b.innerHTML = '<tr><td colspan="4" class="zd">Kunne ikke hente streams.</td></tr>'; });
-    }
-  }
-
-  const tg = (l, v, s) => `<div class="gr-target"><div class="tl">${l}</div><div class="tv">${v}</div><div class="ts">${s}</div></div>`;
-  document.getElementById('gr-targets').innerHTML = [
-    tg('EF forbi', GHOST.ef.toFixed(2), 'rolig-tur effektivitet'),
-    tg('CTL forbi', GHOST.ctl.toFixed(1), 'form-peak'),
-    tg('Lang tur', GHOST.longest.toFixed(1) + ' km', 'HM-distance i træning'),
-    tg('10K', GHOST.tenK, '↔ HM ' + GHOST.hm)
-  ].join('');
-
-  const overall = Math.round((efPct + ctlPct) / 2);
-  let v, vs;
-  if (overall >= 100) { v = `Du har <b>overhalet spøgelset</b> 🏆`; vs = 'Du er forbi din 2024-form. Ny grund — præcis målet.'; }
-  else {
-    v = `Spøgelset fører — du er samlet på <b>${overall}%</b> af din 2024-peakform`;
-    vs = `Gabet er mest kilometer, ikke talent. CTL bygges ved at blive ved; EF følger med.` +
-      (curATL != null && curCTL != null ? ` Form lige nu: CTL ${curCTL.toFixed(1)} / ATL ${curATL.toFixed(1)} (TSB ${(curCTL - curATL).toFixed(1)}).` : '');
-  }
-  document.getElementById('gr-verdict').innerHTML = v;
-  document.getElementById('gr-vsub').innerHTML = vs;
-  document.getElementById('gr-foot').innerHTML = `Spøgelse = faste benchmarks fra din peak-blok okt–nov 2024 (1:47 HM). Opdateres live ved hver genindlæsning. Sidst hentet: ${new Date().toLocaleString('da-DK')}.`;
-}
 
 // ---- Mål-siden: gør sektioner sammenfoldelige (første er åben) ----
 (function(){
@@ -4586,31 +2601,6 @@ function renderGhost() {
   });
 })();
 
-// ---- UI: sektioner, info-ikoner, graf-vælger ----
-function resizeCharts(){ requestAnimationFrame(() => Object.values(charts).forEach(c => { try { c.resize(); } catch(e){} })); }
-document.addEventListener('toggle', e => { if (e.target.classList && e.target.classList.contains('sec') && e.target.open) resizeCharts(); }, true);
-(function(){
-  // forklaringstekster bag et lille (i)-ikon i stedet for altid synlige
-  document.querySelectorAll('.card').forEach(card => {
-    if (card.closest('.goal-card') && !card.querySelector(':scope > .help, :scope > .chpane .help, :scope > div > .help')) return;
-    const help = card.querySelector('.help'); if (!help) return;
-    const head = card.querySelector(':scope > h3, :scope > .ch-head');
-    if (!head) return;
-    card.classList.add('hashelp');
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'infobtn'; btn.setAttribute('aria-label', 'Vis forklaring'); btn.textContent = 'i';
-    btn.addEventListener('click', ev => { ev.stopPropagation(); card.classList.toggle('help-on'); });
-    head.classList.add('hasinfo'); head.appendChild(btn);
-  });
-  // graf-vælger på Overblik
-  const seg = document.getElementById('ovSeg');
-  if (seg) seg.addEventListener('click', e => {
-    const b = e.target.closest('button[data-pane]'); if (!b) return;
-    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    document.querySelectorAll('.chartcard .chpane').forEach(pn => pn.classList.toggle('on', pn.dataset.pane === b.dataset.pane));
-    resizeCharts();
-  });
-})();
 
 init();
 </script>
