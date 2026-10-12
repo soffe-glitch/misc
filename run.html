@@ -106,6 +106,22 @@ tr:hover td { background:var(--card2); }
 .run-selector select:focus { border-color:var(--accent); }
 .run-selector .nav-btn { flex:none; width:46px; height:46px; background:var(--card); border:1px solid var(--border); border-radius:14px; color:var(--muted); cursor:pointer; font-size:18px; }
 .run-selector .nav-btn:active { border-color:var(--accent); color:var(--text); }
+.ins-k { font-size:10.5px; color:var(--accent); text-transform:uppercase; letter-spacing:.09em; font-weight:700; margin-bottom:4px; }
+.ins-t { font-size:15px; line-height:1.6; margin:6px 0 12px; }
+.ins-t b { font-weight:600; }
+.ins-t .good { color:var(--green); } .ins-t .bad { color:var(--orange); }
+#df-card { padding:22px 20px 14px; margin-bottom:12px; }
+#df-card .verdict { background:none; border:0; box-shadow:none; padding:4px 0 0 !important; }
+#df-card .verdict h2 { font-size:19px; }
+.df-stats { display:flex; justify-content:space-around; gap:8px; flex-wrap:wrap; padding:14px 0; margin-top:10px; border-top:1px solid var(--border); }
+.df-stat { text-align:center; min-width:64px; }
+.df-stat b { display:block; font-family:"Fraunces",Georgia,serif; font-size:24px; font-weight:400; }
+.df-stat span { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; }
+.df-more { border-top:1px solid var(--border); }
+.df-more summary { cursor:pointer; padding:12px 0; font-size:14px; color:var(--accent); font-weight:600; list-style:none; display:flex; justify-content:space-between; }
+.df-more summary::after { content:"›"; transition:transform .2s; font-size:18px; line-height:1; }
+.df-more[open] summary::after { transform:rotate(90deg); }
+.df-more summary::-webkit-details-marker { display:none; }
 .ra-sum { font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
 .ra-sum b { color:var(--text); font-weight:600; }
 .ra-table { width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -329,11 +345,12 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       <div id="coach-overview"></div>
       <div id="recent-activity-summary"></div>
     </div>
-    <div id="coach-dagsform" style="display:none"></div>
-    <div id="df-score"></div>
-    <div id="df-workout"></div>
-    <div class="grid g6 statstrip" id="df-metrics"></div>
-    <details class="sec"><summary>Hvad påvirker din dagsform?</summary><div class="secbody"><div id="df-factors"></div></div></details>
+    <div class="card" id="df-card">
+      <div id="df-score"></div>
+      <div id="df-metrics" class="df-stats"></div>
+      <details class="df-more"><summary>Hvad påvirker din dagsform?</summary><div id="df-factors"></div></details>
+      <div id="df-workout"></div>
+    </div>
     <div id="habit-mini"></div>
     <div class="grid g6 statstrip" id="summary"></div>
     <div class="card chartcard">
@@ -363,14 +380,39 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
 
   <!-- UDVIKLING -->
   <div class="page" id="p-trend">
-    <details class="sec" open><summary>Form over tid</summary><div class="secbody">
-      <div class="card">
-        <h3>VO2max (Garmin)</h3>
-        <div class="ch tall"><canvas id="ch-vo2"></canvas></div>
-      </div>
-    </div></details>
+    <div class="card ins" style="margin-bottom:12px">
+      <div class="ins-k">Fart</div><h3>Bliver jeg hurtigere?</h3>
+      <div id="faster-text" class="ins-t"></div>
+      <div class="ch"><canvas id="cFaster"></canvas></div>
+      <div class="ra-sum" style="margin-top:8px">Hver prik er en rolig tur (lav puls). Højere = hurtigere. Den stiplede linje er dit løbende gennemsnit.</div>
+    </div>
 
-    <details class="sec"><summary>Søvn, HRV &amp; puls</summary><div class="secbody">
+    <div class="card ins" style="margin-bottom:12px">
+      <div class="ins-k">Kondition</div><h3>Er min kondition bedre?</h3>
+      <div id="ins-fit-text" class="ins-t"></div>
+      <div class="ch"><canvas id="ch-vo2"></canvas></div>
+      <div class="ra-sum" style="margin-top:8px">VO2max er Garmins skøn over, hvor meget ilt din krop kan bruge. Højere er bedre.</div>
+    </div>
+
+    <div class="card ins" style="margin-bottom:12px">
+      <div class="ins-k">Restitution</div><h3>Restituerer jeg godt?</h3>
+      <div id="ins-rec-text" class="ins-t"></div>
+      <div class="ch"><canvas id="cRec"></canvas></div>
+      <div class="ra-sum" style="margin-top:8px">Ugentligt gennemsnit. Lavere hvilepuls og højere HRV betyder, at kroppen er veludhvilet.</div>
+    </div>
+
+    <div class="card ins" style="margin-bottom:12px">
+      <div class="ins-k">Søvn</div><h3>Løber jeg bedre efter god søvn?</h3>
+      <div id="ins-sleep-text" class="ins-t"></div>
+    </div>
+
+    <div class="card ins" style="margin-bottom:12px">
+      <div class="ins-k">Volumen</div><h3>Hvor meget løber jeg?</h3>
+      <div id="ins-vol-text" class="ins-t"></div>
+      <div class="ch"><canvas id="cVol"></canvas></div>
+    </div>
+
+    <details class="sec"><summary>Rå grafer: søvn, HRV, puls og vægt</summary><div class="secbody">
       <div class="grid g6 statstrip" id="wellness-summary"></div>
       <div class="grid g2">
               <div class="card"><h3>Hvilepuls &amp; HRV over tid</h3><div class="ch tall"><canvas id="cWellness"></canvas></div>
@@ -386,43 +428,6 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       </div>
       <div id="readiness-today" style="margin-top:14px"></div>
       <details id="wellness-fields" class="card" style="margin-top:14px"></details>
-    </div></details>
-
-
-    <details class="sec"><summary>Løbeøkonomi over tid</summary><div class="secbody">
-      <div id="coach-economy" style="display:none"></div>
-      <div class="grid g2">
-              <div class="card">
-        <h3>Nøgletal (seneste 30 dage)</h3>
-        <div id="economy-stats"></div>
-      </div>
-              <div class="card">
-        <h3>Udvikling</h3>
-        <div id="economy-progress"></div>
-      </div>
-      </div>
-      <div class="grid g2">
-            <div class="card" style="margin-bottom:20px;">
-      <h3>Skridtlængde over tid</h3>
-      <div class="ch"><canvas id="cStride"></canvas></div>
-      <div class="help"><span class="good">Grøn = skridtlængde (m)</span>, <span class="bad">rød stiplet = trend</span>. Stigende skridtlængde over tid tyder på bedre løbeøkonomi og styrke. Typisk 0.8-1.2m afhængig af tempo.</div>
-    </div>
-            <div class="card" style="margin-bottom:20px;">
-      <h3>Kadence over tid</h3>
-      <div class="ch"><canvas id="cCadence"></canvas></div>
-      <div class="help"><span class="good">Grøn zone = optimalt interval (170-185 spm).</span> Højere kadence giver mindre belastning per skridt.</div>
-    </div>
-            <div class="card" style="margin-bottom:20px;">
-      <h3>Hvad gør dig hurtigere? Skridtlængde vs. Kadence</h3>
-      <div class="ch"><canvas id="cStrideVsCadence"></canvas></div>
-      <div class="help">Scatter-plot: hvert punkt er et løb. <strong>X-akse</strong> = kadence, <strong>Y-akse</strong> = skridtlængde, <strong>farve</strong> = pace (grøn = hurtig, rød = langsom). Viser om du primært bliver hurtigere via længere skridt eller højere kadence.</div>
-    </div>
-            <div class="card" style="margin-bottom:20px;">
-      <h3>Efficiency Factor (EF) over tid</h3>
-      <div class="ch"><canvas id="cEFTrend"></canvas></div>
-      <div class="help">EF = hastighed / puls. <span class="good">Stigende EF = bedre løbeøkonomi</span> — du løber hurtigere med samme puls, eller samme tempo med lavere puls. <span class="bad">Rød stiplet = trend.</span></div>
-    </div>
-      </div>
     </div></details>
 
     <details class="sec"><summary>Alle løb</summary><div class="secbody">
@@ -443,8 +448,6 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
     <div class="grid g6" id="hStats"></div>
     <div class="card full"><h3>Kalender-heatmap</h3><div id="hHeat" style="overflow-x:auto"></div>
       <div style="font-size:12px;color:#8b8fa3;margin-top:8px">Gr&aring; = ingen l&oslash;b &middot; m&oslash;rk&rarr;lys gr&oslash;n = kort&rarr;langt l&oslash;b</div></div>
-    <div class="card full"><h3>Bliver jeg mere effektiv? (fart pr. puls, aerobe ture)</h3><div class="ch tall"><canvas id="hEff"></canvas></div>
-      <div style="font-size:13px;color:#8b8fa3;margin-top:6px" id="hEffNote"></div></div>
     <div class="grid g2">
       <div class="card"><h3>Comeback-buen (km pr. &aring;r)</h3><div class="ch"><canvas id="hYear"></canvas></div></div>
     </div>
@@ -701,7 +704,7 @@ function render() {
 
   if (page === 'p-overview') { renderOverview(fr); renderHabit(); renderDagsform(fr, fw); }
   if (page === 'p-run') { renderRunDetailPage(fr, fw); }
-  if (page === 'p-trend') { renderWellness(fw); renderVo2maxChart(); renderEconomy(fr); renderActivities(fa, fw); renderHistorik(); }
+  if (page === 'p-trend') { renderInsightCards(); renderWellness(fw); renderActivities(fa, fw); renderHistorik(); }
   renderCoach(page, fr);
 }
 
@@ -1125,16 +1128,16 @@ function renderDagsform(r, w) {
     }
 
     document.getElementById('df-score').innerHTML = `
-      <div class="verdict ${cls}" style="text-align:center;padding:32px;">
+      <div class="verdict ${cls}" style="text-align:center;">
         <div style="font-size:64px;font-weight:800;letter-spacing:-3px;color:${s>=70?'var(--green)':s>=40?'var(--orange)':'var(--red)'}">${s}</div>
-        <div style="font-size:13px;color:var(--muted);margin:4px 0 8px;">${dayLabel} &mdash; Readiness Score</div>
+        <div style="font-size:13px;color:var(--muted);margin:4px 0 8px;">${dayLabel} &mdash; din dagsform</div>
         <h2>${emoji} ${label}</h2>
         ${explanation}
         <div id="df-rec-inline" style="margin-top:16px;"></div>
       </div>`;
   } else {
     document.getElementById('df-score').innerHTML = `
-      <div class="verdict neutral" style="text-align:center;padding:32px;">
+      <div class="verdict neutral" style="text-align:center;">
         <div style="font-size:64px;font-weight:800;letter-spacing:-3px;color:var(--muted)">?</div>
         <h2>Ingen wellness-data for ${dayLabel}</h2>
         <div class="explain"><p>S\u00f8rg for at din Garmin synkroniserer til Intervals.icu.</p></div>
@@ -1144,10 +1147,10 @@ function renderDagsform(r, w) {
   // Metric cards
   const h = dayWell.sleepSecs ? (dayWell.sleepSecs / 3600).toFixed(1) : null;
   document.getElementById('df-metrics').innerHTML = `
-    <div class="card"><div class="lbl">HRV</div><div class="val" style="color:var(--cyan)">${dayWell.hrv||'-'}</div><div class="sub">ms</div></div>
-    <div class="card"><div class="lbl">Hvilepuls</div><div class="val" style="color:var(--pink)">${dayWell.restingHR||'-'}</div><div class="sub">bpm</div></div>
-    <div class="card"><div class="lbl">S&oslash;vn</div><div class="val" style="color:var(--purple)">${h||'-'}</div><div class="sub">${h?'timer':''}${dayWell.sleepScore?' \u00b7 score '+dayWell.sleepScore:''}</div></div>
-    <div class="card"><div class="lbl">Skridt</div><div class="val" style="color:var(--green)">${dayWell.steps?dayWell.steps.toLocaleString():'-'}</div><div class="sub">i dag</div></div>
+    <div class="df-stat"><b style="color:var(--cyan)">${dayWell.hrv||'-'}</b><span>HRV ms</span></div>
+    <div class="df-stat"><b style="color:var(--pink)">${dayWell.restingHR||'-'}</b><span>Hvilepuls</span></div>
+    <div class="df-stat"><b style="color:var(--purple)">${h||'-'}</b><span>Søvn t${dayWell.sleepScore?' · '+dayWell.sleepScore:''}</span></div>
+    <div class="df-stat"><b style="color:var(--green)">${dayWell.steps?dayWell.steps.toLocaleString('da-DK'):'-'}</b><span>Skridt</span></div>
   `;
 
   // Training recommendations removed — Sofie follows her coach's plan.
@@ -1160,11 +1163,8 @@ function renderDagsform(r, w) {
   // Factor breakdown
   if (readiness && readiness.factors.length > 0) {
     document.getElementById('df-factors').innerHTML = `
-      <div class="card" style="margin-top:16px">
-        <h3>Hvad p&aring;virker din dagsform?</h3>
-        <div class="help" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:12px">
-          Hver faktor bidrager til din samlede Readiness Score. <span class="good">H&oslash;j score = positivt bidrag.</span> <span class="bad">Lav score = tr&aelig;kker ned.</span>
-        </div>
+      <div style="padding:4px 0 8px">
+        <div class="ra-sum" style="margin-bottom:12px">Hver faktor bidrager til scoren. Høj = hjælper, lav = trækker ned.</div>
         ${readiness.factors.map(f => {
           const pct = f.score;
           const color = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--orange)' : 'var(--red)';
@@ -1188,37 +1188,156 @@ function renderDagsform(r, w) {
 
 
 // VO2max chart from Garmin export (now lives on Indsigter)
-function renderVo2maxChart() {
-  // VO2max pr. løb fra de flettede Garmin-løb (garmin_activities + historik), frem til i dag.
-  const data = activities.filter(a => a.vo2max).map(a => ({ date: a.start_date_local.substring(0,10), vo2max: a.vo2max }))
-    .sort((x, y) => x.date.localeCompare(y.date));
-  if (!data || data.length === 0) {
-    mkEmpty('ch-vo2', 'Ingen VO2max-data endnu');
-    return;
+// ---- Bliver jeg hurtigere? Rolige ture (lav puls) over tid, i almindeligt dansk ----
+function renderFaster() {
+  const z2 = getZ2Range(), limit = z2.high + 5;
+  const easy = runs(activities).filter(a => a.average_heartrate && a.average_heartrate <= limit && (a.distance || 0) >= 3000 && pace(a))
+    .sort((x, y) => x.start_date_local.localeCompare(y.start_date_local));
+  const txt = document.getElementById('faster-text');
+  if (easy.length < 4) { txt.textContent = 'For få rolige ture endnu til at sige noget.'; mkEmpty('cFaster', 'Ikke nok data'); return; }
+  const day = 864e5, now = Date.now();
+  const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const inWin = (a, from, to) => { const t = now - new Date(a.start_date_local).getTime(); return t >= from * day && t < to * day; };
+  const cur = med(easy.filter(a => inWin(a, 0, 60)).map(pace)), prev = med(easy.filter(a => inWin(a, 60, 120)).map(pace));
+  const nCur = easy.filter(a => inWin(a, 0, 60)).length, nPrev = easy.filter(a => inWin(a, 60, 120)).length;
+  if (cur != null && prev != null && nCur >= 3 && nPrev >= 3) {
+    const diff = (prev - cur) * 60; // sek./km, positiv = hurtigere nu
+    const ds = Math.round(Math.abs(diff));
+    txt.innerHTML = Math.abs(diff) < 4
+      ? `På rolige ture løber du <b>${fmtPace(cur)}/km</b> – stort set det samme som for 2 måneder siden. Din form er stabil.`
+      : diff > 0
+        ? `På rolige ture løber du nu <b>${fmtPace(cur)}/km</b> – <b style="color:var(--green)">${ds} sek./km hurtigere</b> end for 2 måneder siden, ved samme lave puls. Det er fremgang.`
+        : `På rolige ture løber du nu <b>${fmtPace(cur)}/km</b> – <b style="color:var(--orange)">${ds} sek./km langsommere</b> end for 2 måneder siden. Varme, træthed eller en pause kan forklare det.`;
+  } else {
+    txt.innerHTML = `Seneste rolige tur: <b>${fmtPace(pace(easy[easy.length - 1]))}/km</b>. Der skal være mindst 3 rolige ture i både de seneste 2 måneder og de 2 før for at sammenligne.`;
   }
-  const vals = data.map(v => v.vo2max);
-  const trend = linReg(vals);
-  mkChart('ch-vo2', {
-    type: 'line',
-    data: {
-      labels: data.map(v => v.date),
-      datasets: [
-        { label: 'VO2Max', data: vals, borderColor: 'rgb(6,182,212)', backgroundColor: 'rgba(6,182,212,0.1)', fill: true, tension: 0.3, pointRadius: 1 },
-        { label: 'Trend', data: trend, borderColor: 'rgba(6,182,212,0.5)', borderDash: [6,4], borderWidth: 2, pointRadius: 0, fill: false }
-      ]
-    },
+  const pts = easy.map(a => ({ x: new Date(a.start_date_local).getTime(), y: pace(a) }));
+  const trend = pts.map((p, i) => { const w = pts.slice(Math.max(0, i - 4), i + 1); return { x: p.x, y: avg(w.map(q => q.y)) }; });
+  mkChart('cFaster', {
+    data: { datasets: [
+      { type: 'scatter', label: 'Rolig tur', data: pts, pointRadius: 3, pointBackgroundColor: 'rgba(76,194,255,.55)' },
+      { type: 'line', label: 'Gennemsnit', data: trend, borderColor: '#f0a33c', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, tension: .3 }
+    ] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8b8fa3' } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${fmtPace(c.raw.y)}/km` } } },
       scales: {
-        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3', maxTicksLimit: 12 }, grid: { color: 'rgba(42,46,61,.5)' } },
-        y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' },
-          suggestedMin: Math.min(...vals) - 2,
-          suggestedMax: Math.max(...vals) + 2
-        }
+        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3', maxTicksLimit: 8 }, grid: { color: 'rgba(42,46,61,.5)' } },
+        y: { reverse: true, ticks: { color: '#8b8fa3', callback: v => fmtPace(v) }, grid: { color: 'rgba(42,46,61,.5)' } }
       }
     }
   });
+}
+
+// ---- UDVIKLING: indsigter i klar tekst + én lille graf pr. indsigt ----
+const DAY = 864e5;
+const fmtD = (v, n = 1) => (+v).toFixed(n).replace('.', ',');
+function winAvg(arr, from, to) { // gennemsnit af {t,v} med alder i [from,to) dage
+  const now = Date.now();
+  const v = arr.filter(x => { const age = (now - x.t) / DAY; return age >= from && age < to; }).map(x => x.v);
+  return v.length >= 5 ? avg(v) : null;
+}
+function wSeries(field, f) {
+  return (wellness || []).filter(x => x[field] != null && x[field] > 0).map(x => ({ t: new Date(x.id + 'T12:00:00').getTime(), v: f ? f(x[field]) : x[field] }));
+}
+const mini = (unitKey) => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+let fitAgeCache;
+async function fitnessAge() {
+  if (fitAgeCache !== undefined) return fitAgeCache;
+  try {
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_raw?select=data&kind=eq.fitness_age&order=log_date.desc&limit=1', { headers: hdr() });
+    const rows = r.ok ? await r.json() : [];
+    const x = rows[0] && rows[0].data;
+    fitAgeCache = x && x.fitnessAge ? { fit: x.fitnessAge, real: x.chronologicalAge } : null;
+  } catch (e) { fitAgeCache = null; }
+  return fitAgeCache;
+}
+
+function renderInsightCards() {
+  renderFaster();
+  renderFitness();
+  renderRecovery();
+  renderSleepLink();
+  renderVolume();
+}
+
+function renderFitness() {
+  const el = document.getElementById('ins-fit-text');
+  const v = activities.filter(a => a.vo2max).map(a => ({ t: new Date(a.start_date_local).getTime(), v: +a.vo2max, d: a.start_date_local.substring(0, 10) })).sort((x, y) => x.t - y.t);
+  if (v.length < 2) { el.textContent = 'Ingen VO2max-data endnu.'; mkEmpty('ch-vo2', ''); return; }
+  const now = v[v.length - 1], ago = [...v].reverse().find(x => (Date.now() - x.t) / DAY >= 90) || v[0];
+  const diff = now.v - ago.v;
+  let t = Math.abs(diff) < 0.5
+    ? `VO2max er <b>${fmtD(now.v, 0)}</b> – uændret de seneste 3 måneder.`
+    : diff > 0 ? `VO2max er <b>${fmtD(now.v, 0)}</b> – <b class="good">op ${fmtD(diff)} siden for 3 måneder siden</b> (${fmtD(ago.v, 0)}).`
+      : `VO2max er <b>${fmtD(now.v, 0)}</b> – <b class="bad">ned ${fmtD(-diff)} siden for 3 måneder siden</b> (${fmtD(ago.v, 0)}).`;
+  el.innerHTML = t;
+  fitnessAge().then(fa => { if (fa) el.innerHTML = t + ` Garmin skønner din <b>konditionsalder til ${fmtD(fa.fit)} år</b>, og du er ${fa.real}.`; });
+  const last = v.filter(x => (Date.now() - x.t) / DAY <= 365);
+  mkChart('ch-vo2', { type: 'line', data: { datasets: [{ data: last.map(x => ({ x: x.t, y: x.v })), borderColor: '#4cc2ff', backgroundColor: 'rgba(76,194,255,.12)', fill: true, pointRadius: 0, tension: .3 }] },
+    options: { ...mini(), scales: { x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3', maxTicksLimit: 7 }, grid: { color: 'rgba(42,46,61,.5)' } }, y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, suggestedMin: Math.min(...last.map(x => x.v)) - 1, suggestedMax: Math.max(...last.map(x => x.v)) + 1 } } } });
+}
+
+function renderRecovery() {
+  const el = document.getElementById('ins-rec-text');
+  const rhr = wSeries('restingHR'), hrv = wSeries('hrv');
+  const r1 = winAvg(rhr, 0, 30), r0 = winAvg(rhr, 30, 60), h1 = winAvg(hrv, 0, 30), h0 = winAvg(hrv, 30, 60);
+  if (r1 == null && h1 == null) { el.textContent = 'Ikke nok hvilepuls- og HRV-data endnu.'; mkEmpty('cRec', ''); return; }
+  const parts = []; let score = 0;
+  if (r1 != null) { const d = r1 - (r0 ?? r1); parts.push(`Hvilepuls <b>${fmtD(r1, 0)}</b>${r0 != null ? ` (${Math.abs(d) < 0.5 ? 'uændret' : (d < 0 ? '↓ ' : '↑ ') + fmtD(Math.abs(d))} mod måneden før)` : ''}`); if (d <= -1) score++; if (d >= 1.5) score--; }
+  if (h1 != null) { const d = h1 - (h0 ?? h1); parts.push(`HRV <b>${fmtD(h1, 0)} ms</b>${h0 != null ? ` (${Math.abs(d) < 1 ? 'uændret' : (d > 0 ? '↑ ' : '↓ ') + fmtD(Math.abs(d), 0)})` : ''}`); if (d >= 2) score++; if (d <= -3) score--; }
+  const verdict = score > 0 ? '<b class="good">Kroppen restituerer bedre end sidste måned.</b>' : score < 0 ? '<b class="bad">Kroppen er under mere pres end sidste måned</b> – kig på søvn og hvor hårdt du træner.' : 'Stabilt niveau – ingen tegn på hverken overbelastning eller fremgang.';
+  el.innerHTML = parts.join(' · ') + '. ' + verdict;
+  // ugentlige gennemsnit, 16 uger
+  const wk = (series) => { const m = {}; series.forEach(x => { const k = weekKey({ start_date_local: new Date(x.t).toISOString().substring(0, 10) }); (m[k] = m[k] || []).push(x.v); }); return m; };
+  const mr = wk(rhr), mh = wk(hrv), keys = [...new Set([...Object.keys(mr), ...Object.keys(mh)])].sort().slice(-16);
+  mkChart('cRec', { type: 'line', data: { labels: keys, datasets: [
+    { label: 'Hvilepuls', data: keys.map(k => mr[k] ? avg(mr[k]) : null), borderColor: '#ec4899', pointRadius: 2, tension: .3, yAxisID: 'y', spanGaps: true },
+    { label: 'HRV', data: keys.map(k => mh[k] ? avg(mh[k]) : null), borderColor: '#06b6d4', pointRadius: 2, tension: .3, yAxisID: 'y2', spanGaps: true }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8b8fa3' } } },
+      scales: { x: { ticks: { color: '#8b8fa3', maxTicksLimit: 6, callback: (v, i) => keys[i].substring(5) }, grid: { display: false } },
+        y: { position: 'left', ticks: { color: '#ec4899' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'puls', color: '#8b8fa3' } },
+        y2: { position: 'right', ticks: { color: '#06b6d4' }, grid: { display: false }, title: { display: true, text: 'HRV', color: '#8b8fa3' } } } } });
+}
+
+function renderSleepLink() {
+  const el = document.getElementById('ins-sleep-text');
+  const hrs = wSeries('sleepSecs', x => x / 3600), sc = wSeries('sleepScore');
+  const s14 = winAvg(hrs, 0, 14), s90 = winAvg(hrs, 0, 90), c14 = winAvg(sc, 0, 14);
+  let html = s14 != null ? `De seneste 14 nætter har du sovet <b>${fmtD(s14)} timer</b> i snit${c14 != null ? ` (søvnscore ${fmtD(c14, 0)})` : ''}${s90 != null ? ` – ${Math.abs(s14 - s90) < 0.2 ? 'det samme som' : s14 > s90 ? '<b class="good">mere end</b>' : '<b class="bad">mindre end</b>'} dit 3-måneders-snit på ${fmtD(s90)} t` : ''}. ` : '';
+  // forbindelse: tempo på rolige ture efter god vs. dårlig nat
+  const z2 = getZ2Range(), limit = z2.high + 5, wm = {}; (wellness || []).forEach(x => wm[x.id] = x);
+  const easy = runs(activities).filter(a => a.average_heartrate && a.average_heartrate <= limit && (a.distance || 0) >= 3000 && pace(a) && wm[d(a)] && wm[d(a)].sleepScore)
+    .map(a => ({ p: pace(a), sc: wm[d(a)].sleepScore }));
+  if (easy.length >= 12) {
+    const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v[Math.floor(v.length / 2)]; };
+    const cut = med(easy.map(x => x.sc)), good = easy.filter(x => x.sc >= cut), bad = easy.filter(x => x.sc < cut);
+    if (good.length >= 5 && bad.length >= 5) {
+      const diff = (med(bad.map(x => x.p)) - med(good.map(x => x.p))) * 60;
+      html += Math.abs(diff) < 5
+        ? `<br><br>Jeg kan ikke se nogen tydelig forskel på dine rolige ture efter gode og dårlige nætter (${easy.length} ture).`
+        : diff > 0 ? `<br><br>Efter nætter med søvnscore <b>${fmtD(cut, 0)} eller mere</b> løber du <b class="good">${Math.round(diff)} sek./km hurtigere</b> ved samme rolige puls (${easy.length} ture). Søvn betyder noget for dig.`
+          : `<br><br>Overraskende nok løber du <b>${Math.round(-diff)} sek./km langsommere</b> efter dine bedste nætter (${easy.length} ture) – søvnscoren forklarer ikke din form særlig godt.`;
+    }
+  } else if (easy.length) html += `<br><br>Der skal mindst 12 rolige ture med søvndata til, før jeg kan sammenligne (har ${easy.length}).`;
+  el.innerHTML = html || 'Ikke nok søvndata endnu.';
+}
+
+function renderVolume() {
+  const el = document.getElementById('ins-vol-text');
+  const r = runs(activities), cur = weekKey({ start_date_local: new Date().toISOString().substring(0, 10) });
+  const m = {}; r.forEach(a => { const k = weekKey(a); m[k] = (m[k] || 0) + (a.distance || 0) / 1000; });
+  const weeks = []; let t = new Date(cur + 'T12:00:00');
+  for (let i = 0; i < 12; i++) { weeks.unshift(t.toISOString().substring(0, 10)); t = new Date(t.getTime() - 7 * DAY); }
+  const done = weeks.filter(k => k < cur), last4 = done.slice(-4), prev4 = done.slice(-8, -4);
+  const a4 = avg(last4.map(k => m[k] || 0)), p4 = avg(prev4.map(k => m[k] || 0));
+  const longest = Math.max(0, ...r.filter(a => (Date.now() - new Date(a.start_date_local).getTime()) / DAY <= 28).map(a => (a.distance || 0) / 1000));
+  let ch = '';
+  if (p4 > 0) { const pc = (a4 - p4) / p4 * 100; ch = Math.abs(pc) < 8 ? ' – nogenlunde som de 4 uger før' : pc > 0 ? ` – <b class="good">op ${Math.round(pc)} %</b> fra de 4 uger før (${fmtD(p4, 0)} km)` : ` – <b class="bad">ned ${Math.round(-pc)} %</b> fra de 4 uger før (${fmtD(p4, 0)} km)`; }
+  el.innerHTML = `Du løber <b>${fmtD(a4, 0)} km om ugen</b> i snit de seneste 4 uger${ch}. Længste tur de seneste 4 uger: <b>${fmtD(longest)} km</b>.`;
+  mkChart('cVol', { type: 'bar', data: { labels: weeks, datasets: [{ data: weeks.map(k => +(m[k] || 0).toFixed(1)), borderRadius: 4, backgroundColor: weeks.map(k => k === cur ? 'rgba(34,197,94,.3)' : 'rgba(34,197,94,.7)') }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { title: c => 'Uge fra ' + weeks[c[0].dataIndex], label: c => ` ${c.raw} km${weeks[c.dataIndex] === cur ? ' (i gang)' : ''}` } } },
+      scales: { x: { ticks: { color: '#8b8fa3', maxTicksLimit: 6, callback: (v, i) => weeks[i].substring(5) }, grid: { display: false } }, y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'km', color: '#8b8fa3' } } } } });
 }
 
 
@@ -1542,25 +1661,6 @@ function renderHistorik() {
     document.getElementById('hHeat').innerHTML=html;
   })();
 
-  // efficiency
-  (function(){
-    const pts=H.filter(a=>a.average_heartrate&&a.average_speed&&a.moving_time>1200&&a.average_heartrate>=130&&a.average_heartrate<=172)
-      .map(a=>({x:new Date(a.start_date_local).getTime(),y:(a.average_speed*60)/a.average_heartrate}));
-    const n=pts.length; if(!n){return;}
-    const sx=pts.reduce((s,p)=>s+p.x,0),sy=pts.reduce((s,p)=>s+p.y,0),sxy=pts.reduce((s,p)=>s+p.x*p.y,0),sxx=pts.reduce((s,p)=>s+p.x*p.x,0);
-    const b=(n*sxy-sx*sy)/(n*sxx-sx*sx),a0=(sy-b*sx)/n;
-    const xs=pts.map(p=>p.x),x0=Math.min(...xs),x1=Math.max(...xs);
-    const trend=[{x:x0,y:a0+b*x0},{x:x1,y:a0+b*x1}];
-    const pctYr=(b*365.25*864e5)/(a0+b*((x0+x1)/2))*100;
-    mkChart('hEff',{data:{datasets:[
-      {type:'scatter',label:'Løbeøkonomi',data:pts,pointRadius:2.5,pointBackgroundColor:'rgba(76,194,255,.5)'},
-      {type:'line',label:'Trend',data:trend,borderColor:Cc.orange,borderWidth:2,borderDash:[6,4],pointRadius:0}]},
-      options:{maintainAspectRatio:false,plugins:{legend:{labels:{color:Cc.muted}}},
-        scales:{x:{type:'linear',ticks:{callback:v=>new Date(v).getFullYear(),color:Cc.muted,maxTicksLimit:10},grid:{color:Cc.grid}},
-          y:{title:{display:true,text:'m pr. slag',color:Cc.muted},ticks:{color:Cc.muted},grid:{color:Cc.grid}}}}});
-    document.getElementById('hEffNote').innerHTML=`Trend: <b style="color:#e7eef5">${pctYr>0?'+':''}${pctYr.toFixed(1)}% pr. år</b> &mdash; ${pctYr>0?'du bliver mere effektiv over tid.':'let fald.'}`;
-  })();
-
   // year bars
   (function(){
     const by={};H.forEach(a=>{const y=a.start_date_local.substring(0,4);by[y]=(by[y]||0)+(a.distance||0)/1000;});
@@ -1654,262 +1754,6 @@ function renderPRs(r) {
 // ---- RUN DETAIL ----
 let rdRuns = [], rdWellMap = {};
 
-// ---- RUNNING ECONOMY ----
-function renderEconomy(r) {
-  const sortedRuns = sorted(r); // Use filtered runs (respects period selector)
-
-  // Also merge Garmin running dynamics if available
-  const garminDyn = {};
-  if (typeof GARMIN_DATA !== 'undefined' && GARMIN_DATA.runningDynamics) {
-    GARMIN_DATA.runningDynamics.forEach(rd => {
-      if (rd.date) garminDyn[rd.date.substring(0, 10)] = rd;
-    });
-  }
-
-  // Build economy data per run
-  const econData = sortedRuns.map(a => {
-    const date = d(a);
-    const km = (a.distance || 0) / 1000;
-    const mins = (a.moving_time || 0) / 60;
-    const p = km > 0.1 ? mins / km : null;
-    const hr = a.average_heartrate || null;
-    const cad = a.average_cadence ? Math.round(a.average_cadence * 2) : null;
-    const stride = a.average_stride || null;
-    const speedMS = km > 0 ? (a.distance || 0) / (a.moving_time || 1) : null;
-    const efVal = hr && speedMS ? (speedMS / hr * 1000) : null;
-
-    // Merge Garmin dynamics if available
-    const gd = garminDyn[date] || {};
-
-    return {
-      date, p, hr, cad, stride, efVal, km,
-      vertOsc: gd.avgVerticalOscillation || gd.avg_vertical_oscillation || null,
-      gct: gd.avgGroundContactTime || gd.avg_ground_contact_time || null,
-      vertRatio: gd.avgVerticalRatio || null,
-      gcBalance: gd.avgGroundContactBalance || null,
-    };
-  }).filter(e => e.km > 1); // Only runs > 1km
-
-  // ---- 1. STRIDE LENGTH OVER TIME ----
-  const strideData = econData.filter(e => e.stride && e.stride > 0.3 && e.stride < 2.5);
-  if (strideData.length > 2) {
-    const vals = strideData.map(e => e.stride);
-    const trend = linReg(vals);
-    mkChart('cStride', {
-      type: 'line',
-      data: {
-        labels: strideData.map(e => e.date),
-        datasets: [
-          { label: 'Skridtlængde (m)', data: vals, borderColor: 'rgba(34,197,94,0.8)', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: 'rgba(34,197,94,1)' },
-          { label: 'Trend', data: trend, borderColor: 'rgba(239,68,68,0.6)', borderDash: [6,4], borderWidth: 2, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8b8fa3' } } },
-        scales: {
-          x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } },
-          y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'Meter', color: '#8b8fa3' },
-            suggestedMin: Math.min(...vals) - 0.05, suggestedMax: Math.max(...vals) + 0.05 }
-        }
-      }
-    });
-  } else { mkEmpty('cStride', 'Ikke nok data til skridtlængde-graf endnu.'); }
-
-  // ---- 2. CADENCE OVER TIME ----
-  const cadData = econData.filter(e => e.cad && e.cad > 100 && e.cad < 220);
-  if (cadData.length > 2) {
-    const vals = cadData.map(e => e.cad);
-    const trend = linReg(vals);
-    mkChart('cCadence', {
-      type: 'line',
-      data: {
-        labels: cadData.map(e => e.date),
-        datasets: [
-          { label: 'Kadence (spm)', data: vals, borderColor: 'rgba(59,130,246,0.8)', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: 'rgba(59,130,246,1)' },
-          { label: 'Trend', data: trend, borderColor: 'rgba(239,68,68,0.6)', borderDash: [6,4], borderWidth: 2, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: '#8b8fa3' } },
-          annotation: {
-            annotations: {
-              optZone: { type: 'box', yMin: 170, yMax: 185, backgroundColor: 'rgba(34,197,94,0.06)', borderWidth: 0 }
-            }
-          }
-        },
-        scales: {
-          x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } },
-          y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'Steps/min', color: '#8b8fa3' },
-            suggestedMin: Math.min(...vals) - 5, suggestedMax: Math.max(...vals) + 5 }
-        }
-      }
-    });
-  } else { mkEmpty('cCadence', 'Ikke nok data til kadence-graf endnu.'); }
-
-  // ---- 3. STRIDE vs CADENCE (colored by pace) ----
-  const scatterData = econData.filter(e => e.stride && e.cad && e.p);
-  if (scatterData.length > 3) {
-    const paces = scatterData.map(e => e.p);
-    const minP = Math.min(...paces), maxP = Math.max(...paces);
-    // Color: green = fast (low pace), red = slow (high pace)
-    const colors = scatterData.map(e => {
-      const t = maxP > minP ? (e.p - minP) / (maxP - minP) : 0.5;
-      const r = Math.round(34 + t * 205);
-      const g = Math.round(197 - t * 150);
-      return `rgba(${r},${g},70,0.8)`;
-    });
-
-    mkChart('cStrideVsCadence', {
-      type: 'scatter',
-      data: {
-        datasets: [{
-          label: 'Løb (farve = pace)',
-          data: scatterData.map(e => ({ x: e.cad, y: e.stride })),
-          backgroundColor: colors,
-          pointRadius: 6,
-          pointHoverRadius: 8
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: '#8b8fa3' } },
-          tooltip: {
-            callbacks: {
-              label: function(ctx) {
-                const e = scatterData[ctx.dataIndex];
-                return `${e.date}: ${e.cad} spm, ${e.stride.toFixed(2)}m, pace ${fmtPace(e.p)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { title: { display: true, text: 'Kadence (spm)', color: '#8b8fa3' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } },
-          y: { title: { display: true, text: 'Skridtlængde (m)', color: '#8b8fa3' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } }
-        }
-      }
-    });
-  } else { mkEmpty('cStrideVsCadence', 'Ikke nok data til scatter-plot endnu.'); }
-
-  // ---- 4. EFFICIENCY FACTOR TREND ----
-  const efData = econData.filter(e => e.efVal && e.efVal > 1 && e.efVal < 20);
-  if (efData.length > 2) {
-    const vals = efData.map(e => e.efVal);
-    const trend = linReg(vals);
-    mkChart('cEFTrend', {
-      type: 'line',
-      data: {
-        labels: efData.map(e => e.date),
-        datasets: [
-          { label: 'Efficiency Factor', data: vals, borderColor: 'rgba(168,85,247,0.8)', backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: 'rgba(168,85,247,1)' },
-          { label: 'Trend', data: trend, borderColor: 'rgba(239,68,68,0.6)', borderDash: [6,4], borderWidth: 2, pointRadius: 0, fill: false }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8b8fa3' } } },
-        scales: {
-          x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' } },
-          y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'EF (hastighed/puls)', color: '#8b8fa3' } }
-        }
-      }
-    });
-  } else { mkEmpty('cEFTrend', 'Ikke nok data til EF-graf endnu.'); }
-
-  // ---- 5. STATS SUMMARY ----
-  // Separate easy vs hard runs for fair comparison
-  const z2 = getZ2Range();
-  function isEasy(e) {
-    return e.hr && e.hr <= z2.high + 5;
-  }
-  const easyRuns = econData.filter(e => isEasy(e));
-  const hardRuns = econData.filter(e => e.hr && !isEasy(e));
-
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const recent = econData.filter(e => new Date(e.date) >= thirtyDaysAgo);
-  const recentEasy = recent.filter(e => isEasy(e));
-  const recentHard = recent.filter(e => e.hr && !isEasy(e));
-  const older = econData.filter(e => {
-    const dt = new Date(e.date);
-    return dt < thirtyDaysAgo && dt >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-  });
-  const olderEasy = older.filter(e => isEasy(e));
-  const olderHard = older.filter(e => e.hr && !isEasy(e));
-
-  function statBlock(label, vals, unit, decimals) {
-    if (vals.length === 0) return `<div style="margin-bottom:12px;"><div class="goal-label">${label}</div><div class="goal-value" style="font-size:16px;">—</div></div>`;
-    const a = vals.reduce((s,v) => s + v, 0) / vals.length;
-    return `<div style="margin-bottom:12px;"><div class="goal-label">${label}</div><div class="goal-value" style="font-size:18px;">${a.toFixed(decimals)} ${unit}</div></div>`;
-  }
-
-  const statsEl = document.getElementById('economy-stats');
-  if (statsEl) {
-    const hasEasy = recentEasy.length > 0;
-    const hasHard = recentHard.length > 0;
-    let html = '';
-    if (hasEasy) {
-      html += '<div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;">Lette løb (zone 1-2)</div>';
-      html += statBlock('Skridtlængde', recentEasy.filter(e=>e.stride).map(e=>e.stride), 'm', 2);
-      html += statBlock('Kadence', recentEasy.filter(e=>e.cad).map(e=>e.cad), 'spm', 0);
-      html += statBlock('Efficiency Factor', recentEasy.filter(e=>e.efVal).map(e=>e.efVal), '', 2);
-    }
-    if (hasHard) {
-      html += '<div style="margin-bottom:8px;margin-top:16px;font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;">Hårde løb (zone 3+)</div>';
-      html += statBlock('Skridtlængde', recentHard.filter(e=>e.stride).map(e=>e.stride), 'm', 2);
-      html += statBlock('Kadence', recentHard.filter(e=>e.cad).map(e=>e.cad), 'spm', 0);
-      html += statBlock('Efficiency Factor', recentHard.filter(e=>e.efVal).map(e=>e.efVal), '', 2);
-    }
-    if (!hasEasy && !hasHard) {
-      html += statBlock('Gns. skridtlængde', recent.filter(e=>e.stride).map(e=>e.stride), 'm', 2);
-      html += statBlock('Gns. kadence', recent.filter(e=>e.cad).map(e=>e.cad), 'spm', 0);
-      html += statBlock('Gns. Efficiency Factor', recent.filter(e=>e.efVal).map(e=>e.efVal), '', 2);
-    }
-    html += (recent.some(e=>e.gct) ? statBlock('Gns. Ground Contact Time', recent.filter(e=>e.gct).map(e=>e.gct), 'ms', 0) : '');
-    html += (recent.some(e=>e.vertOsc) ? statBlock('Gns. Vertical Oscillation', recent.filter(e=>e.vertOsc).map(e=>e.vertOsc), 'cm', 1) : '');
-    statsEl.innerHTML = html;
-  }
-
-  // ---- 6. PROGRESS COMPARISON (easy vs easy, hard vs hard) ----
-  const progressEl = document.getElementById('economy-progress');
-  if (progressEl && (recentEasy.length > 0 || recentHard.length > 0) && older.length > 0) {
-    function cmp(label, recentVals, olderVals, unit, decimals, higherIsBetter) {
-      if (recentVals.length === 0 || olderVals.length === 0) return '';
-      const rAvg = recentVals.reduce((s,v) => s+v, 0) / recentVals.length;
-      const oAvg = olderVals.reduce((s,v) => s+v, 0) / olderVals.length;
-      const diff = rAvg - oAvg;
-      const good = higherIsBetter ? diff > 0 : diff < 0;
-      const arrow = diff > 0 ? '\u25b2' : diff < 0 ? '\u25bc' : '\u25cf';
-      const cls = good ? 'f-up' : diff === 0 ? 'f-neutral' : 'f-down';
-      return `<div style="margin-bottom:12px;">
-        <div class="goal-label">${label}</div>
-        <div style="font-size:14px;font-weight:600;">${rAvg.toFixed(decimals)} ${unit}
-          <span class="${cls}" style="font-size:12px;margin-left:8px;">${arrow} ${Math.abs(diff).toFixed(decimals)} vs. forrige 60 dage</span>
-        </div>
-      </div>`;
-    }
-    let html = '';
-    if (recentEasy.length > 0 && olderEasy.length > 0) {
-      html += '<div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;">Lette løb</div>';
-      html += cmp('Skridtlængde', recentEasy.filter(e=>e.stride).map(e=>e.stride), olderEasy.filter(e=>e.stride).map(e=>e.stride), 'm', 3, true);
-      html += cmp('Kadence', recentEasy.filter(e=>e.cad).map(e=>e.cad), olderEasy.filter(e=>e.cad).map(e=>e.cad), 'spm', 1, true);
-      html += cmp('EF', recentEasy.filter(e=>e.efVal).map(e=>e.efVal), olderEasy.filter(e=>e.efVal).map(e=>e.efVal), '', 2, true);
-    }
-    if (recentHard.length > 0 && olderHard.length > 0) {
-      html += '<div style="margin-bottom:8px;margin-top:16px;font-size:11px;font-weight:600;color:var(--orange);text-transform:uppercase;">Hårde løb</div>';
-      html += cmp('Skridtlængde', recentHard.filter(e=>e.stride).map(e=>e.stride), olderHard.filter(e=>e.stride).map(e=>e.stride), 'm', 3, true);
-      html += cmp('Kadence', recentHard.filter(e=>e.cad).map(e=>e.cad), olderHard.filter(e=>e.cad).map(e=>e.cad), 'spm', 1, true);
-      html += cmp('EF', recentHard.filter(e=>e.efVal).map(e=>e.efVal), olderHard.filter(e=>e.efVal).map(e=>e.efVal), '', 2, true);
-    }
-    if (!html) html = '<p style="color:var(--muted);font-size:13px;">Ikke nok data til sammenligning endnu.</p>';
-    progressEl.innerHTML = html;
-  } else if (progressEl) {
-    progressEl.innerHTML = '<p style="color:var(--muted);font-size:13px;">Ikke nok historisk data til sammenligning endnu (kræver 90+ dages data).</p>';
-  }
-}
 
 function renderRunDetailPage(r, w) {
   rdRuns = sorted(r).reverse(); // newest first
