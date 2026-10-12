@@ -365,7 +365,7 @@ body[data-page="goals"] .controls { display:none; }
       <div class="help" style="margin-top:8px;"><strong>Racedag:</strong> start bevidst roligt i behageligt samtale-tempo og lad følelsen styre, ikke uret. Gåpauser er en del af planen — du brugte dem selv på 16-km-turen 9. aug. Fyld depoterne op til og undervejs.</div>
     </div>
 
-    <div id="coach-goals"></div>
+    <div id="coach-goals" style="display:none"></div>
 
     <!-- Retur-til-form-sæsonmål (sub 1:47) — udskudt forbi 20/9 -->
     <div class="goal-card" id="hm-sub145-card">
@@ -698,7 +698,7 @@ body[data-page="goals"] .controls { display:none; }
 
   <!-- FORM -->
   <div class="page" id="p-form">
-    <div id="coach-dagsform"></div>
+    <div id="coach-dagsform" style="display:none"></div>
     <div id="df-score"></div>
     <div id="df-workout"></div>
     <div class="grid g6 statstrip" id="df-metrics"></div>
@@ -763,7 +763,7 @@ body[data-page="goals"] .controls { display:none; }
     </div></details>
 
     <details class="sec"><summary>Indsigter &amp; sammenhænge</summary><div class="secbody">
-      <div id="coach-insights"></div>
+      <div id="coach-insights" style="display:none"></div>
       <div class="grid g2" id="insight-cards"></div>
       <div class="grid g2">
             <div class="card" style="margin-bottom:16px">
@@ -845,7 +845,7 @@ body[data-page="goals"] .controls { display:none; }
     </div></details>
 
     <details class="sec"><summary>Løbeøkonomi</summary><div class="secbody">
-      <div id="coach-economy"></div>
+      <div id="coach-economy" style="display:none"></div>
       <div class="grid g2">
               <div class="card">
         <h3>Nøgletal (seneste 30 dage)</h3>
@@ -1332,10 +1332,8 @@ function coachInsights(r){
 }
 function renderCoach(page, fr){
   try{
+    // Coach kun to steder: Overblik + Løb-analyse (det enkelte løb). Mål/Dagsform/Indsigter/Løbeøkonomi er fravalgt (12/10).
     if(page==='p-overview')coachOverview(fr);
-    else if(page==='p-goals')coachGoals(fr);
-    else if(page==='p-form'){ coachDagsform(); coachInsights(fr); }
-    else if(page==='p-run'){ coachEconomy(fr); }
   }catch(e){ /* coach må aldrig vælte siden */ }
 }
 
