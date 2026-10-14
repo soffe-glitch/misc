@@ -139,6 +139,8 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .st.good .sub{color:var(--good)} .st.warn .sub{color:var(--warn)}
 .st .meter{margin-top:6px}
 .coach p.clamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+.coachfoot{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+#coachTime{font-size:12px; opacity:.65; white-space:nowrap; padding-top:8px}
 .coach .more{background:none; border:0; color:inherit; opacity:.75; font:inherit; font-size:13px; padding:8px 0 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
 @media (max-width:560px){ .statusrow{gap:8px} .st{padding:9px 9px} .st .v{font-size:20px} .st .k{font-size:9.5px} .st .sub{font-size:10px} }
 .meter{height:7px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:10px}
@@ -252,7 +254,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <div class="coach" id="coach">
       <div class="who"><span class="av">C</span>Din coach</div>
       <p id="coachText" class="clamp">…</p>
-      <button type="button" class="more" id="coachMore">Læs hele briefen ▾</button>
+      <div class="coachfoot"><button type="button" class="more" id="coachMore">Læs hele briefen ▾</button><span id="coachTime"></span></div>
       <div class="nudge" id="coachNudge"></div>
 
     </div>
@@ -1504,6 +1506,9 @@ function beforeAfterQuit(st){
       soevn_timer:[m(pre,"sleep_h"),m(post,"sleep_h")],hrv:[m(pre,"hrv"),m(post,"hrv")],hvilepuls:[m(pre,"rhr"),m(post,"rhr")],note:"[før, efter]"};
   }catch(e){ return null; }
 }
+function coachTime(ts,ai){ const el=$("#coachTime"); if(!el) return;
+  if(!ai){ el.textContent="regelbaseret · AI-brief ikke hentet endnu"; return; }
+  el.textContent=ts?"AI-brief skrevet kl. "+new Date(ts).toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"}):"AI-brief fra i dag"; }
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
@@ -1515,13 +1520,13 @@ async function aiCoach(){
   const kc=sumDay(S.nutrition,t,"calories_in")||0, sr=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt");
   const fp=(gT?(gT.sleep_h!=null?"S":"s"):"-")+"#"+runsToday+"#"+(weighToday("morgen")?"m":"")+(weighToday("foraften")?"f":"")+"#k"+Math.floor(kc/500)+"#s"+Math.floor(((sr&&sr.steps)||0)/4000);
   let c=null; try{ c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date!==t) c=null; }catch(e){}
-  if(c&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); if(c.fp===fp) return; if((c.n||1)>=3||Date.now()-(c.ts||0)<2*3600e3) return; }
+  if(c&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); coachTime(c.ts,true); if(c.fp===fp) return; if((c.n||1)>=3||Date.now()-(c.ts||0)<2*3600e3) return; }
   if(!gT && new Date().getHours()<9) return;
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
     const r=await fetch(FN_COACH,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},
       body:JSON.stringify({surface:"livsstil",tab:"overview",trigger:"dashboard",data:coachPayload()})});
-    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content,ts:Date.now(),n:((c&&c.n)||0)+1}));}catch(e){} } }
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); coachTime(Date.now(),true); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content,ts:Date.now(),n:((c&&c.n)||0)+1}));}catch(e){} } }
   }catch(e){ /* offline / fejl → behold skabelonen */ }
   finally{ aiCoach._busy=false; }
 }
@@ -1633,7 +1638,7 @@ function coach(){
     parts.push(`<b>Brændstof:</b> du har logget ~${Math.round(kcalToday)} kcal indtil nu${act?` og ${act}`:""} — under 1.200-gulvet. Kuren styrer efter gram, men giv gerne kroppen lidt mere i aften (fx en skyr eller lidt rugsprø); det modarbejder ikke vægttabet.`);
   }
 
-  $("#coachText").innerHTML=parts.join(" ");
+  $("#coachText").innerHTML=parts.join(" "); coachTime(null,false);
   aiCoach();  // henter en frisk AI-brief og erstatter skabelonen (1x/dag/enhed)
   // roterende, kontekst-tilpasset nudge — skifter dag for dag så den ikke bliver slidt
   const dayIdx=Math.floor(Date.now()/86400000);
