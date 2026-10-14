@@ -748,14 +748,35 @@ async function loadAll(){
   try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-60)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
                rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake})); }catch(e){ S.garmin=[]; }
-  try{ S.gacts=await get("garmin_activities","?select=log_date,type,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
+  try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
   try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
+  // Garmin er primær kilde: løb fra garmin_activities fyldes ind på dage hvor intervals.icu ikke (endnu) har dem
+  try{
+    const RUN=new Set(["running","treadmill_running","trail_running","virtual_run"]);
+    const icuRunDays=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
+    (S.gacts||[]).filter(g=>RUN.has(g.type)&&+g.distance_m>0&&!icuRunDays.has(g.log_date)).forEach(g=>{
+      S.workouts.push({id:"g-"+g.activity_id,ext_id:"garmin-"+g.activity_id,log_date:g.log_date,kind:"loeb",
+        distance_km:+(g.distance_m/1000).toFixed(2),duration_min:g.duration_s?Math.round(g.duration_s/60):null,source:"garmin",note:null,steps:null});
+    });
+    S.workouts.sort((a,b)=>a.log_date<b.log_date?1:-1);
+  }catch(e){}
   S.body=body.map(b=>({...b,fat_pct:b.fat_pct==null?null:+b.fat_pct,muscle_kg:b.muscle_kg==null?null:+b.muscle_kg}));
   S.wellness=wellness.map(w=>({...w,sleep_hours:w.sleep_hours==null?null:+w.sleep_hours,hrv:w.hrv==null?null:+w.hrv}));
+  // Garmin er primær kilde for søvn/HRV/hvilepuls; intervals-wellness er kun fallback
+  try{
+    const byD={}; S.wellness.forEach(w=>byD[w.log_date]=w);
+    (S.garmin||[]).forEach(g=>{
+      let w=byD[g.log_date]; if(!w){ w=byD[g.log_date]={log_date:g.log_date,sleep_hours:null,hrv:null,resting_hr:null,_src:"garmin"}; S.wellness.push(w); }
+      if(g.sleep_h!=null) w.sleep_hours=+g.sleep_h.toFixed(2);
+      if(g.hrv!=null) w.hrv=g.hrv;
+      if(g.rhr!=null) w.resting_hr=g.rhr;
+    });
+    S.wellness.sort((a,b)=>a.log_date<b.log_date?-1:1);
+  }catch(e){}
   S.daily=daily; S.checkins=checkins; S.migraines=migraines; S.meds=meds;
   S.labs=labs.map(l=>({...l,tsh:l.tsh==null?null:+l.tsh}));
   try{ S.books=await booksGet(); }catch(e){ S.books=[]; }
@@ -1353,7 +1374,11 @@ function coachPayload(){
   const cur=M.length?+M[M.length-1].weight_kg:null, curDate=M.length?M[M.length-1].log_date:null;
   let diff=null; try{ if(cur!=null&&s.kur_basis_weight) diff=+(malvaegt(curDate,+s.kur_basis_weight)-cur).toFixed(2); }catch(e){}
   // søvn pr. nat med ugedag: natten står på den morgen, hun vågnede (fx "natten til fredag 9. okt")
-  const sl=[]; for(let i=6;i>=0;i--){ const di=addDays(t,-i); const w=S.wellness.find(x=>x.log_date===di); sl.push(["natten til "+dl(di), w&&w.sleep_hours!=null?+w.sleep_hours:"ingen data (uret var ikke på)"]); }
+  const G=S.garmin||[], gT=G.find(g=>g.log_date===t)||null;
+  const sl=[]; for(let i=6;i>=0;i--){ const di=addDays(t,-i); const g=G.find(x=>x.log_date===di), w=S.wellness.find(x=>x.log_date===di);
+    const h=g&&g.sleep_h!=null?+g.sleep_h.toFixed(2):(w&&w.sleep_hours!=null?+w.sleep_hours:null);
+    sl.push(["natten til "+dl(di), h!=null?h:(di===t&&!gT?"ikke hentet endnu":"mangler")]); }
+  const hrvBase=G.filter(g=>g.log_date<t&&g.hrv!=null).slice(-21).map(g=>g.hrv);
   const runs=S.workouts.filter(w=>w.kind==="loeb").sort((x,y)=>x.log_date<y.log_date?-1:1).slice(-6).map(w=>[dl(w.log_date),w.distance_km]);
   const sidsteLoebIso=S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date).sort().pop()||null; const sidsteLoeb=sidsteLoebIso?dl(sidsteLoebIso):null;
   const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
@@ -1361,13 +1386,15 @@ function coachPayload(){
   let streak=0, d=ranToday?t:addDays(t,-1);
   while(runDays.has(d)){ streak++; d=addDays(d,-1); }
   return {
-    dato:t, i_dag:dl(t), note:"Alle datoer står med ugedag — brug dem, gæt aldrig ugedage. Søvn står på den morgen hun vågnede.",
+    dato:t, i_dag:dl(t), note:"Alle datoer står med ugedag — brug dem, gæt aldrig ugedage. Søvn, HRV og hvilepuls står på den morgen hun vågnede og er KUN fra i dag. Mangler et tal, så skriv blot at det mangler — gæt aldrig hvorfor.",
     dagsform:S.rd?{score:S.rd.score,niveau:S.rd.level,traekker_ned:S.rd.flags}:null,
     maal:{start:+s.start_weight||null, realistisk:+s.realistic_goal||null, maal:+s.goal_weight||null, foran_linjen_kg:diff},
     morgenvaegt:mW, vaegt_i_dag:cur,
-    soevn_naetter:sl, soevn_i_nat:(wl.sleep_hours??null), lur_i_dag_min:Math.round(napH(t)*60)||0,
-    hrv_i_dag:(wl.hrv??null), hrv_snit:Math.round(avg(S.wellness.slice(-21).map(w=>w.hrv).filter(x=>x!=null)))||null,
-    hvilepuls:(wl.resting_hr??null),
+    soevn_naetter:sl, soevn_i_nat:(gT&&gT.sleep_h!=null?+gT.sleep_h.toFixed(2):null), soevnscore_i_nat:(gT?gT.score:null),
+    soevn_status:(!gT?"ikke hentet endnu":gT.sleep_h==null?"hentet, men ingen søvn registreret i nat":"ok"),
+    lur_i_dag_min:Math.round(napH(t)*60)||0,
+    hrv_i_dag:(gT?gT.hrv:null), hrv_snit:hrvBase.length?Math.round(avg(hrvBase)):null,
+    hvilepuls:(gT?gT.rhr:null), body_battery_ved_opvaagning:(gT?gT.bb_wake:null),
     loeb_seneste_6_aeldst_foerst:runs, sidste_loebedag:sidsteLoeb, loebet_i_dag:ranToday, dage_i_traek_MED_loeb_til_og_med_i_gaar_eller_i_dag:streak,
     kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null,
     rygestop:smokePayload(t)
@@ -1395,12 +1422,18 @@ function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
   const t=todayISO(), LSK="liv-coachbrief6";
-  try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
+  // Fingeraftryk: ny tekst når nattens Garmin-data lander, eller når der kommer et nyt løb
+  const gT=(S.garmin||[]).find(g=>g.log_date===t)||null;
+  const runsToday=S.workouts.filter(w=>w.log_date===t&&w.kind==="loeb").map(w=>w.ext_id||w.id).sort().join(",");
+  const fp=(gT?(gT.sleep_h!=null?"S":"s"):"-")+"#"+runsToday;
+  try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.fp===fp&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
+  // Gate: er nattens Garmin-data ikke hentet endnu, venter AI'en (regelbaseret coach vises) — dog højst til kl. 9
+  if(!gT && new Date().getHours()<9) return;
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
     const r=await fetch(FN_COACH,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},
       body:JSON.stringify({surface:"livsstil",tab:"overview",trigger:"dashboard",data:coachPayload()})});
-    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content}));}catch(e){} } }
   }catch(e){ /* offline / fejl → behold skabelonen */ }
   finally{ aiCoach._busy=false; }
 }
