@@ -254,7 +254,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <p id="coachText" class="clamp">…</p>
       <button type="button" class="more" id="coachMore">Læs hele briefen ▾</button>
       <div class="nudge" id="coachNudge"></div>
-      <div class="soon">💬 Live-coach du kan spørge frit kommer som næste skridt — indtil da er dagens brief her, læst fra dine data.</div>
+
     </div>
     <div class="grid g2" style="align-content:start">
       <div class="tile"><div class="k">Til aftensmad</div><div class="v tnum" id="tRation">—</div><div class="sub" id="tRationSub">vej før aften</div></div>
@@ -1458,9 +1458,23 @@ function coachPayload(){
     hrv_i_dag:(gT?gT.hrv:null), hrv_snit:hrvBase.length?Math.round(avg(hrvBase)):null,
     hvilepuls:(gT?gT.rhr:null), body_battery_ved_opvaagning:(gT?gT.bb_wake:null),
     loeb_seneste_6_aeldst_foerst:runs, sidste_loebedag:sidsteLoeb, loebet_i_dag:ranToday, dage_i_traek_MED_loeb_til_og_med_i_gaar_eller_i_dag:streak,
-    kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null,
+    kcal_i_dag:sumDay(S.nutrition,t,"calories_in")||null, kcal_maal:+s.calorie_target||null,
+    ...dayExtras(t),
     rygestop:smokePayload(t)
   };
+}
+// ekstra dagstal til AI-coachen: det Sofie faktisk handler på i dag
+function dayExtras(t){
+  const s=S.settings||{},M=morning(),o={};
+  try{ const wN=weighToday("foraften")||weighToday("morgen")||(M.length?M[M.length-1]:null);
+    if(wN&&s.kur_basis_weight){ o.aftensmad_ration_gram=Math.max(s.ration_floor_g||600,Math.round((malvaegt(t,+s.kur_basis_weight)-wN.weight_kg)*1000));
+      o.ration_baseret_paa=weighToday("foraften")?"før-aften-vejning":weighToday("morgen")?"morgenvejning":"seneste vejning"; } }catch(e){}
+  const pl=S.planned.filter(p=>p.log_date===t).map(p=>p.name||"planlagt pas"); o.planlagt_i_dag_fra_soeren=pl.length?pl:null;
+  const sr=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt"); o.skridt_i_dag=sr?sr.steps:null; o.skridt_maal=7000;
+  const md=S.meds.find(m=>m.log_date===t)||{}; o.eltroxin_i_dag={morgen:!!md.morning,aften:!!md.evening};
+  const ci=S.checkins.filter(c=>c.log_date===t&&(c.energy||c.mood)); if(ci.length) o.energi_checkin_i_dag_1til5=+avg(ci.map(c=>c.energy||c.mood)).toFixed(1);
+  const dl=S.daily.find(d=>d.log_date===t)||{}; if(dl.work_load!=null) o.arbejdsbelastning_i_dag_1til5=+dl.work_load;
+  return o;
 }
 function smokePayload(t){
   try{
@@ -1476,26 +1490,38 @@ function smokePayload(t){
       udskridninger_antal:st.slipN, sidste_udskridning:st.lastSlip?isoOf(st.lastSlip):null,
       trang_pr_dag:perDag, trang_i_dag:perDag[t]||0, trang_i_gaar:perDag[y]||0,
       trang_intensitet_snit_1til5:ints.length?+avg(ints).toFixed(1):null,
+      foer_vs_efter_stop:beforeAfterQuit(st),
       trang_situationer:sit, gjorde_i_stedet:instead
     };
+  }catch(e){ return null; }
+}
+// Garmin-gennemsnit de 21 dage FØR stoppet vs. dagene efter — konkret belæg i stedet for gæt
+function beforeAfterQuit(st){
+  try{ const G=S.garmin||[],qd=isoOf(st.q),pre=G.filter(g=>g.log_date<qd&&g.log_date>=addDays(qd,-21)),post=G.filter(g=>g.log_date>=qd);
+    if(pre.length<7||post.length<3) return null;
+    const m=(A,k)=>{const v=A.map(x=>x[k]).filter(x=>x!=null);return v.length?+avg(v).toFixed(k==="sleep_h"?2:1):null;};
+    return {dage_foer:pre.length,dage_efter:post.length,
+      soevn_timer:[m(pre,"sleep_h"),m(post,"sleep_h")],hrv:[m(pre,"hrv"),m(post,"hrv")],hvilepuls:[m(pre,"rhr"),m(post,"rhr")],note:"[før, efter]"};
   }catch(e){ return null; }
 }
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief6";
-  // Fingeraftryk: ny tekst når nattens Garmin-data lander, eller når der kommer et nyt løb
+  const t=todayISO(), LSK="liv-coachbrief7";
+  // Fingeraftryk: nattens Garmin-data, nyt løb, vejninger, aftensration, mad- og skridt-niveau.
+  // Regenerér kun ved ændring — og højst 3 gange/dag med mindst 2 timer imellem (holder prisen nede).
   const gT=(S.garmin||[]).find(g=>g.log_date===t)||null;
   const runsToday=S.workouts.filter(w=>w.log_date===t&&w.kind==="loeb").map(w=>w.ext_id||w.id).sort().join(",");
-  const fp=(gT?(gT.sleep_h!=null?"S":"s"):"-")+"#"+runsToday;
-  try{ const c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date===t&&c.fp===fp&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); return; } }catch(e){}
-  // Gate: er nattens Garmin-data ikke hentet endnu, venter AI'en (regelbaseret coach vises) — dog højst til kl. 9
+  const kc=sumDay(S.nutrition,t,"calories_in")||0, sr=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt");
+  const fp=(gT?(gT.sleep_h!=null?"S":"s"):"-")+"#"+runsToday+"#"+(weighToday("morgen")?"m":"")+(weighToday("foraften")?"f":"")+"#k"+Math.floor(kc/500)+"#s"+Math.floor(((sr&&sr.steps)||0)/4000);
+  let c=null; try{ c=JSON.parse(localStorage.getItem(LSK)||"null"); if(c&&c.date!==t) c=null; }catch(e){}
+  if(c&&c.text){ el.textContent=c.text; el.dataset.ai="1"; hideNudge(); if(c.fp===fp) return; if((c.n||1)>=3||Date.now()-(c.ts||0)<2*3600e3) return; }
   if(!gT && new Date().getHours()<9) return;
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
     const r=await fetch(FN_COACH,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},
       body:JSON.stringify({surface:"livsstil",tab:"overview",trigger:"dashboard",data:coachPayload()})});
-    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content}));}catch(e){} } }
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content,ts:Date.now(),n:((c&&c.n)||0)+1}));}catch(e){} } }
   }catch(e){ /* offline / fejl → behold skabelonen */ }
   finally{ aiCoach._busy=false; }
 }
