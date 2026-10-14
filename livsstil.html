@@ -521,6 +521,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="card">
         <div class="ch"><h3>Kalorier — 14 dage</h3></div>
         <div id="kostChart"><div class="empty">Log mad i vægt-dashboardet, så vises kalorierne her.</div></div>
+        <div class="legend" id="kostLegend" style="display:none"></div>
         <div class="grid g2" style="margin-top:12px">
           <div class="tile"><div class="k">Snit kcal</div><div class="v tnum" id="tAvgKcal">—</div><div class="sub">mål 1648</div></div>
           <div class="tile"><div class="k">Dage logget</div><div class="v tnum" id="tKostDays">—</div><div class="sub">seneste 14</div></div>
@@ -1095,6 +1096,8 @@ function render(){
   const kmap={};S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
   const kdays=Object.keys(kmap).filter(d=>kmap[d]>0).sort().slice(-14);
   if(kdays.length){bars("kostChart",kdays.map(d=>({d,v:kmap[d]})),+s.calorie_target,"var(--accent)","var(--kost)");
+    const kl=$("#kostLegend");const nOver=kdays.filter(d=>kmap[d]>+s.calorie_target).length;
+    kl.style.display="";kl.innerHTML=`<span style="--x:var(--accent)">under mål</span><span style="--x:var(--kost)">over mål (${nOver} af ${kdays.length} dage)</span><span style="--x:var(--accent-ink)">stiplet = ${s.calorie_target} kcal</span>`;
     $("#tAvgKcal").textContent=Math.round(avg(kdays.map(d=>kmap[d])));$("#tKostDays").textContent=kdays.length;}
 
   // --- arbejde 7d ---
