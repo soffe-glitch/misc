@@ -1693,22 +1693,87 @@ function coach(){
   $("#coachNudge").style.display="";  // vises ved skabelon-reserve; skjules når AI-briefen er på
 }
 
+// ---------- Sammenhænge: rigtige fund fra dine egne data (regelbaseret, ingen AI) ----------
+// Splitter dage i to grupper efter en "årsag" (fx kort søvn) og sammenligner et "udfald" (fx energi).
+// Et fund vises kun med nok dage i begge grupper og en tydelig forskel. Det er sammenfald i dine data, ikke bevis.
+function findPatterns(){
+  const t=todayISO(), from=addDays(t,-120), inW=d=>d>=from&&d<=t, sick=sickSet();
+  const mapBy=(arr,f)=>{const m={};arr.forEach(r=>{if(!inW(r.log_date))return;const v=f(r);if(v!=null&&!isNaN(v))m[r.log_date]=v;});return m;};
+  const sleep=mapBy(S.wellness,w=>w.sleep_hours), hrv=mapBy(S.wellness,w=>w.hrv);
+  const alc=mapBy(S.daily,d=>d.alcohol_units==null?null:+d.alcohol_units);
+  const work=mapBy(S.daily,d=>d.work_load==null?null:+d.work_load), comm=mapBy(S.daily,d=>d.comm_load==null?null:+d.comm_load);
+  const sofa={},ovr={}; S.daily.forEach(d=>{if(inW(d.log_date)&&d.day_type){sofa[d.log_date]=d.day_type==="sofa"?1:0;ovr[d.log_date]=d.day_type==="overskud"?1:0;}});
+  const kc={};S.nutrition.forEach(n=>{if(inW(n.log_date)&&n.calories_in>0)kc[n.log_date]=(kc[n.log_date]||0)+n.calories_in;});
+  const steps=mapBy(S.workouts.filter(w=>w.kind==="skridt"),w=>w.steps>0?+w.steps:null);
+  const runDays=new Set(S.workouts.filter(w=>w.kind==="loeb").map(w=>w.log_date));
+  const ran={}; for(let i=0;i<=120;i++){const d=addDays(t,-i); if(d===t||sick.has(d))continue; ran[d]=runDays.has(d)?1:0;}
+  const en={};S.checkins.forEach(c=>{const v=c.energy||c.mood;if(v==null||!inW(c.log_date))return;(en[c.log_date]=en[c.log_date]||[]).push(v);});
+  const energy={};Object.keys(en).forEach(d=>energy[d]=avg(en[d]));
+  const wt={};morning().forEach(w=>{if(inW(w.log_date))wt[w.log_date]=w.weight_kg;});
+  const wdelta={};Object.keys(wt).forEach(d=>{const n=addDays(d,1);if(wt[n]!=null)wdelta[d]=wt[n]-wt[d];});
+  const tgt=+(S.settings&&S.settings.calorie_target)||1648;
+  const pct=v=>Math.round(v*100)+"%";
+  // årsager: to grupper hver (a = "påvirket", b = "reference")
+  const X={
+    soevn:{s:"Kort søvn (<6,5 t)",data:sleep,a:v=>v<6.5,b:v=>v>=7,wa:"efter <6,5 t søvn",wb:"efter ≥7 t"},
+    alko:{s:"Alkohol",data:alc,a:v=>v>0,b:v=>v===0,wa:"på alkohol-dage",wb:"uden alkohol"},
+    arbejde:{s:"Hård arbejdsdag",data:work,a:v=>v>=4,b:v=>v<=2,wa:"efter hårde arbejdsdage (4-5)",wb:"efter lette (1-2)"},
+    komm:{s:"Drænende kommunikation",data:comm,a:v=>v>=4,b:v=>v<=2,wa:"efter høj kommunikation (4-5)",wb:"efter lav (1-2)"},
+    kcal:{s:"Over "+(tgt+250)+" kcal",data:kc,a:v=>v>tgt+250,b:v=>v<=tgt,wa:"efter dage over "+(tgt+250)+" kcal",wb:"efter dage inden for målet"},
+    skridt:{s:"Mange skridt (≥7.000)",data:steps,a:v=>v>=7000,b:v=>v<4000,wa:"efter ≥7.000 skridt",wb:"efter <4.000 skridt"},
+    loeb:{s:"Løbetur",data:ran,a:v=>v===1,b:v=>v===0,wa:"på løbedage",wb:"uden løb"},
+    hrvLav:{s:"Lav HRV",data:hrv,a:null,b:null,wa:"ved lav HRV",wb:"ved høj HRV",tert:true}
+  };
+  const hv=Object.values(hrv).sort((p,q)=>p-q); if(hv.length>=15){const lo=hv[Math.floor(hv.length/3)],hi=hv[Math.floor(hv.length*2/3)];X.hrvLav.a=v=>v<=lo;X.hrvLav.b=v=>v>=hi;}
+  // udfald
+  const Y={
+    energi:{data:energy,bin:false,up:"højere energi",down:"lavere energi",f:v=>fmt(v,1)+"/5 i energi"},
+    sofa:{data:sofa,bin:true,up:"flere sofadage",down:"færre sofadage",f:v=>pct(v)+" sofadage"},
+    loeb:{data:ran,bin:true,up:"oftere løb",down:"sjældnere løb",f:v=>pct(v)+" løbedage"},
+    soevn:{data:sleep,bin:false,up:"længere søvn",down:"kortere søvn",f:v=>hhmm(v)+" søvn"},
+    hrv:{data:hrv,bin:false,up:"højere HRV",down:"lavere HRV",f:v=>Math.round(v)+" ms HRV"},
+    vaegt:{data:wdelta,bin:false,up:"vægten stiger mere til næste morgen",down:"vægten falder mere til næste morgen",f:v=>(v>=0?"+":"−")+fmt(Math.abs(v),2)+" kg"}
+  };
+  // par: [årsag, udfald, forsinkelse i dage]
+  const P=[["soevn","energi",0],["soevn","sofa",0],["soevn","loeb",0],["hrvLav","energi",0],["hrvLav","loeb",0],
+    ["alko","soevn",1],["alko","hrv",1],["alko","energi",1],["alko","sofa",1],
+    ["arbejde","soevn",1],["arbejde","energi",1],["arbejde","loeb",1],["komm","energi",1],["komm","soevn",1],
+    ["kcal","vaegt",0],["skridt","soevn",1],["loeb","energi",0],["loeb","soevn",1]];
+  const mean=a=>a.reduce((x,y)=>x+y,0)/a.length, sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/Math.max(1,a.length-1));};
+  const out=[];
+  P.forEach(([xk,yk,lag])=>{
+    const x=X[xk],y=Y[yk]; if(!x.a)return;
+    const A=[],B=[];
+    Object.keys(x.data).forEach(d=>{const yd=lag?addDays(d,lag):d; const yv=y.data[yd]; if(yv==null)return; const xv=x.data[d]; if(x.a(xv))A.push(yv); else if(x.b(xv))B.push(yv);});
+    if(A.length<7||B.length<7)return;
+    const mA=mean(A),mB=mean(B); let z;
+    if(y.bin){const pool=(mA*A.length+mB*B.length)/(A.length+B.length),se=Math.sqrt(pool*(1-pool)*(1/A.length+1/B.length)); if(!se||Math.abs(mA-mB)<0.3)return; z=(mA-mB)/se;}
+    else{const se=Math.sqrt(Math.pow(sd(A),2)/A.length+Math.pow(sd(B),2)/B.length); const eff=Math.abs(mA-mB)/(sd(A.concat(B))||1); if(!se||eff<0.6)return; z=(mA-mB)/se;}
+    if(Math.abs(z)<2)return;
+    const dir=(mA>mB)?y.up:y.down, when=(lag&&yk!=="vaegt"&&yk!=="soevn")?" dagen efter":"";
+    out.push({z:Math.abs(z),t:`${x.s}: ${dir}${when}`,p:`${y.f(mA)} ${x.wa} mod ${y.f(mB)} ${x.wb}. Bygger på ${A.length} og ${B.length} dage.`,xk});
+  });
+  // migræne: hvad lå forud for anfaldene?
+  const migDays=[...new Set(S.migraines.map(m=>m.log_date).filter(inW))];
+  if(migDays.length>=3){
+    const sM=migDays.map(d=>sleep[d]).filter(v=>v!=null), sO=Object.keys(sleep).filter(d=>!migDays.includes(d)).map(d=>sleep[d]);
+    if(sM.length>=3&&sO.length>=10&&mean(sO)-mean(sM)>=0.6) out.push({z:2.5,t:"Migræne: kortere søvn op til anfaldene",p:`Natten før dine ${sM.length} anfald sov du i snit ${hhmm(mean(sM))} mod ${hhmm(mean(sO))} ellers.`,xk:"mig"});
+    const wM=migDays.map(d=>work[addDays(d,-1)]).filter(v=>v!=null), wO=Object.keys(work).filter(d=>!migDays.includes(addDays(d,1))).map(d=>work[d]);
+    if(wM.length>=3&&wO.length>=10&&mean(wM)-mean(wO)>=0.8) out.push({z:2.4,t:"Migræne: hård arbejdsdag dagen før",p:`Arbejdsbelastning ${fmt(mean(wM),1)}/5 dagen før anfald mod ${fmt(mean(wO),1)}/5 ellers (${wM.length} anfald).`,xk:"mig"});
+  }
+  out.sort((a,b)=>b.z-a.z);
+  const seen={},top=[]; out.forEach(o=>{if((seen[o.xk]=(seen[o.xk]||0)+1)<=2&&top.length<5)top.push(o);});
+  const days={energi:Object.keys(energy).length,log:Object.keys(sofa).length,soevn:Object.keys(sleep).length};
+  return {top,days};
+}
 function insights(){
-  const rows=[];
-  // migræne: log-først
-  const nMig=S.migraines.length;
-  rows.push({ic:"🤕",bg:"kost-soft",col:"warn",t:"Migræne — vi samler mønsteret.",p:nMig?`Du har logget ${nMig} anfald. Når der er nok til at se en reel sammenhæng med søvn, HRV og arbejde, tænder vi et evidensbaseret forvarsel — ikke før.`:"Log dine anfald efterhånden. Forvarsel tændes først når data viser en reel sammenhæng — ingen falske alarmer."});
-  // søvn niveau
-  const sl=S.wellness.filter(w=>w.sleep_hours!=null).slice(-14);
-  if(sl.length>=5){const av=avg(sl.map(w=>w.sleep_hours));rows.push({ic:"😴",bg:"rest-soft",col:"rest",t:"Søvn lige nu.",p:`Snit ${hhmm(av)} de sidste ${sl.length} dage. Når du har logget nok skippede løb, kobler vi de to sammen.`});}
-  // stofskifte
-  rows.push({ic:"💊",bg:"krop-soft",col:"krop",t:"Energi følger stofskiftet.",p:S.labs.length?`Blodprøverne er markeret på vægtkurven — hold øje med energi og vægt omkring dosisændringer.`:"Tilføj blodprøver + dosis-noter, så lægger jeg markører på vægt- og energikurverne og kan pege på skift."});
-  // recomposition
+  const rows=[],{top,days}=findPatterns();
+  top.forEach(o=>rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:o.t,p:o.p}));
+  if(!top.length) rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:"Ingen tydelige sammenhænge endnu.",p:`Jeg sammenligner dage med fx kort søvn, alkohol, hård arbejdsdag og mange skridt med din energi, dine sofadage, løb og vægt. Lige nu har jeg ${days.soevn} dage med søvn, ${days.log} med dagslog og ${days.energi} med energi-check-in — jeg skal bruge mindst 7 dage i hver gruppe, før noget vises.`});
   const B=S.body.filter(b=>b.fat_pct!=null);
-  if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden start. Se overlejringen ovenfor før du dømmer et vægt-plateau.`});}
-  // læsning
-  rows.push({ic:"📖",bg:"energi-soft",col:"energi",t:"Læsning som balance-signal.",p:"Jævn læsning følger gode uger; pludselige spidser + sofadage + lav energi ligner tilbagetrækning. Kurven samler mønsteret."});
-  $("#insights").innerHTML=rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--${r.bg});color:var(--${r.col})">${r.ic}</div><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("");
+  if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden start. Se overlejringen i Krop-sektionen før du dømmer et vægt-plateau.`});}
+  $("#insights").innerHTML=rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--${r.bg});color:var(--${r.col})">${r.ic}</div><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("")+
+    `<p class="hint" style="margin:10px 0 0">Sammenfald i dine egne data de seneste 120 dage — ikke bevis. Opdateres automatisk, jo mere du logger.</p>`;
 }
 
 // ---------- weather (open-meteo, ingen nøgle) ----------
