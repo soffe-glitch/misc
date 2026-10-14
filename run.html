@@ -599,7 +599,7 @@ async function init() {
     }
     render();
   } catch(e) {
-    document.getElementById('loader').innerHTML = '<div class="err"><strong>Kunne ikke hente data.</strong><br>Fejl: ' + e.message + '<br><br>Tjek at dit Athlete ID og API Key er korrekte i dashboard.html</div>';
+    document.getElementById('loader').innerHTML = '<div class="err"><strong>Kunne ikke hente data.</strong><br>Fejl: ' + e.message + '<br><br>Prøv at trække ned / genindlæse om lidt.</div>';
   }
 }
 
@@ -607,7 +607,7 @@ function updateTimestamp() {
   const now = new Date();
   const time = now.toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'});
   const date = now.toLocaleDateString('da-DK', {day: '2-digit', month: 'short'});
-  document.getElementById('last-updated').textContent = `Sidst opdateret: ${date} ${time}`;
+  document.getElementById('last-updated').textContent = `Sidst opdateret: ${date} ${time}` + (window.ICU_DOWN ? ' · intervals.icu svarer ikke, viser Garmin-data' : '');
 }
 
 
@@ -646,9 +646,13 @@ function setupPeriod() {
 
 // ---- API ----
 async function fetchActs() {
-  const r = await fetch(`${BASE}/athlete/${ATHLETE}/activities?oldest=2015-01-01&newest=2027-01-01`, { headers: hdr() });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const live = (await r.json()).filter(a => ['Run','VirtualRun','TrailRun','Walk','Hike'].includes(a.type));
+  // intervals.icu er kun et ekstra lag nu: er den nede, kører siden videre på garmin_activities
+  let live = [];
+  try {
+    const r = await fetch(`${BASE}/athlete/${ATHLETE}/activities?oldest=2015-01-01&newest=2027-01-01`, { headers: hdr() });
+    if (r.ok) live = (await r.json()).filter(a => ['Run','VirtualRun','TrailRun','Walk','Hike'].includes(a.type));
+    else window.ICU_DOWN = r.status;
+  } catch (e) { window.ICU_DOWN = 'netværk'; }
   // Flet tre lag pr. dato: Garmin-blob (gammel), garmin_activities (frisk), Intervals (live). Højeste lag vinder.
   // Lag (laveste først): gammel Garmin-blob (2017-) < garmin_activities (2024-, helt til i dag) < intervals live.
   const day = a => (a.start_date_local || '').substring(0,10);
@@ -680,19 +684,44 @@ async function fetchSick() {
   } catch(e) { return []; }
 }
 
+// Wellness: garmin_daily er primær kilde; intervals.icu fylder kun ældre/manglende felter (fx CTL/ATL, vægt)
+async function fetchGarminDaily() {
+  try {
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_daily?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,bb_wake,bb_high,steps,stress_avg,vo2max,training_readiness&order=log_date.asc&limit=5000', { headers: hdr() });
+    if (!r.ok) return [];
+    return await r.json();
+  } catch (e) { return []; }
+}
 async function fetchWellness() {
   const newest = new Date().toISOString().substring(0,10);
-  const r = await fetch(`${BASE}/athlete/${ATHLETE}/wellness?oldest=2020-01-01&newest=${newest}`, { headers: hdr() });
-  if (!r.ok) return [];
-  return await r.json();
+  let icu = [];
+  try {
+    const r = await fetch(`${BASE}/athlete/${ATHLETE}/wellness?oldest=2020-01-01&newest=${newest}`, { headers: hdr() });
+    if (r.ok) icu = await r.json(); else window.ICU_DOWN = r.status;
+  } catch (e) { window.ICU_DOWN = 'netværk'; }
+  const map = {};
+  icu.forEach(w => { if (w && w.id) map[w.id] = w; });
+  const n = v => (v == null || v === '' ? null : +v);
+  (await fetchGarminDaily()).forEach(g => {
+    const w = map[g.log_date] || (map[g.log_date] = { id: g.log_date });
+    const set = (k, v) => { if (v != null) w[k] = v; };
+    set('sleepSecs', n(g.sleep_secs)); set('sleepScore', n(g.sleep_score));
+    set('hrv', n(g.hrv_last_night)); set('restingHR', n(g.resting_hr));
+    set('bodyBattery', n(g.bb_wake) ?? n(g.bb_high)); set('steps', n(g.steps));
+    set('stress', n(g.stress_avg)); set('vo2max', n(g.vo2max)); set('readiness', n(g.training_readiness));
+    w._src = 'garmin';
+  });
+  return Object.values(map).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 async function fetchEvents() {
   const today = new Date().toISOString().substring(0,10);
   const end = new Date(); end.setDate(end.getDate() + 7);
-  const r = await fetch(`${BASE}/athlete/${ATHLETE}/events?oldest=${today}&newest=${end.toISOString().substring(0,10)}`, { headers: hdr() });
-  if (!r.ok) return [];
-  return await r.json();
+  try {
+    const r = await fetch(`${BASE}/athlete/${ATHLETE}/events?oldest=${today}&newest=${end.toISOString().substring(0,10)}`, { headers: hdr() });
+    if (!r.ok) return [];
+    return await r.json();
+  } catch (e) { return []; }
 }
 
 
@@ -808,7 +837,8 @@ function setCoachAI(id, headline, body){
 async function aiCoachRun(fr, headline){
   const el=document.getElementById('coach-overview'); if(!el) return;
   const t=new Date().toISOString().substring(0,10), LSK='liv-run-coach-v5';
-  try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
+  const fp=runFP();
+  try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.fp===fp&&c.text){ setCoachAI('coach-overview',headline,c.text); return; } }catch(e){}
   if(aiCoachRun._busy) return; aiCoachRun._busy=true;
   try{
     const l30=coachInWin(fr,30), lPrev=coachBetween(fr,30,60), l7=coachInWin(fr,7);
@@ -817,7 +847,7 @@ async function aiCoachRun(fr, headline){
     const efR=coachEF(rec), efP=coachEF(prev);
     const lastRuns=fr.slice().sort((a,b)=>new Date(b.start_date_local||b.start_date)-new Date(a.start_date_local||a.start_date)).slice(0,6)
       .map(a=>[(a.start_date_local||a.start_date||'').substring(0,10), +((a.distance||0)/1000).toFixed(2), coachFmtPace(((a.moving_time||0)/60)/Math.max(0.001,(a.distance||0)/1000))]);
-    let readiness=null; try{ const allW=wellness||[]; const dw=[...allW].sort((a,b)=>b.id.localeCompare(a.id))[0]; if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); if(rd) readiness=rd.score; } }catch(e){}
+    let readiness=null; try{ const allW=wellness||[]; const dw=allW.find(x=>x.id===t); if(dw&&typeof calcReadiness==='function'){ const rd=calcReadiness(dw,allW,activities); if(rd) readiness=rd.score; } }catch(e){}
     const data={
       dato:t,
       kontekst:runCtx(),
@@ -829,10 +859,16 @@ async function aiCoachRun(fr, headline){
       seneste_loeb:lastRuns
     };
     const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(aiEnrich({surface:'run',tab:'overview',trigger:'run-dashboard',data}))});
-    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI('coach-overview',headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI('coach-overview',headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content}));}catch(e){} } }
   }catch(e){ /* offline / fejl → behold regelbaseret */ }
   finally{ aiCoachRun._busy=false; }
 }
+// Fingeraftryk: AI-teksten laves på ny når nattens søvn lander eller et nyt løb er kommet ind
+function runFP(){ try{
+  const t=nowISO(); const w=(wellness||[]).find(x=>x.id===t);
+  const last=(activities||[]).filter(a=>['Run','VirtualRun','TrailRun'].includes(a.type)).map(a=>(a.start_date_local||'')+'|'+a.id).sort().pop()||'';
+  return (w?(w.sleepSecs!=null?'S':'s'):'-')+'#'+last;
+}catch(e){ return ''; } }
 // ---- generel AI-coach til de øvrige kort (hver med egen cache pr. tab) ----
 function nowISO(){ return new Date().toISOString().substring(0,10); }
 // ---- giv AI-coachen ugedage på ALLE datoer + dagens fælles dagsform, så den aldrig gætter ----
@@ -861,11 +897,12 @@ function runReadiness(){ try{ const allW=wellness||[]; const dw=[...allW].sort((
 async function aiCoachCard(cardId, tab, headline, data){
   const el=document.getElementById(cardId); if(!el) return;
   const t=nowISO(), LSK='liv-run-coach-v5-'+tab;
-  try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.text){ setCoachAI(cardId,headline,c.text); return; } }catch(e){}
+  const fp=runFP();
+  try{ const c=JSON.parse(localStorage.getItem(LSK)||'null'); if(c&&c.date===t&&c.fp===fp&&c.text){ setCoachAI(cardId,headline,c.text); return; } }catch(e){}
   aiCoachCard._busy=aiCoachCard._busy||{}; if(aiCoachCard._busy[tab]) return; aiCoachCard._busy[tab]=true;
   try{
     const r=await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/ai-coach',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(aiEnrich({surface:'run',tab,trigger:'run-dashboard',data}))});
-    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI(cardId,headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,text:j.content}));}catch(e){} } }
+    if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ setCoachAI(cardId,headline,j.content); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content}));}catch(e){} } }
   }catch(e){ /* behold regelbaseret */ }
   finally{ aiCoachCard._busy[tab]=false; }
 }
