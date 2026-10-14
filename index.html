@@ -79,7 +79,7 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 #vaegtFrame{width:100%; border:0; border-radius:var(--r); min-height:640px; background:var(--bg); display:block}
 
 /* Hurtig-log */
-.logwrap{display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:2px 2px 10px; scrollbar-width:none}
+.logwrap{display:flex; align-items:flex-start; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:2px 2px 10px; scrollbar-width:none}
 .logwrap::-webkit-scrollbar{display:none}
 .logcard{scroll-snap-align:center; flex:0 0 87%; max-width:87%}
 @media(min-width:820px){ .logcard{flex-basis:31%; max-width:31%} }
@@ -398,7 +398,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <!-- ENERGI, HUMØR & OVERSKUD -->
   <div class="section-label"><span class="bar" style="background:var(--energi)"></span>Energi, humør & overskud</div>
   <div class="grid lead">
-    <div class="card">
+    <div class="card" style="align-self:start">
       <div class="ch"><h2>Dagens check-in</h2><span class="hint">nedslag i dag</span></div>
       <div id="checkinList"></div>
     </div>
@@ -417,7 +417,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <div class="section-label"><span class="bar" style="background:var(--krop)"></span>Krop & behandling</div>
   <div class="grid lead">
     <div class="card">
-      <div class="ch"><h2>Vægt over tid</h2><span class="hint">hele historikken · markør = blodprøve · Vægttab-fanen viser mod målvægt</span></div>
+      <div class="ch"><h2>Vægt over tid</h2><span class="seg" id="wRange" style="margin-left:auto;width:auto"><button type="button" data-r="kur" class="sel">Kuren</button><button type="button" data-r="12">12 uger</button><button type="button" data-r="alt">Alt</button></span></div>
       <div id="vaegtChart"><div class="empty">Vejninger hentes fra Withings.</div></div>
     </div>
     <div class="grid g2" style="align-content:start">
@@ -427,7 +427,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="tile"><div class="k">Muskel</div><div class="v tnum" id="tMuscle">—</div><div class="sub" id="tMuscleSub"></div></div>
     </div>
   </div>
-  <div class="card" style="margin-top:14px"><div class="ch"><h2>Vægt vs. fedt%</h2><span class="hint">recomposition-tjek · vægt kan stå stille mens fedt falder</span></div><div id="fatChart"><div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen.</div></div></div>
+  <details class="card smoked" style="margin-top:14px"><summary>Vægt vs. fedt% — recomposition-tjek</summary><div class="ch" style="margin-top:10px"><h2 style="display:none">Vægt vs. fedt%</h2><span class="hint">recomposition-tjek · vægt kan stå stille mens fedt falder</span></div><div id="fatChart"><div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen.</div></div></details>
   <div class="grid g2" style="margin-top:14px">
     <div class="card">
       <div class="ch"><h2>Medicin</h2><span class="hint">Eltroxin · klik for at logge</span></div>
@@ -844,7 +844,9 @@ function bindDots(el){
 
 // Vægt over tid — HELE historikken (livsstil er ikke afgrænset til kuren)
 function weightChart(){
-  const s=S.settings,M=morning();const el=$("#vaegtChart");
+  const s=S.settings,Mall=morning();const el=$("#vaegtChart");
+  const rg=weightChart.range||"kur",from=rg==="kur"?addDays(s.kur_start_date,-7):rg==="12"?addDays(todayISO(),-84):null;
+  const M=from?Mall.filter(d=>d.log_date>=from):Mall;
   if(!M.length){return;}
   const w=680,h=300,mL=32,mR=42,mT=16,mB=28;
   const t0=parseD(M[0].log_date).getTime();
@@ -877,6 +879,8 @@ function weightChart(){
   bindDots(el);
 }
 
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("#wRange button");if(!b)return;
+  weightChart.range=b.dataset.r;document.querySelectorAll("#wRange button").forEach(x=>x.classList.toggle("sel",x===b));weightChart();});
 function fatChart(){
   const el=$("#fatChart"); const B=S.body.filter(b=>b.fat_pct!=null);
   if(B.length<2){el.innerHTML='<div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen. Withings har '+B.length+' indtil videre.</div>';return;}
@@ -1738,17 +1742,11 @@ function renderSmoke(){
   const ms=smokeMilestones(st),nextI=ms.findIndex(m=>!m.on);
   const mileHtml=ms.map((m,i)=>`<div class="mile ${m.on?'on':i===nextI?'next':''}"><span class="dot">${m.on?'✓':''}</span><div><b>${m.t}</b><div class="when">${m.s?m.s+' · ':''}${m.on?'nået '+m.date:(m.range?'':m.date+' · ')+(m.on?'':'om '+(dur(m.left).big+' '+dur(m.left).small))}</div></div></div>`).join("");
   body.innerHTML=`<div class="smokebig tnum">${d.big}<small>${d.small} røgfri</small></div>
-    <div class="grid g3" style="margin-top:14px;grid-template-columns:repeat(3,1fr);gap:10px">
-      <div class="tile"><div class="k">Sparet</div><div class="v tnum">${Math.round(st.saved).toLocaleString("da-DK")}<small> kr.</small></div></div>
-      <div class="tile"><div class="k">Ikke røget</div><div class="v tnum">${st.notSmoked.toLocaleString("da-DK")}</div><div class="sub">estimat</div></div>
-      <div class="tile"><div class="k">Siden slip</div><div class="v tnum" style="font-size:${sinceSlip?'20':'18'}px">${sinceSlip?sinceSlip.big:'Ingen'}</div><div class="sub">${st.slipN?st.slipN+' slip i alt':'ingen slip'}</div></div>
-    </div>
-    <div class="formstrip" style="margin-top:14px;grid-template-columns:repeat(7,1fr)">${strip}</div>
-    <div class="legend"><span style="--x:var(--accent)">røgfri</span><span style="--x:var(--kost)">slip</span><span style="--x:var(--accent)">i dag</span></div>
+    <div class="hint" style="margin-top:8px"><b>${Math.round(st.saved).toLocaleString("da-DK")} kr.</b> sparet · <b>${st.notSmoked.toLocaleString("da-DK")}</b> ikke røget (est.) · ${sinceSlip?sinceSlip.big+' '+sinceSlip.small+' siden slip':'ingen slip'}</div>
+    <div class="formstrip" style="margin-top:10px;grid-template-columns:repeat(7,1fr);gap:4px">${strip}</div>
     ${msg}
-    <div style="display:flex;gap:8px;margin-top:14px"><button type="button" class="pbtn" id="smokeCrav" style="flex:2;background:var(--accent);color:var(--bg)">🌊 Trang nu</button><button type="button" class="btn" id="smokeSlip" style="flex:1">Log slip</button></div>
-    <details class="smoked"><summary>Milepæle</summary>${mileHtml}</details>
-    ${reasons}${edit}`;
+    <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="pbtn" id="smokeCrav" style="flex:2;background:var(--accent);color:var(--bg)">🌊 Trang nu</button><button type="button" class="btn" id="smokeSlip" style="flex:1">Log slip</button></div>
+    <details class="smoked"><summary>Milepæle, grunde og indstillinger</summary>${mileHtml}${reasons}${edit}</details>`;
 }
 function autoSituation(){const h=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Copenhagen",hour:"2-digit",hour12:false}).format(new Date())%24;const wd=new Date().getDay();
   if(h<10)return "morgen"; if(h>=18)return "aften"; if(wd>=1&&wd<=5&&h>=10&&h<17)return "arbejde"; return "andet";}
