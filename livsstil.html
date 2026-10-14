@@ -142,6 +142,24 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .coachfoot{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
 #coachTime{font-size:12px; opacity:.65; white-space:nowrap; padding-top:8px}
 .coach .more{background:none; border:0; color:inherit; opacity:.75; font:inherit; font-size:13px; padding:8px 0 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
+/* bred skærm: sektioner flyder i flere kolonner i stedet for én lang scroll */
+.blk{margin-bottom:6px}
+@media (min-width:1100px){
+  .wrap{max-width:1520px}
+  .statusrow{grid-template-columns:repeat(8,1fr)}
+  .dash{column-count:2; column-gap:24px}
+  .blk{break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid}
+  .dash .section-label{break-after:avoid; -webkit-column-break-after:avoid}
+  .blk{margin-bottom:22px}
+  .dash .section-label:first-child{margin-top:0}
+  .dash .logcard{flex-basis:47%; max-width:47%}
+}
+@media (min-width:1400px){
+  .wrap{max-width:1860px}
+  .dash{column-count:3}
+  .dash>.blk>.grid.lead,.dash>.blk>.grid.g2{grid-template-columns:1fr}
+  .dash .logcard{flex-basis:88%; max-width:88%}
+}
 @media (max-width:560px){ .statusrow{gap:8px} .st{padding:9px 9px} .st .v{font-size:20px} .st .k{font-size:9.5px} .st .sub{font-size:10px} }
 .meter{height:7px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:10px}
 .meter>i{display:block; height:100%; border-radius:99px}
@@ -250,6 +268,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <!-- I DAG -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span><span id="todayLabel">I dag</span></div>
   <div class="statusrow" id="statusRow"></div>
+  <div class="dash"><div class="blk">
   <div class="grid lead">
     <div class="coach" id="coach">
       <div class="who"><span class="av">C</span>Din coach</div>
@@ -296,6 +315,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <p class="hint" id="energiCheckMsg" style="margin-top:10px"></p>
   </div>
 
+  </div><div class="blk">
   <!-- HURTIG-LOG (swipe) -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Hurtig-log<span class="hint" style="margin-left:auto;text-transform:none;letter-spacing:0">swipe for felter →</span></div>
   <div class="logwrap" id="logwrap">
@@ -397,6 +417,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   </div>
   <div class="logdots" id="logdots"></div>
 
+  </div><div class="blk">
   <!-- ENERGI, HUMØR & OVERSKUD -->
   <div class="section-label"><span class="bar" style="background:var(--energi)"></span>Energi, humør & overskud</div>
   <div class="grid lead">
@@ -415,6 +436,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     </div>
   </div>
 
+  </div><div class="blk">
   <!-- KROP & BEHANDLING -->
   <div class="section-label"><span class="bar" style="background:var(--krop)"></span>Krop & behandling</div>
   <div class="grid lead">
@@ -429,7 +451,9 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="tile"><div class="k">Muskel</div><div class="v tnum" id="tMuscle">—</div><div class="sub" id="tMuscleSub"></div></div>
     </div>
   </div>
+  </div><div class="blk">
   <details class="card smoked" style="margin-top:14px"><summary>Vægt vs. fedt% — recomposition-tjek</summary><div class="ch" style="margin-top:10px"><h2 style="display:none">Vægt vs. fedt%</h2><span class="hint">recomposition-tjek · vægt kan stå stille mens fedt falder</span></div><div id="fatChart"><div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen.</div></div></details>
+  </div><div class="blk">
   <div class="grid g2" style="margin-top:14px">
     <div class="card">
       <div class="ch"><h2>Medicin</h2><span class="hint">Eltroxin · klik for at logge</span></div>
@@ -443,6 +467,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     </div>
   </div>
 
+  </div><div class="blk">
   <!-- TRÆNING -->
   <div class="section-label"><span class="bar" style="background:var(--trae)"></span>Træning</div>
   <div class="card" id="streakCard" style="margin-bottom:14px">
@@ -459,6 +484,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <p class="hint" style="margin-top:6px">Syg? Tryk på dagen ovenfor — sygedage bryder ikke kæden og tæller ikke som afbrydelser.</p>
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
+  </div><div class="blk">
   <div class="card" id="vaneCard" style="margin-bottom:14px">
     <div class="ch"><h2>Vane-modning 🌱</h2><span class="hint">hvornår løbet kører af sig selv</span></div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 6px">
@@ -493,6 +519,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="hint" id="vaneFloorBody" style="margin-top:3px;line-height:1.5">—</div>
     </div>
   </div>
+  </div><div class="blk">
   <div class="grid lead">
     <div class="card">
       <div class="ch"><h2>Seneste løb</h2><span class="hint">fra intervals.icu</span></div>
@@ -506,6 +533,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     </div>
   </div>
 
+  </div><div class="blk">
   <!-- RESTITUTION + KOST -->
   <div class="grid g2">
     <div>
@@ -532,6 +560,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     </div>
   </div>
 
+  </div></div><!-- /dash -->
   <!-- LIV: ARBEJDE, VEJR & LÆSNING -->
   <div class="section-label"><span class="bar" style="background:var(--arb)"></span>Liv — arbejde, vejr & læsning</div>
   <div class="grid g3">
