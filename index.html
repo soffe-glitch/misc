@@ -128,6 +128,19 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .tile .v{font-size:28px; font-weight:400; font-family:"Fraunces",serif; margin-top:6px; line-height:1}
 .tile .v small{font-size:12px; color:var(--muted); font-family:"Hanken Grotesk"; font-weight:500}
 .tile .sub{font-size:11.5px; color:var(--muted); margin-top:5px}
+/* status-række: alt vigtigt med et blik */
+.statusrow{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:0 0 16px}
+.st{background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--faint); border-radius:14px; padding:11px 12px; box-shadow:var(--shadow); min-width:0}
+.st.good{border-left-color:var(--good)} .st.warn{border-left-color:var(--warn)}
+.st .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.st .v{font-family:"Fraunces",serif; font-size:23px; line-height:1.1; margin-top:4px; white-space:nowrap}
+.st .v small{font-size:11px; color:var(--muted); font-family:"Hanken Grotesk"; font-weight:500}
+.st .sub{font-size:11px; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.st.good .sub{color:var(--good)} .st.warn .sub{color:var(--warn)}
+.st .meter{margin-top:6px}
+.coach p.clamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+.coach .more{background:none; border:0; color:inherit; opacity:.75; font:inherit; font-size:13px; padding:8px 0 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
+@media (max-width:560px){ .statusrow{gap:8px} .st{padding:9px 9px} .st .v{font-size:20px} .st .k{font-size:9.5px} .st .sub{font-size:10px} }
 .meter{height:7px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:10px}
 .meter>i{display:block; height:100%; border-radius:99px}
 .chip{display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:99px}
@@ -234,18 +247,20 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <div id="viewLiv">
   <!-- I DAG -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span><span id="todayLabel">I dag</span></div>
+  <div class="statusrow" id="statusRow"></div>
   <div class="grid lead">
     <div class="coach" id="coach">
       <div class="who"><span class="av">C</span>Din coach</div>
-      <p id="coachText">…</p>
+      <p id="coachText" class="clamp">…</p>
+      <button type="button" class="more" id="coachMore">Læs hele briefen ▾</button>
       <div class="nudge" id="coachNudge"></div>
       <div class="soon">💬 Live-coach du kan spørge frit kommer som næste skridt — indtil da er dagens brief her, læst fra dine data.</div>
     </div>
     <div class="grid g2" style="align-content:start">
       <div class="tile"><div class="k">Til aftensmad</div><div class="v tnum" id="tRation">—</div><div class="sub" id="tRationSub">vej før aften</div></div>
-      <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum" id="tKcal">—</div><div class="meter"><i id="tKcalBar" style="width:0%;background:var(--accent)"></i></div></div>
+      <div class="tile" style="display:none"><div class="k">Kalorier i dag</div><div class="v tnum" id="tKcal">—</div><div class="meter"><i id="tKcalBar" style="width:0%;background:var(--accent)"></i></div></div>
       <div class="tile"><div class="k">Dagens træning</div><div class="v" style="font-size:16px" id="tTrain">—</div><div class="sub" id="tTrainSub"></div></div>
-      <div class="tile"><div class="k">Restitution</div><div class="v" style="font-size:16px" id="tRest">—</div><div class="sub" id="tRestSub"></div></div>
+      <div class="tile" style="display:none"><div class="k">Restitution</div><div class="v" style="font-size:16px" id="tRest">—</div><div class="sub" id="tRestSub"></div></div>
     </div>
   </div>
 
@@ -922,6 +937,43 @@ function readingSeries(nDays){
   return Object.keys(map).sort().map(d=>({d,v:Math.round(map[d])}));
 }
 
+// ---------- status-række (øverst) ----------
+function statusRow(){
+  const el=$("#statusRow"); if(!el) return;
+  const s=S.settings,t=todayISO(),M=morning(),chips=[];
+  const chip=(k,v,sub,cls,extra)=>chips.push(`<div class="st ${cls||''}"><div class="k">${k}</div><div class="v tnum">${v}</div><div class="sub">${sub||'&nbsp;'}</div>${extra||''}</div>`);
+  // vægt
+  if(M.length){const cur=M[M.length-1].weight_kg,diff=malvaegt(M[M.length-1].log_date,+s.kur_basis_weight)-cur;
+    chip("Vægt",fmt(cur,1)+"<small> kg</small>",(diff>=0?fmt(diff,1)+" kg foran":fmt(-diff,1)+" kg bagud"),diff>=0?"good":"warn");
+  } else chip("Vægt","—","ingen vejning");
+  // kalorier
+  const kcal=sumDay(S.nutrition,t,"calories_in"),tg=+s.calorie_target||1648,h=new Date().getHours();
+  chip("Kalorier",kcal?String(kcal):"—",kcal?(kcal>tg?(kcal-tg)+" over":"af "+tg):"intet logget",kcal>tg?"warn":(kcal?"good":""),kcal?`<div class="meter"><i style="width:${Math.min(100,kcal/tg*100)}%;background:var(--accent)"></i></div>`:"");
+  // skridt
+  const stepRow=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt"),steps=stepRow?stepRow.steps:null;
+  chip("Skridt",steps?steps.toLocaleString("da-DK"):"—","mål 7.000",steps>=7000?"good":"");
+  // søvn + HRV
+  const wl=S.wellness[S.wellness.length-1];
+  if(wl&&wl.sleep_hours!=null){const a=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));
+    chip("Søvn",hhmm(wl.sleep_hours),"snit "+hhmm(a),wl.sleep_hours>=7?"good":"warn");
+  } else chip("Søvn","—","");
+  if(wl&&wl.hrv!=null){const a=avg(S.wellness.slice(-14).map(w=>w.hrv).filter(x=>x!=null)),low=a&&wl.hrv<a-4;
+    chip("HRV",wl.hrv+"<small> ms</small>","snit "+fmt(a,0)+(low?" · lav":""),low?"warn":"good");
+  } else chip("HRV","—","");
+  // løbestreak
+  const cur=S._streakCur||0,ran=!!S._ranToday;
+  chip("Streak",cur+"<small> dage</small>",ran?"løbet i dag ✓":(cur?"løb i dag holder kæden":"start i morgen"),ran?"good":(cur?"warn":""));
+  // medicin
+  const rec=S.meds.find(m=>m.log_date===t)||{},n=(rec.morning?1:0)+(rec.evening?1:0);
+  chip("Eltroxin",n+"<small> / 2</small>",(n===2?"begge taget ✓":rec.morning?"morgen ✓":"ikke taget"),(rec.morning&&(rec.evening||h<20))?"good":(!rec.morning&&h>=10?"warn":""));
+  // rygestop
+  try{const st=smokeStats();
+    if(st.started){const d=Math.floor(st.ms/864e5);chip("Røgfri",d+"<small> dage</small>",st.slipN?st.slipN+" slip i alt":"ingen slip","good");}
+    else chip("Røgfri","—","starter snart");
+  }catch(e){chip("Røgfri","—","");}
+  el.innerHTML=chips.join("");
+}
+
 // ---------- render ----------
 function render(){
   const s=S.settings,t=todayISO(),M=morning();
@@ -1025,6 +1077,7 @@ function render(){
   renderMedQuick();
   renderChores();
   praktiskSpark();
+  statusRow();
 
   // --- restitution ---
   if(wl){
@@ -1079,6 +1132,7 @@ function streak(){
   let cur=0, cursor = days.has(t) ? t : addDays(t,-1);
   for(let i=0;i<4000;i++){ if(days.has(cursor)) cur++; else if(!sick.has(cursor)) break; cursor=addDays(cursor,-1); }
   const activeToday=days.has(t);
+  S._streakCur=cur; S._ranToday=activeToday;
   // rekord i seneste 90 dage
   let longest=0, run=0;
   for(let i=90;i>=0;i--){ const d=addDays(t,-i); if(days.has(d)){ run++; longest=Math.max(longest,run); } else if(!sick.has(d)) run=0; }
@@ -1221,6 +1275,7 @@ function renderMedQuick(){
   const ws=weekStart(t);let done=0,tot=0;
   for(let i=0;i<7;i++){const d=addDays(ws,i);if(d>t)continue;const r=S.meds.find(m=>m.log_date===d)||{};tot+=2;if(r.morning)done++;if(r.evening)done++;}
   $("#medQuick").innerHTML=`Denne uge: <b style="color:var(--krop)">${done}/${tot}</b> doser.`;
+  if(typeof statusRow==="function")statusRow();
 }
 
 // ---------- Praktisk (chores) ----------
@@ -1760,6 +1815,7 @@ function initSmoke(){
   $("#cravFab").onclick=openCrav;$("#cravCancel").onclick=()=>$("#cravDialog").classList.remove("open");$("#cravClose").onclick=()=>$("#cravDialog").classList.remove("open");
   $("#cravSave").onclick=saveCraving;$("#sCancel").onclick=()=>$("#slipDialog").classList.remove("open");$("#sSave").onclick=saveSlip;
   $("#qCancel").onclick=()=>$("#smokeCfgDialog").classList.remove("open");$("#qSave").onclick=saveSmokeCfg;
+  $("#coachMore").addEventListener("click",()=>{const p=$("#coachText"),open=p.classList.toggle("clamp")===false;$("#coachMore").textContent=open?"Vis mindre ▴":"Læs hele briefen ▾";});
   $("#smokeBody").addEventListener("click",e=>{
     if(e.target.closest("#smokeCrav"))openCrav();else if(e.target.closest("#smokeSlip"))openSlip();else if(e.target.closest("#smokeEdit"))openSmokeCfg();});
   $("#smokeBody").addEventListener("change",e=>{const k=e.target.dataset&&e.target.dataset.prep;if(k)savePrep(k,e.target.checked);});
