@@ -1541,7 +1541,7 @@ function coachTime(ts,ai){ const el=$("#coachTime"); if(!el) return;
 function hideNudge(){ const n=$("#coachNudge"); if(n){ n.style.display="none"; n.textContent=""; } }
 async function aiCoach(){
   const el=$("#coachText"); if(!el) return;
-  const t=todayISO(), LSK="liv-coachbrief7";
+  const t=todayISO(), LSK="liv-coachbrief8";
   // Fingeraftryk: nattens Garmin-data, nyt løb, vejninger, aftensration, mad- og skridt-niveau.
   // Regenerér kun ved ændring — og højst 3 gange/dag med mindst 2 timer imellem (holder prisen nede).
   const gT=(S.garmin||[]).find(g=>g.log_date===t)||null;
