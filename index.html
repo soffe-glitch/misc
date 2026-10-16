@@ -153,12 +153,16 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
   .dash[data-n="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
   .blk{margin-bottom:22px}
   .dash .section-label:first-child{margin-top:0}
-  .dash .logcard{flex-basis:47%; max-width:47%}
+  .dash .logcard{flex-basis:100%; max-width:100%}
+  .dash .logdots,.dash .section-label .hint{display:none}
+  .logtabs{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px}
+  .logtabs button{border:1.5px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:99px; padding:6px 13px; font:inherit; font-size:13px; font-weight:600; cursor:pointer}
+  .logtabs button.on{background:var(--accent); border-color:var(--accent); color:var(--bg)}
+  #logwrap{transition:height .2s}
 }
 @media (min-width:1400px){
   .wrap{max-width:1860px}
   .dash[data-n="3"] .dcol>.blk>.grid.lead,.dash[data-n="3"] .dcol>.blk>.grid.g2{grid-template-columns:1fr}
-  .dash .logcard{flex-basis:88%; max-width:88%}
 }
 @media (max-width:560px){ .statusrow{gap:8px} .st{padding:9px 9px} .st .v{font-size:20px} .st .k{font-size:9.5px} .st .sub{font-size:10px} }
 .meter{height:7px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:10px}
@@ -2181,7 +2185,26 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();});
     d.replaceChildren(...MAPS[n].map(gs=>{const c=document.createElement('div');c.className='dcol';
       gs.forEach(g=>d._blks.filter(b=>b.dataset.g===g).forEach(b=>c.appendChild(b)));return c;}));
   }
-  layoutDash(); let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(layoutDash,120);});
+  // Hurtig-log på bred skærm: faner med navn og kun ét kort ad gangen (ingen swipe, ingen tom plads)
+  function logTabs(){
+    const wrap=document.querySelector('#logwrap'); if(!wrap) return;
+    const cards=[...wrap.querySelectorAll('.logcard')]; if(!cards.length) return;
+    let bar=document.querySelector('#logtabs');
+    if(window.innerWidth<1100){ if(bar) bar.remove(); wrap.style.height=''; return; }
+    const cur=()=>{let b=0,dm=1e9;cards.forEach((c,i)=>{const d=Math.abs(c.offsetLeft-cards[0].offsetLeft-wrap.scrollLeft);if(d<dm){dm=d;b=i;}});return b;};
+    const mark=i=>{ if(!bar) return; [...bar.children].forEach((b,j)=>b.classList.toggle('on',j===i)); wrap.style.height=(cards[i].offsetHeight+12)+'px'; };
+    if(!bar){
+      const short={'Medicin i dag':'Medicin','Lur i dag':'Lur','Løbe-forhandling':'Forhandling'};
+      bar=document.createElement('div'); bar.id='logtabs'; bar.className='logtabs';
+      bar.innerHTML=cards.map((c,i)=>{const t=c.querySelector('h3').textContent.trim();return `<button type="button" data-i="${i}">${short[t]||t}</button>`;}).join('');
+      wrap.parentNode.insertBefore(bar,wrap);
+      bar.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; const i=+b.dataset.i; wrap.scrollTo({left:cards[i].offsetLeft-cards[0].offsetLeft,behavior:'smooth'}); mark(i);});
+      wrap.addEventListener('scroll',()=>{clearTimeout(wrap._t); wrap._t=setTimeout(()=>mark(cur()),80);});
+      if(window.ResizeObserver){ const ro=new ResizeObserver(()=>mark(cur())); cards.forEach(c=>ro.observe(c)); }
+    }
+    mark(cur());
+  }
+  layoutDash(); logTabs(); let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{layoutDash();logTabs();},120);});
 })();
 </script>
 </body>
