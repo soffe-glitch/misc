@@ -142,22 +142,22 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .coachfoot{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
 #coachTime{font-size:12px; opacity:.65; white-space:nowrap; padding-top:8px}
 .coach .more{background:none; border:0; color:inherit; opacity:.75; font:inherit; font-size:13px; padding:8px 0 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
-/* bred skærm: sektioner flyder i flere kolonner i stedet for én lang scroll */
+/* bred skærm: faste temakolonner (bygges af layoutDash) i stedet for én lang scroll */
+.dcol{min-width:0}
 .blk{margin-bottom:6px}
 @media (min-width:1100px){
   .wrap{max-width:1520px}
   .statusrow{grid-template-columns:repeat(8,1fr)}
-  .dash{column-count:2; column-gap:24px}
-  .blk{break-inside:avoid; -webkit-column-break-inside:avoid; page-break-inside:avoid}
-  .dash .section-label{break-after:avoid; -webkit-column-break-after:avoid}
+  .dash{display:grid; gap:24px; align-items:start}
+  .dash[data-n="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dash[data-n="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
   .blk{margin-bottom:22px}
   .dash .section-label:first-child{margin-top:0}
   .dash .logcard{flex-basis:47%; max-width:47%}
 }
 @media (min-width:1400px){
   .wrap{max-width:1860px}
-  .dash{column-count:3}
-  .dash>.blk>.grid.lead,.dash>.blk>.grid.g2{grid-template-columns:1fr}
+  .dash[data-n="3"] .dcol>.blk>.grid.lead,.dash[data-n="3"] .dcol>.blk>.grid.g2{grid-template-columns:1fr}
   .dash .logcard{flex-basis:88%; max-width:88%}
 }
 @media (max-width:560px){ .statusrow{gap:8px} .st{padding:9px 9px} .st .v{font-size:20px} .st .k{font-size:9.5px} .st .sub{font-size:10px} }
@@ -2166,6 +2166,22 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();});
 (async function(){
   try{await loadAll();if(!S.settings)throw new Error("Ingen indstillinger fundet.");render();weather();}
   catch(e){$("#sub").textContent="Kunne ikke hente data: "+e.message;$("#sub").style.color="var(--bad)";}
+})();
+</script>
+<script>
+// Temakolonner på bred skærm: I dag & velvære | Krop & kost | Træning (2 kolonner: I dag | Krop, træning & kost)
+(function(){
+  const GROUPS=['I','L','E','K','K','K','T','T','T','R']; // I dag, Hurtig-log, Energi, Krop(3), Træning(3), Restitution+Kost
+  const MAPS={3:[['I','L','E'],['K','R'],['T']],2:[['I','L','E'],['K','T','R']],1:[['I','L','E','K','T','R']]};
+  function layoutDash(){
+    const d=document.querySelector('.dash'); if(!d) return;
+    if(!d._blks){ d._blks=[...d.children]; d._blks.forEach((b,i)=>b.dataset.g=GROUPS[i]||'I'); }
+    const w=window.innerWidth, n=w>=1400?3:w>=1100?2:1;
+    if(d.dataset.n==String(n)) return; d.dataset.n=String(n);
+    d.replaceChildren(...MAPS[n].map(gs=>{const c=document.createElement('div');c.className='dcol';
+      gs.forEach(g=>d._blks.filter(b=>b.dataset.g===g).forEach(b=>c.appendChild(b)));return c;}));
+  }
+  layoutDash(); let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(layoutDash,120);});
 })();
 </script>
 </body>
