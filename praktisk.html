@@ -179,8 +179,9 @@ function dueIn(t){ // days until due; <=0 means due now
   return t.done?Infinity:0;
 }
 const doneToday=t=>t.lastDone===today();
-const isReady=t=>!doneToday(t)&&dueIn(t)<=0&&!(t.done&&!isRecurring(t));
-const isLater=t=>isRecurring(t)&&!doneToday(t)&&dueIn(t)>0;
+const isSnoozed=t=>t.snooze!=null&&t.snooze>today();
+const isReady=t=>!doneToday(t)&&dueIn(t)<=0&&!(t.done&&!isRecurring(t))&&!isSnoozed(t);
+const isLater=t=>!doneToday(t)&&!(t.done&&!isRecurring(t))&&(isSnoozed(t)||(isRecurring(t)&&dueIn(t)>0));
 const isDoneList=t=>doneToday(t)||(t.done&&!isRecurring(t));
 function lateDays(t){ return isRecurring(t)&&t.lastDone!=null? today()-(t.lastDone+t.repeat):0; }
 
@@ -221,6 +222,7 @@ function renderHero(){
     <div class="actions">
       <button class="btn go" data-act="done" data-id="${t.id}">Gjort</button>
       ${c.length>1?`<button class="btn ghost" data-act="skip">Ikke den her</button>`:""}
+      <button class="btn ghost" data-act="snooze" data-id="${t.id}">Ikke relevant i dag</button>
     </div>`;
 }
 function renderFilters(){
@@ -230,9 +232,9 @@ function renderFilters(){
 function rowHTML(t,kind){
   let extra="";
   if(kind==="ready"){const l=lateDays(t); if(l>0) extra=`<span class="chip late tnum">${l} ${l===1?"dag":"dage"} over</span>`;}
-  if(kind==="later"){const d=dueIn(t); extra=`<span class="chip tnum">om ${d} ${d===1?"dag":"dage"}</span>`;}
+  if(kind==="later"){const d=dueIn(t); extra=isSnoozed(t)?`<span class="chip">udsat til i morgen</span>`:`<span class="chip tnum">om ${d} ${d===1?"dag":"dage"}</span>`;}
   const isDone=kind==="done";
-  const more=open===t.id?`<div class="more"><label class="ev">Gentages hver <input type="number" min="0" max="365" value="${t.repeat}" data-ev="${t.id}" aria-label="Antal dage mellem gentagelser, 0 er aldrig"> dage</label><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
+  const more=open===t.id?`<div class="more">${kind==="ready"?`<button class="del" style="color:var(--ink)" data-act="snooze" data-id="${t.id}">Ikke relevant i dag</button>`:""}${isSnoozed(t)?`<button class="del" style="color:var(--ink)" data-act="unsnooze" data-id="${t.id}">Hent tilbage i dag</button>`:""}<label class="ev">Gentages hver <input type="number" min="0" max="365" value="${t.repeat}" data-ev="${t.id}" aria-label="Antal dage mellem gentagelser, 0 er aldrig"> dage</label><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
     ${isDone?`<button class="del" style="color:var(--ink)" data-act="undo" data-id="${t.id}">Fortryd</button>`:""}</div>`:"";
   return `<div class="row ${isDone?"done":""}">
     <button class="check" data-act="${isDone?"undo":"done"}" data-id="${t.id}" aria-label="${isDone?"Marker som ikke gjort":"Marker som gjort"}: ${esc(t.title)}">${isDone?'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':""}</button>
@@ -276,6 +278,8 @@ document.addEventListener("click",e=>{
   if(act==="done")markDone(id);
   else if(act==="undo")undo(id);
   else if(act==="skip"){skip++;render()}
+  else if(act==="snooze"){skip=0;open=null;patch(id,{snooze:today()+1})}
+  else if(act==="unsnooze"){patch(id,{snooze:null})}
   else if(act==="open"){open=open===id?null:id;sureDel=null;render()}
   else if(act==="del"){
     if(sureDel===id){tasks=tasks.filter(t=>t.id!==id);open=sureDel=null;render();store&&store.remove(id)}
@@ -301,8 +305,8 @@ const KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
 const HEAD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
 const dayToISO=n=>{const d=new Date(n*864e5);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")};
 const isoToDay=s=>{if(!s)return null;const [y,m,d]=s.split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
-const toRow=t=>({id:t.id,title:t.title,area:t.area,minutes:t.min,energy:t.energy,repeat_days:t.repeat,last_done:t.lastDone==null?null:dayToISO(t.lastDone),done:!!t.done});
-const fromRow=r=>({id:r.id,title:r.title,area:r.area,min:r.minutes,energy:r.energy,repeat:r.repeat_days,lastDone:isoToDay(r.last_done),done:r.done});
+const toRow=t=>({id:t.id,title:t.title,area:t.area,minutes:t.min,energy:t.energy,repeat_days:t.repeat,last_done:t.lastDone==null?null:dayToISO(t.lastDone),done:!!t.done,snooze_until:t.snooze==null?null:dayToISO(t.snooze)});
+const fromRow=r=>({id:r.id,title:r.title,area:r.area,min:r.minutes,energy:r.energy,repeat:r.repeat_days,lastDone:isoToDay(r.last_done),done:r.done,snooze:isoToDay(r.snooze_until)});
 const say=m=>{$("status").textContent=m};
 async function req(url,opt){const r=await fetch(url,opt);if(!r.ok)throw new Error(r.status+" "+(await r.text()));return r}
 store={
