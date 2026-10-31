@@ -765,7 +765,7 @@ function fmt(n,d=1){return (n==null||isNaN(n))?"—":n.toLocaleString("da-DK",{m
 function daLabel(iso){const d=parseD(iso);return d.getDate()+". "+MONTHS[d.getMonth()];}
 
 // ---------- rest helpers ----------
-async function get(t,qs=""){const r=await fetch(REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function get(t,qs=""){const P=/[?&]limit=/.test(qs)?0:1000,U=REST+t+qs+(qs?"&":"?");let all=[];for(let o=0;;o+=P){const r=await fetch(P?U+"limit="+P+"&offset="+o:REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));const j=await r.json();all=all.concat(j);if(!P||j.length<P)return all;}}
 async function insert(t,body){const r=await fetch(REST+t,{method:"POST",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="+oc):""),{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 async function booksGet(){const r=await fetch(BOOKS_FN);if(!r.ok)throw new Error("books: "+r.status);return r.json();}
@@ -776,7 +776,7 @@ let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],da
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
     get("settings","?select=*&limit=1"),
-    get("weighins","?select=*&order=log_date.asc"),
+    get("weighins","?select=*&order=log_date.asc,moment.asc"),
     get("nutrition","?select=*&order=log_date.asc"),
     get("workouts","?select=*&order=log_date.desc"),
     get("body_comp","?select=*&order=log_date.asc"),
@@ -789,7 +789,7 @@ async function loadAll(){
     get("planned","?select=*&order=log_date.asc")
   ]);
   S.planned=planned;
-  try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc&limit=2000")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
+  try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc,ts.desc")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
   try{ S.negotiations=await get("run_negotiations","?select=*&order=ts.asc"); }catch(e){ S.negotiations=[]; }
   try{ S.naps=await get("naps","?select=*&order=ts.asc"); }catch(e){ S.naps=[]; }
   try{ S.sickDays=await get("sick_days","?select=*&order=log_date.asc"); }catch(e){ S.sickDays=[]; }
