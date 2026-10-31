@@ -82,6 +82,9 @@ header h1{font-size:30px;line-height:1.1}
 .add .line{display:flex;gap:8px;flex-wrap:wrap}
 .add input[type=text]{flex:1 1 200px;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px}
 .add select{flex:none;width:100%;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:10px 8px;min-height:44px}
+.add input[type=number]{border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px;width:100%;min-width:0}
+.ev{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.ev input{width:64px;border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:6px 8px}
 .add label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted);flex:1 1 120px;min-width:0}
 
 /* list */
@@ -142,7 +145,8 @@ header h1{font-size:30px;line-height:1.1}
         <option value="1">Lav</option><option value="2" selected>Mellem</option><option value="3">Høj</option></select></label>
       <label for="aRepeat">Gentages<select id="aRepeat">
         <option value="0">Aldrig</option><option value="1">Hver dag</option><option value="7">Hver uge</option>
-        <option value="14">Hver 14. dag</option><option value="30">Hver måned</option><option value="90">Hvert kvartal</option></select></label>
+        <option value="14">Hver 14. dag</option><option value="30">Hver måned</option><option value="90">Hvert kvartal</option><option value="custom">Andet antal dage…</option></select></label>
+      <label for="aDays" id="aDaysWrap" hidden>Antal dage<input type="number" id="aDays" min="1" max="365" value="10"></label>
     </div>
   </form>
 
@@ -153,9 +157,9 @@ header h1{font-size:30px;line-height:1.1}
 </div>
 
 <script>
-const AREAS=["Køkken","Badeværelse","Tøj","Indkøb","Papirer og penge","Ærinder","Andet"];
+const AREAS=["Køkken","Badeværelse","Tøj","Oprydning","Rengøring","Have og ude","Indkøb","Papirer og penge","Ærinder","Andet"];
 const ENERGY={1:"Lav",2:"Mellem",3:"Høj"};
-const REPEAT={0:"",1:"hver dag",7:"hver uge",14:"hver 14. dag",30:"hver måned",90:"hvert kvartal"};
+const repeatLabel=n=>n<=0?"":n===1?"hver dag":n===7?"hver uge":n===30?"hver måned":"hver "+n+". dag";
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>{const d=new Date();return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/864e5)};
@@ -193,7 +197,7 @@ function chipsFor(t,extra){
   if(extra) c.push(extra);
   c.push(`<span class="chip tnum">${fmtMin(t.min)}</span>`);
   c.push(`<span class="chip">${ENERGY[t.energy]} energi</span>`);
-  if(isRecurring(t)) c.push(`<span class="chip">${REPEAT[t.repeat]}</span>`);
+  if(isRecurring(t)) c.push(`<span class="chip">${repeatLabel(t.repeat)}</span>`);
   return c.join("");
 }
 function renderHero(){
@@ -228,7 +232,7 @@ function rowHTML(t,kind){
   if(kind==="ready"){const l=lateDays(t); if(l>0) extra=`<span class="chip late tnum">${l} ${l===1?"dag":"dage"} over</span>`;}
   if(kind==="later"){const d=dueIn(t); extra=`<span class="chip tnum">om ${d} ${d===1?"dag":"dage"}</span>`;}
   const isDone=kind==="done";
-  const more=open===t.id?`<div class="more"><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
+  const more=open===t.id?`<div class="more"><label class="ev">Gentages hver <input type="number" min="0" max="365" value="${t.repeat}" data-ev="${t.id}" aria-label="Antal dage mellem gentagelser, 0 er aldrig"> dage</label><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
     ${isDone?`<button class="del" style="color:var(--ink)" data-act="undo" data-id="${t.id}">Fortryd</button>`:""}</div>`:"";
   return `<div class="row ${isDone?"done":""}">
     <button class="check" data-act="${isDone?"undo":"done"}" data-id="${t.id}" aria-label="${isDone?"Marker som ikke gjort":"Marker som gjort"}: ${esc(t.title)}">${isDone?'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':""}</button>
@@ -263,6 +267,7 @@ function patch(id,p){const t=byId(id);if(!t)return;Object.assign(t,p);render();s
 function markDone(id){const t=byId(id);if(!t)return;skip=0;patch(id,{done:!isRecurring(t),lastDone:today()})}
 function undo(id){const t=byId(id);if(!t)return;patch(id,{done:false,lastDone:null})}
 
+document.addEventListener("change",e=>{const el=e.target;if(!el.dataset||!el.dataset.ev)return;const n=Math.max(0,Math.min(365,Math.round(+el.value)||0));const t=byId(el.dataset.ev);if(!t)return;patch(t.id,{repeat:n,done:n>0?false:t.done})});
 document.addEventListener("click",e=>{
   const el=e.target.closest("button");if(!el)return;
   const {act,id}=el.dataset;
@@ -281,11 +286,12 @@ document.addEventListener("click",e=>{
 });
 
 $("aArea").innerHTML=AREAS.map(a=>`<option>${esc(a)}</option>`).join("");
+$("aRepeat").addEventListener("change",()=>{$("aDaysWrap").hidden=$("aRepeat").value!=="custom"});
 $("addForm").addEventListener("submit",e=>{
   e.preventDefault();
   const title=$("aTitle").value.trim();if(!title)return;
   const id=crypto.randomUUID();
-  const t={id,title,area:$("aArea").value,min:+$("aMin").value,energy:+$("aEnergy").value,repeat:+$("aRepeat").value,lastDone:null,done:false};
+  const t={id,title,area:$("aArea").value,min:+$("aMin").value,energy:+$("aEnergy").value,repeat:$("aRepeat").value==="custom"?Math.max(1,Math.min(365,+$("aDays").value||7)):+$("aRepeat").value,lastDone:null,done:false};
   tasks.push(t);$("aTitle").value="";render();store&&store.save(t);
 });
 
