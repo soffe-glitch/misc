@@ -2158,7 +2158,7 @@ function showTab(t){
   $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");
   $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   $("#syncBtn").style.display=""; // Synk virker nu på begge faner (opdaterer også vægt-iframen)
-  if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","vaegt.html");
+  if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","vaegt.html?v="+Date.now());
   if(t==="vaegt")sizeFrame();
   try{localStorage.setItem("liv-tab",t)}catch(e){}
 }
