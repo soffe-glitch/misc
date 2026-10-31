@@ -76,7 +76,7 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .tab{border:0; background:transparent; color:var(--muted); font:inherit; font-weight:600; font-size:14px; padding:9px 20px; border-radius:99px; cursor:pointer; transition:background .15s,color .15s}
 .tab.on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
 .framewrap{margin-top:10px}
-#vaegtFrame{width:100%; border:0; border-radius:var(--r); min-height:640px; background:var(--bg); display:block}
+#vaegtFrame,#praktiskFrame{width:100%; border:0; border-radius:var(--r); min-height:640px; background:var(--bg); display:block}
 
 /* Hurtig-log */
 .logwrap{display:flex; align-items:flex-start; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:2px 2px 10px; scrollbar-width:none}
@@ -266,6 +266,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <div class="tabbar" id="tabbar">
     <button class="tab on" data-tab="liv">Livsstil</button>
     <button class="tab" data-tab="vaegt">Vægttab &amp; log</button>
+    <button class="tab" data-tab="praktisk">Praktisk</button>
   </div>
 
   <div id="viewLiv">
@@ -595,6 +596,10 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 
   <div id="viewVaegt" hidden>
     <div class="framewrap"><iframe id="vaegtFrame" title="Vægttab & log" loading="lazy"></iframe></div>
+  </div>
+
+  <div id="viewPraktisk" hidden>
+    <div class="framewrap"><iframe id="praktiskFrame" title="Praktisk" loading="lazy"></iframe></div>
   </div>
 
   <footer>
@@ -2148,23 +2153,30 @@ window.addEventListener("scroll",hideTT,{passive:true});
 
 // ---------- faner (Livsstil / Vægttab) ----------
 const frame=$("#vaegtFrame");let frameTimer=null;
-function sizeFrame(){try{const d=frame.contentWindow.document;if(d&&d.body){const hgt=Math.max(d.body.scrollHeight,d.documentElement.scrollHeight);if(hgt>200)frame.style.height=hgt+"px";}}catch(e){}}
-function syncFrameTheme(){try{const dt=document.documentElement.getAttribute("data-theme");const idoc=frame.contentDocument;if(!idoc)return;if(dt)idoc.documentElement.setAttribute("data-theme",dt);else idoc.documentElement.removeAttribute("data-theme");}catch(e){}}
+function sizeFrame(f){f=f||frame;try{const d=f.contentWindow.document;if(d&&d.body){const hgt=Math.max(d.body.scrollHeight,d.documentElement.scrollHeight);if(hgt>200)f.style.height=hgt+"px";}}catch(e){}}
+function syncFrameTheme(f){f=f||frame;try{const dt=document.documentElement.getAttribute("data-theme");const idoc=f.contentDocument;if(!idoc)return;if(dt)idoc.documentElement.setAttribute("data-theme",dt);else idoc.documentElement.removeAttribute("data-theme");}catch(e){}}
 frame.addEventListener("load",()=>{ // vægt-dashboardet henter data async → mål højden nogle gange efter load
   syncFrameTheme();
   let n=0;clearInterval(frameTimer);frameTimer=setInterval(()=>{sizeFrame();if(++n>12)clearInterval(frameTimer);},400);
 });
+const pframe=$("#praktiskFrame");let pTimer=null;
+pframe.addEventListener("load",()=>{ // Praktisk henter data async → mål højden et par gange efter load
+  syncFrameTheme(pframe);
+  let n=0;clearInterval(pTimer);pTimer=setInterval(()=>{sizeFrame(pframe);if(++n>12)clearInterval(pTimer);},400);
+});
 function showTab(t){
-  $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");
+  $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");$("#viewPraktisk").hidden=(t!=="praktisk");
   $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   $("#syncBtn").style.display=""; // Synk virker nu på begge faner (opdaterer også vægt-iframen)
   if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","vaegt.html");
+  if(t==="praktisk"&&!pframe.getAttribute("src"))pframe.setAttribute("src","praktisk.html");
   if(t==="vaegt")sizeFrame();
+  if(t==="praktisk")sizeFrame(pframe);
   try{localStorage.setItem("liv-tab",t)}catch(e){}
 }
 $("#tabbar").querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
-window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();});
-(function(){let t="liv";try{t=localStorage.getItem("liv-tab")||"liv"}catch(e){}if(t==="vaegt")showTab("vaegt");})();
+window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(!$("#viewPraktisk").hidden)sizeFrame(pframe);});
+(function(){let t="liv";try{t=localStorage.getItem("liv-tab")||"liv"}catch(e){}if(t==="vaegt"||t==="praktisk")showTab(t);})();
 
 // ---------- boot ----------
 (async function(){

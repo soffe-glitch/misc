@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<script src="auth.js?v=20261012"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praktisk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one hero card that picks the next step, a filter strip, then chores grouped by area. Same emerald Livsstil palette as Projekt Vægttab. */
+:root{
+  --bg:#F5F0E8; --surface:#FFFDF9; --surface-2:#F1EBE1; --surface-3:#E7DFD2;
+  --ink:#1F2B26; --muted:#66726B; --faint:#9AA39C; --border:#E6DED0;
+  --accent:#2F7A62; --accent-ink:#1E5543; --accent-soft:#DCEBE3; --on-accent:#ffffff;
+  --hero:#1F3B31; --hero-ink:#F4F1E8; --hero-soft:rgba(255,255,255,.14);
+  --amber:#C9822A; --amber-soft:#F6E5CC; --bad:#C4483B;
+  --shadow:0 1px 2px rgba(60,45,20,.04),0 8px 28px rgba(60,45,20,.07);
+  --display:"Fraunces",Georgia,serif; --body:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1411; --surface:#161D19; --surface-2:#1C2520; --surface-3:#26312B;
+    --ink:#EEF1EA; --muted:#98A89F; --faint:#6E7F76; --border:#25302A;
+    --accent:#4FCBA0; --accent-ink:#86E3C3; --accent-soft:#143027; --on-accent:#08241b;
+    --hero:#173126; --hero-ink:#F1F4EC; --hero-soft:rgba(255,255,255,.10);
+    --amber:#E5A857; --amber-soft:#35290F; --bad:#E0705F;
+    --shadow:0 1px 2px rgba(0,0,0,.2),0 4px 20px rgba(0,0,0,.28);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1411; --surface:#161D19; --surface-2:#1C2520; --surface-3:#26312B;
+    --ink:#EEF1EA; --muted:#98A89F; --faint:#6E7F76; --border:#25302A;
+    --accent:#4FCBA0; --accent-ink:#86E3C3; --accent-soft:#143027; --on-accent:#08241b;
+    --hero:#173126; --hero-ink:#F1F4EC; --hero-soft:rgba(255,255,255,.10);
+    --amber:#E5A857; --amber-soft:#35290F; --bad:#E0705F;
+    --shadow:0 1px 2px rgba(0,0,0,.2),0 4px 20px rgba(0,0,0,.28);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding-block:24px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{margin:0;font-family:var(--display);font-weight:500;letter-spacing:-.01em;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tnum{font-variant-numeric:tabular-nums}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header h1{font-size:30px;line-height:1.1}
+.count{color:var(--muted);font-size:14px}
+
+/* hero */
+.hero{background:var(--hero);color:var(--hero-ink);border-radius:20px;padding:22px 20px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
+.hero .eyebrow{color:inherit;opacity:.75}
+.hero h2{font-size:28px;line-height:1.15}
+.hero .meta{display:flex;gap:8px;flex-wrap:wrap}
+.hero .chip{background:var(--hero-soft);color:inherit;border-color:transparent}
+.hero .actions{display:flex;gap:10px;flex-wrap:wrap}
+.hero .why{margin:0;opacity:.8;font-size:14px}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:10px 16px;font-weight:600;min-height:44px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.06)}
+.hero .btn.go{background:var(--hero-ink);color:var(--hero);border-color:transparent}
+.hero .btn.ghost{background:transparent;color:inherit;border-color:var(--hero-soft)}
+.hero .btn.ghost:hover{background:var(--hero-soft)}
+
+/* filters */
+.filters{display:flex;flex-direction:column;gap:10px}
+.frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.flabel{font-size:13px;color:var(--muted);min-width:96px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:500;min-height:36px}
+.pill[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.chip.late{background:var(--amber-soft);color:var(--amber);border-color:transparent}
+
+/* add */
+.add{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.add .line{display:flex;gap:8px;flex-wrap:wrap}
+.add input[type=text]{flex:1 1 200px;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px}
+.add select{flex:none;width:100%;min-width:0;border:1px solid var(--border);background:var(--bg);border-radius:10px;padding:10px 8px;min-height:44px}
+.add label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted);flex:1 1 120px;min-width:0}
+
+/* list */
+.area{display:flex;flex-direction:column;gap:8px}
+.area h3{font-size:18px;display:flex;align-items:baseline;gap:8px}
+.area h3 span{font-family:var(--body);font-size:13px;color:var(--faint);font-weight:500}
+.rows{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden}
+.row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--border)}
+.row:first-child{border-top:0}
+.check{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--faint);background:transparent;display:grid;place-items:center;padding:0;margin-top:1px}
+.check:hover{border-color:var(--accent)}
+.row.done .check{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.row .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.row .t{background:none;border:0;padding:0;text-align:left;font-weight:500;overflow-wrap:anywhere}
+.row.done .t{color:var(--faint);text-decoration:line-through}
+.row .chips{display:flex;gap:6px;flex-wrap:wrap}
+.row .more{display:flex;gap:8px;align-items:center}
+.del{border:1px solid var(--border);background:transparent;color:var(--bad);border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600}
+.del.sure{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sec-h h2{font-size:20px}
+.toggle{background:none;border:0;color:var(--accent-ink);font-weight:600;padding:6px 0}
+.empty{background:var(--surface);border:1px dashed var(--border);border-radius:16px;padding:22px;color:var(--muted);text-align:center}
+.note{color:var(--faint);font-size:13px}
+@media (prefers-reduced-motion:no-preference){.hero h2{transition:opacity .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Livsstil · Misc</div>
+      <h1>Praktisk</h1>
+    </div>
+    <div class="count tnum" id="count"></div>
+  </header>
+
+  <section class="hero" aria-live="polite" id="hero"></section>
+
+  <section class="filters" aria-label="Tilpas forslag">
+    <div class="frow"><span class="flabel">Min energi i dag</span>
+      <div class="seg" id="f-energy"></div></div>
+    <div class="frow"><span class="flabel">Jeg har tid til</span>
+      <div class="seg" id="f-time"></div></div>
+  </section>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <div class="line">
+      <input type="text" id="aTitle" placeholder="Ny opgave, fx Tøm opvaskemaskinen" aria-label="Opgave" required maxlength="120">
+      <button class="btn primary" type="submit">Tilføj</button>
+    </div>
+    <div class="line">
+      <label for="aArea">Område<select id="aArea"></select></label>
+      <label for="aMin">Tid<select id="aMin">
+        <option value="5">5 min</option><option value="15" selected>15 min</option>
+        <option value="30">30 min</option><option value="60">1 time</option><option value="120">2 timer</option></select></label>
+      <label for="aEnergy">Energi<select id="aEnergy">
+        <option value="1">Lav</option><option value="2" selected>Mellem</option><option value="3">Høj</option></select></label>
+      <label for="aRepeat">Gentages<select id="aRepeat">
+        <option value="0">Aldrig</option><option value="1">Hver dag</option><option value="7">Hver uge</option>
+        <option value="14">Hver 14. dag</option><option value="30">Hver måned</option><option value="90">Hvert kvartal</option></select></label>
+    </div>
+  </form>
+
+  <section id="ready"></section>
+  <section id="later"></section>
+  <section id="doneSec"></section>
+  <p class="note" id="status"></p>
+</div>
+
+<script>
+const AREAS=["Køkken","Badeværelse","Tøj","Indkøb","Papirer og penge","Ærinder","Andet"];
+const ENERGY={1:"Lav",2:"Mellem",3:"Høj"};
+const REPEAT={0:"",1:"hver dag",7:"hver uge",14:"hver 14. dag",30:"hver måned",90:"hvert kvartal"};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today=()=>{const d=new Date();return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/864e5)};
+const fmtMin=m=>m>=60?(m/60)+" t":m+" min";
+
+let tasks=[];           // [{id,...}]
+let store=null;         // {save(task), remove(id)}
+let energy=2, maxMin=0; // maxMin 0 = ingen grænse
+let skip=0, open=null, sureDel=null, showDone=false, showLater=false;
+try{const p=JSON.parse(localStorage.getItem("praktisk-filter")||"{}");if(p.energy)energy=p.energy;if(p.maxMin!=null)maxMin=p.maxMin}catch(e){}
+const saveFilter=()=>{try{localStorage.setItem("praktisk-filter",JSON.stringify({energy,maxMin}))}catch(e){}};
+
+/* ---- state helpers ---- */
+const isRecurring=t=>t.repeat>0;
+function dueIn(t){ // days until due; <=0 means due now
+  if(isRecurring(t)){ if(t.lastDone==null) return 0; return t.lastDone+t.repeat-today(); }
+  return t.done?Infinity:0;
+}
+const doneToday=t=>t.lastDone===today();
+const isReady=t=>!doneToday(t)&&dueIn(t)<=0&&!(t.done&&!isRecurring(t));
+const isLater=t=>isRecurring(t)&&!doneToday(t)&&dueIn(t)>0;
+const isDoneList=t=>doneToday(t)||(t.done&&!isRecurring(t));
+function lateDays(t){ return isRecurring(t)&&t.lastDone!=null? today()-(t.lastDone+t.repeat):0; }
+
+function candidates(){
+  return tasks.filter(isReady)
+    .filter(t=>t.energy<=energy)
+    .filter(t=>!maxMin||t.min<=maxMin)
+    .sort((a,b)=>(lateDays(b)-lateDays(a))||(a.min-b.min)||(a.title.localeCompare(b.title,"da")));
+}
+
+/* ---- render ---- */
+function chipsFor(t,extra){
+  const c=[];
+  if(extra) c.push(extra);
+  c.push(`<span class="chip tnum">${fmtMin(t.min)}</span>`);
+  c.push(`<span class="chip">${ENERGY[t.energy]} energi</span>`);
+  if(isRecurring(t)) c.push(`<span class="chip">${REPEAT[t.repeat]}</span>`);
+  return c.join("");
+}
+function renderHero(){
+  const c=candidates(), h=$("hero");
+  const readyAll=tasks.filter(isReady).length;
+  if(!tasks.length){
+    h.innerHTML=`<div class="eyebrow">Næste skridt</div><h2>Tilføj din første opgave nedenfor.</h2><p class="why">Så foreslår jeg, hvor du kan starte.</p>`;return;
+  }
+  if(!c.length){
+    const msg = readyAll===0 ? "Der er ikke mere at gøre lige nu." : "Intet passer til din energi og tid lige nu.";
+    const sub = readyAll===0 ? "Alt er gjort, eller venter på næste gang det skal gentages." : `${readyAll} opgaver venter. Prøv mere tid eller højere energi, hvis du kan.`;
+    h.innerHTML=`<div class="eyebrow">Næste skridt</div><h2>${msg}</h2><p class="why">${sub}</p>`;return;
+  }
+  const t=c[skip%c.length], late=lateDays(t);
+  const why = late>0 ? `Den skulle have været gjort for ${late} ${late===1?"dag":"dage"} siden.`
+    : t.min<=15 ? "Den er hurtig, så det er nemt at komme i gang." : "Den passer til den energi og tid, du har valgt.";
+  h.innerHTML=`<div class="eyebrow">Start her · ${esc(t.area)}</div>
+    <h2>${esc(t.title)}</h2>
+    <div class="meta">${chipsFor(t)}</div>
+    <p class="why">${why}</p>
+    <div class="actions">
+      <button class="btn go" data-act="done" data-id="${t.id}">Gjort</button>
+      ${c.length>1?`<button class="btn ghost" data-act="skip">Ikke den her</button>`:""}
+    </div>`;
+}
+function renderFilters(){
+  $("f-energy").innerHTML=[1,2,3].map(v=>`<button class="pill" aria-pressed="${energy===v}" data-energy="${v}">${ENERGY[v]}</button>`).join("");
+  $("f-time").innerHTML=[[15,"15 min"],[30,"30 min"],[60,"1 time"],[0,"Hele dagen"]].map(([v,l])=>`<button class="pill" aria-pressed="${maxMin===v}" data-time="${v}">${l}</button>`).join("");
+}
+function rowHTML(t,kind){
+  let extra="";
+  if(kind==="ready"){const l=lateDays(t); if(l>0) extra=`<span class="chip late tnum">${l} ${l===1?"dag":"dage"} over</span>`;}
+  if(kind==="later"){const d=dueIn(t); extra=`<span class="chip tnum">om ${d} ${d===1?"dag":"dage"}</span>`;}
+  const isDone=kind==="done";
+  const more=open===t.id?`<div class="more"><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
+    ${isDone?`<button class="del" style="color:var(--ink)" data-act="undo" data-id="${t.id}">Fortryd</button>`:""}</div>`:"";
+  return `<div class="row ${isDone?"done":""}">
+    <button class="check" data-act="${isDone?"undo":"done"}" data-id="${t.id}" aria-label="${isDone?"Marker som ikke gjort":"Marker som gjort"}: ${esc(t.title)}">${isDone?'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':""}</button>
+    <div class="body"><button class="t" data-act="open" data-id="${t.id}">${esc(t.title)}</button>
+      <div class="chips">${chipsFor(t,extra)}</div>${more}</div></div>`;
+}
+function groupByArea(list,kind){
+  const by={};list.forEach(t=>(by[t.area]??=[]).push(t));
+  const order=[...AREAS,...Object.keys(by).filter(a=>!AREAS.includes(a))];
+  return order.filter(a=>by[a]).map(a=>{
+    const items=by[a].sort((x,y)=>(lateDays(y)-lateDays(x))||(x.min-y.min));
+    const mins=items.reduce((s,t)=>s+t.min,0);
+    return `<div class="area"><h3>${esc(a)}<span class="tnum">${items.length} · ${fmtMin(mins)}</span></h3><div class="rows">${items.map(t=>rowHTML(t,kind)).join("")}</div></div>`;
+  }).join("");
+}
+function render(){
+  const ready=tasks.filter(isReady), later=tasks.filter(isLater), done=tasks.filter(isDoneList);
+  $("count").textContent=ready.length?`${ready.length} at gøre · ca. ${fmtMin(ready.reduce((s,t)=>s+t.min,0))}`:"";
+  renderHero(); renderFilters();
+  $("ready").innerHTML = ready.length
+    ? `<div class="sec-h"><h2>Alle opgaver</h2></div><div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">${groupByArea(ready,"ready")}</div>`
+    : `<div class="empty">Ingen åbne opgaver. Tilføj en ovenfor.</div>`;
+  $("later").innerHTML = later.length
+    ? `<div class="sec-h"><h2>Senere</h2><button class="toggle" data-act="toggleLater">${showLater?"Skjul":"Vis "+later.length}</button></div>${showLater?`<div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">${groupByArea(later,"later")}</div>`:""}`:"";
+  $("doneSec").innerHTML = done.length
+    ? `<div class="sec-h"><h2>Gjort</h2><button class="toggle" data-act="toggleDone">${showDone?"Skjul":"Vis "+done.length}</button></div>${showDone?`<div class="rows" style="margin-top:10px">${done.map(t=>rowHTML(t,"done")).join("")}</div>`:""}`:"";
+}
+
+/* ---- actions ---- */
+const byId=id=>tasks.find(t=>t.id===id);
+function patch(id,p){const t=byId(id);if(!t)return;Object.assign(t,p);render();store&&store.save(t)}
+function markDone(id){const t=byId(id);if(!t)return;skip=0;patch(id,{done:!isRecurring(t),lastDone:today()})}
+function undo(id){const t=byId(id);if(!t)return;patch(id,{done:false,lastDone:null})}
+
+document.addEventListener("click",e=>{
+  const el=e.target.closest("button");if(!el)return;
+  const {act,id}=el.dataset;
+  if(el.dataset.energy){energy=+el.dataset.energy;skip=0;saveFilter();render();return}
+  if(el.dataset.time!=null&&el.dataset.time!==""&&el.closest("#f-time")){maxMin=+el.dataset.time;skip=0;saveFilter();render();return}
+  if(act==="done")markDone(id);
+  else if(act==="undo")undo(id);
+  else if(act==="skip"){skip++;render()}
+  else if(act==="open"){open=open===id?null:id;sureDel=null;render()}
+  else if(act==="del"){
+    if(sureDel===id){tasks=tasks.filter(t=>t.id!==id);open=sureDel=null;render();store&&store.remove(id)}
+    else{sureDel=id;render()}
+  }
+  else if(act==="toggleDone"){showDone=!showDone;render()}
+  else if(act==="toggleLater"){showLater=!showLater;render()}
+});
+
+$("aArea").innerHTML=AREAS.map(a=>`<option>${esc(a)}</option>`).join("");
+$("addForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const title=$("aTitle").value.trim();if(!title)return;
+  const id=crypto.randomUUID();
+  const t={id,title,area:$("aArea").value,min:+$("aMin").value,energy:+$("aEnergy").value,repeat:+$("aRepeat").value,lastDone:null,done:false};
+  tasks.push(t);$("aTitle").value="";render();store&&store.save(t);
+});
+
+/* ---- lager: Supabase-tabellen praktisk_tasks (login via auth.js) ---- */
+const SB="https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/praktisk_tasks";
+const KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
+const HEAD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
+const dayToISO=n=>{const d=new Date(n*864e5);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")};
+const isoToDay=s=>{if(!s)return null;const [y,m,d]=s.split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
+const toRow=t=>({id:t.id,title:t.title,area:t.area,minutes:t.min,energy:t.energy,repeat_days:t.repeat,last_done:t.lastDone==null?null:dayToISO(t.lastDone),done:!!t.done});
+const fromRow=r=>({id:r.id,title:r.title,area:r.area,min:r.minutes,energy:r.energy,repeat:r.repeat_days,lastDone:isoToDay(r.last_done),done:r.done});
+const say=m=>{$("status").textContent=m};
+async function req(url,opt){const r=await fetch(url,opt);if(!r.ok)throw new Error(r.status+" "+(await r.text()));return r}
+store={
+  save:t=>req(SB+"?on_conflict=id",{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(toRow(t))}).catch(e=>say("Kunne ikke gemme: "+e.message)),
+  remove:id=>req(SB+"?id=eq."+id,{method:"DELETE",headers:HEAD}).catch(e=>say("Kunne ikke slette: "+e.message))
+};
+async function start(){
+  render();
+  try{
+    const r=await req(SB+"?select=*&order=created_at.asc&limit=1000",{headers:HEAD});
+    tasks=(await r.json()).map(fromRow);say("");
+  }catch(e){say("Kunne ikke hente opgaver: "+e.message)}
+  render();
+}
+start();
+</script>
+</body>
+</html>
