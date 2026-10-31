@@ -47,13 +47,22 @@
     var p = fmt.format(new Date(ts)).split(":"), h = +p[0] + (+p[1]) / 60;
     return h < 12 ? h + 24 : h;
   }
-  async function get(t, qs) { var r = await fetch(REST + t + qs, { headers: { apikey: KEY, Authorization: "Bearer " + KEY } }); if (!r.ok) throw new Error(t + " " + r.status); return r.json(); }
+  async function get(t, qs) {
+    var P = 1000, all = [];
+    for (var o = 0; ; o += P) {
+      var r = await fetch(REST + t + qs + "&limit=" + P + "&offset=" + o, { headers: { apikey: KEY, Authorization: "Bearer " + KEY } });
+      if (!r.ok) throw new Error(t + " " + r.status);
+      var j = await r.json();
+      all = all.concat(j);
+      if (j.length < P) return all;
+    }
+  }
 
   async function load() {
     var res = await Promise.all([
-      get("garmin_daily", "?select=log_date,sleep_start,sleep_secs,deep_secs,sleep_score,hrv_last_night,resting_hr,steps,stress_avg,bb_wake&order=log_date.asc&limit=2000"),
-      get("weighins", "?select=log_date,weight_kg&order=log_date.asc&limit=3000").catch(function () { return []; }),
-      get("garmin_activities", "?select=log_date,distance_m,training_load,type&type=in.(running,treadmill_running)&limit=3000").catch(function () { return []; })
+      get("garmin_daily", "?select=log_date,sleep_start,sleep_secs,deep_secs,sleep_score,hrv_last_night,resting_hr,steps,stress_avg,bb_wake&order=log_date.asc"),
+      get("weighins", "?select=log_date,weight_kg&order=log_date.asc,moment.asc").catch(function () { return []; }),
+      get("garmin_activities", "?select=log_date,distance_m,training_load,type&type=in.(running,treadmill_running)&order=activity_id.asc").catch(function () { return []; })
     ]);
     var days = {};
     res[0].forEach(function (g) {

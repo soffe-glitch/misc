@@ -238,7 +238,7 @@ const kg=n=>num(n,1)+" kg";
 const gram=n=>Math.round(n).toLocaleString("da-DK")+" g";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-async function apiGet(t,qs=""){const r=await fetch(REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
+async function apiGet(t,qs=""){const P=/[?&]limit=/.test(qs)?0:1000,U=REST+t+qs+(qs?"&":"?");let all=[];for(let o=0;;o+=P){const r=await fetch(P?U+"limit="+P+"&offset="+o:REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));const j=await r.json();all=all.concat(j);if(!P||j.length<P)return all;}}
 async function apiUpsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="+oc):""),{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 async function apiInsert(t,body){const r=await fetch(REST+t,{method:"POST",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 
@@ -247,7 +247,7 @@ let S={settings:null,weighins:[],nutrition:[],workouts:[]};
 async function loadAll(){
   const [settings,weighins,nutrition,workouts]=await Promise.all([
     apiGet("settings","?select=*&limit=1"),
-    apiGet("weighins","?select=*&order=log_date.asc"),
+    apiGet("weighins","?select=*&order=log_date.asc,moment.asc"),
     apiGet("nutrition","?select=*&order=log_date.asc"),
     apiGet("workouts","?select=*&order=log_date.desc")
   ]);
@@ -559,7 +559,7 @@ function render(){
 async function reloadData(){
   const [wk,wg]=await Promise.all([
     apiGet("workouts","?select=*&order=log_date.desc"),
-    apiGet("weighins","?select=*&order=log_date.asc")
+    apiGet("weighins","?select=*&order=log_date.asc,moment.asc")
   ]);
   S.workouts=wk.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
   S.weighins=wg.map(w=>({...w,weight_kg:+w.weight_kg}));
