@@ -569,6 +569,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 
   <!-- SAMMENHÆNGE -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge — hvorfor</div>
+  <div class="card" id="hypoCard" style="margin-bottom:14px"></div>
   <div class="card" id="insights"></div>
   </div><!-- /viewLiv -->
 
@@ -1123,6 +1124,7 @@ function render(){
   // --- coach + insights ---
   coach();
   insights();
+  hypotheses();
   $("#foot").textContent="Sidst opdateret "+now.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
 }
 
@@ -1413,6 +1415,10 @@ function dayExtras(t){
     if(m.length&&l.length) o.energi_morgen_vs_senere_i_dag=[+avg(m.map(c=>c.energy)).toFixed(1),+avg(l.map(c=>c.energy)).toFixed(1)];
   }catch(e){}
   try{
+    const hy=hypoTests().filter(r=>r.status==="tydelig"||r.status==="antydning").map(r=>({spoergsmaal:r.q,styrke:r.status,[r.expLabel]:r.m1,[r.ctlLabel]:r.m2,dage:[r.n1,r.n2]}));
+    if(hy.length) o.egne_hypoteser_antydninger=hy;
+  }catch(e){}
+  try{
     const hb=hrvBaseline(t);
     if(hb) o.hrv_personlig_baseline={...hb,note:"Normalområde = 25.-75. percentil af dine seneste 60 nætter. Sammenlign med dig selv, ikke et fast tal."};
     const s14=sleepRhythm(t,14), s60=sleepRhythm(t,60);
@@ -1695,6 +1701,49 @@ function insights(){
     `<p class="hint" style="margin:10px 0 0">Sammenfald i dine egne data de seneste 120 dage — ikke bevis. Opdateres automatisk, jo mere du logger.</p>`;
 }
 
+// ---------- Ugens hypoteser: dine egne spørgsmål testet mod dine egne data ----------
+function hypoTests(){
+  const t=todayISO(), from=addDays(t,-120), inW=d=>d>=from&&d<=t;
+  const gar={}; (S.garmin||[]).forEach(g=>gar[g.log_date]=g);
+  const add=(m,k,v)=>{(m[k]=m[k]||[]).push(v);};
+  const eAll={},eLater={};
+  S.checkins.forEach(c=>{const v=c.energy??c.mood; if(v==null)return; add(eAll,c.log_date,v); if(c.slot!=="morgen") add(eLater,c.log_date,v);});
+  const mv=(m,d)=>m[d]?avg(m[d]):null;
+  const ctx={}; (S.ctx||[]).forEach(c=>ctx[c.log_date]=c);
+  const km={}; S.workouts.filter(w=>w.kind==="loeb").forEach(w=>{km[w.log_date]=(km[w.log_date]||0)+(+w.distance_km||0);});
+  const D=S.daily.filter(d=>inW(d.log_date)), logged=D.filter(d=>d.late_coffee!=null);
+  const e1=v=>fmt(v,1)+"/5";
+  const tests=[
+    {id:"kaffe",q:"Sover du kortere natten efter kaffe efter kl. 14?",rows:logged,exp:d=>d.late_coffee===true,out:d=>{const g=gar[addDays(d.log_date,1)];return g&&g.sleep_h!=null?g.sleep_h:null;},f:hhmm,what:"søvn",expLabel:"med sen kaffe",ctlLabel:"uden"},
+    {id:"komm",q:"Er energien lavere dagen efter høj kommunikation (4-5)?",rows:D.filter(d=>d.comm_load!=null),exp:d=>d.comm_load>=4,out:d=>mv(eAll,addDays(d.log_date,1)),f:e1,what:"energi dagen efter",expLabel:"efter høj",ctlLabel:"efter lav"},
+    {id:"ude",q:"Er eftermiddags-energien højere på dage med tid ude?",rows:logged,exp:d=>(d.gave_energy||[]).includes("ude"),out:d=>mv(eLater,d.log_date),f:e1,what:"eftermiddags-energi",expLabel:"med ude",ctlLabel:"uden"},
+    {id:"social",q:"Er eftermiddags-energien højere på dage med noget socialt?",rows:logged,exp:d=>(d.gave_energy||[]).includes("social"),out:d=>mv(eLater,d.log_date),f:e1,what:"eftermiddags-energi",expLabel:"med social",ctlLabel:"uden"},
+    {id:"loeb",q:"Er eftermiddags-energien højere efter et løb på mindst 3 km?",rows:Object.keys(eLater).filter(inW).map(d=>({log_date:d})),exp:d=>(km[d.log_date]||0)>=3,out:d=>mv(eLater,d.log_date),f:e1,what:"eftermiddags-energi",expLabel:"løbedage",ctlLabel:"øvrige"},
+    {id:"soevn",q:"Er energien lavere efter en nat under 6,5 timers søvn?",rows:Object.keys(eAll).filter(inW).map(d=>({log_date:d})),exp:d=>gar[d.log_date]&&gar[d.log_date].sleep_h!=null&&gar[d.log_date].sleep_h<6.5,out:d=>gar[d.log_date]&&gar[d.log_date].sleep_h!=null?mv(eAll,d.log_date):null,f:e1,what:"energi",expLabel:"efter kort nat",ctlLabel:"øvrige"},
+    {id:"sol",q:"Er energien højere på dage med mindst 2 timers solskin?",rows:Object.keys(eAll).filter(inW).map(d=>({log_date:d})),exp:d=>ctx[d.log_date]&&(ctx[d.log_date].sunshine_min||0)>=120,out:d=>ctx[d.log_date]?mv(eAll,d.log_date):null,f:e1,what:"energi",expLabel:"solrige dage",ctlLabel:"øvrige"}
+  ];
+  return tests.map(h=>{
+    const A=[],B=[]; h.rows.forEach(r=>{const v=h.out(r); if(v==null||isNaN(v))return; (h.exp(r)?A:B).push(v);});
+    const n1=A.length,n2=B.length, res={id:h.id,q:h.q,n1,n2,expLabel:h.expLabel,ctlLabel:h.ctlLabel,what:h.what};
+    if(n1<4||n2<4){ res.status="for-faa"; res.mangler=Math.max(0,4-n1)+" med / "+Math.max(0,4-n2)+" uden"; return res; }
+    const m1=avg(A),m2=avg(B), sp=Math.sqrt(((n1-1)*Math.pow(sdev(A),2)+(n2-1)*Math.pow(sdev(B),2))/(n1+n2-2))||1, d=(m1-m2)/sp;
+    res.m1=h.f(m1); res.m2=h.f(m2); res.d=+d.toFixed(2); res.retning=d>0?"højere":"lavere";
+    res.status=(Math.abs(d)>=0.8&&n1>=6&&n2>=6)?"tydelig":(Math.abs(d)>=0.5?"antydning":"ingen");
+    return res;
+  });
+}
+function hypotheses(){
+  const el=$("#hypoCard"); if(!el) return;
+  const R=hypoTests();
+  const badge={tydelig:["● Tydelig forskel","var(--good)"],antydning:["◐ Antydning","var(--warn)"],ingen:["○ Ingen tydelig forskel","var(--muted)"],"for-faa":["… For få dage endnu","var(--muted)"]};
+  el.innerHTML=`<div class="ch"><h2>Ugens hypoteser</h2><span class="hint">dine egne data · 120 dage</span></div>`+
+    R.map(r=>{const b=badge[r.status];
+      const body=r.status==="for-faa"?`${r.n1} dage ${r.expLabel}, ${r.n2} ${r.ctlLabel}. Mangler ca. ${r.mangler}.`
+        :`${r.expLabel}: <b>${r.m1}</b> (${r.n1} dage) mod ${r.ctlLabel}: <b>${r.m2}</b> (${r.n2} dage).`;
+      return `<div class="insight"><div><b>${r.q}</b><p><span style="color:${b[1]};font-weight:600">${b[0]}</span> · ${body}</p></div></div>`;}).join("")+
+    `<p class="hint" style="margin:10px 0 0">Sammenfald i få dage — ikke bevis. En forskel kan skyldes noget helt andet (fx at fridage både er solrige og hviler). Jo flere dage du logger, jo mere troværdigt.</p>`;
+}
+
 // ---------- weather (open-meteo, ingen nøgle) ----------
 async function weather(){
   try{
@@ -1820,7 +1869,7 @@ async function submitDaily(){
   const btn=$("#dailyBtn");btn.disabled=true;setNote("#noteDaily","Gemmer…");
   // tom alkohol-rubrik = 0 (hvis dagen ikke allerede har en værdi); øvrige felter overskrives ikke med tomt
   const body={log_date:todayISO(),day_type:dt||ex.day_type||null,comm_load:cl?+cl:(ex.comm_load??null),work_load:wk?+wk:(ex.work_load??null),
-    alcohol_units:al!==""?+al:(ex.alcohol_units!=null?+ex.alcohol_units:0),updated_at:new Date().toISOString()};
+    alcohol_units:al!==""?+al:(ex.alcohol_units!=null?+ex.alcohol_units:0),late_coffee:ex.late_coffee===true,updated_at:new Date().toISOString()};
   try{const row=(await upsert("daily_log",body,"log_date"))[0];
     const i=S.daily.findIndex(d=>d.log_date===row.log_date);if(i>=0)S.daily[i]=row;else S.daily.push(row);
     setNote("#noteDaily","Gemt ✓","ok");render();
