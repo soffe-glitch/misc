@@ -730,9 +730,9 @@ async function loadAll(){
   rebuildEventViews();
   try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
   syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
-  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
+  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_start,sleep_end,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
-               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake})); }catch(e){ S.garmin=[]; }
+               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end})); }catch(e){ S.garmin=[]; }
   try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
   try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
   S.settings=settings[0];
@@ -912,6 +912,35 @@ function readingSeries(nDays){
 }
 
 // ---------- status-række (øverst) ----------
+// ---------- søvnrytme + personlig HRV-baseline (beregnet på Garmin-data) ----------
+function cphMinutes(ts){const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date(ts));
+  return (+p.find(x=>x.type==="hour").value%24)*60+ +p.find(x=>x.type==="minute").value;}
+function sdev(a){if(a.length<3)return null;const m=a.reduce((s,x)=>s+x,0)/a.length;return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1));}
+// regelmæssighed = spredning (standardafvigelse, minutter) i sengetid og opvågning; weekend-forskydning = social jetlag
+function sleepRhythm(t,days){
+  const from=addDays(t,-days);
+  const rows=(S.garmin||[]).filter(g=>g.bed_ts&&g.wake_ts&&g.log_date>from&&g.log_date<=t).map(g=>{
+    let bed=cphMinutes(g.bed_ts); if(bed<12*60) bed+=1440;
+    const wake=cphMinutes(g.wake_ts), dur=(new Date(g.wake_ts)-new Date(g.bed_ts))/60000, wd=parseD(g.log_date).getDay();
+    return {bed,wake,mid:bed+dur/2,free:(wd===0||wd===6)};
+  });
+  if(rows.length<5) return null;
+  const free=rows.filter(r=>r.free), work=rows.filter(r=>!r.free);
+  return {n:rows.length,bedSd:sdev(rows.map(r=>r.bed)),wakeSd:sdev(rows.map(r=>r.wake)),
+    sjl:(free.length>=2&&work.length>=3)?Math.abs(avg(free.map(r=>r.mid))-avg(work.map(r=>r.mid))):null};
+}
+// dit eget normalområde: 25.-75. percentil af de seneste 60 nætter (uden i nat)
+function hrvBaseline(t){
+  const G=(S.garmin||[]).filter(g=>g.hrv!=null);
+  const prev=G.filter(g=>g.log_date<t&&g.log_date>=addDays(t,-60)).map(g=>g.hrv).sort((a,b)=>a-b);
+  if(prev.length<21) return null;
+  const q=p=>{const i=(prev.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return prev[lo]+(prev[hi]-prev[lo])*(i-lo);};
+  const lo=q(.25),hi=q(.75),med=q(.5), st=v=>v<lo?"under":v>hi?"over":"inden for";
+  const last=G.filter(g=>g.log_date<=t).slice(-1)[0], w7=G.filter(g=>g.log_date<=t&&g.log_date>addDays(t,-7)).map(g=>g.hrv);
+  return {median:Math.round(med),lo:Math.round(lo),hi:Math.round(hi),n:prev.length,
+    i_nat:last?last.hrv:null,i_nat_dato:last?last.log_date:null,status_nat:last?st(last.hrv):null,
+    snit7:w7.length>=3?Math.round(avg(w7)):null,status7:w7.length>=3?st(avg(w7)):null};
+}
 function statusRow(){
   const el=$("#statusRow"); if(!el) return;
   const s=S.settings,t=todayISO(),M=morning(),chips=[];
@@ -931,9 +960,15 @@ function statusRow(){
   if(wl&&wl.sleep_hours!=null){const a=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));
     chip("Søvn",hhmm(wl.sleep_hours),"snit "+hhmm(a),wl.sleep_hours>=7?"good":"warn");
   } else chip("Søvn","—","");
-  if(wl&&wl.hrv!=null){const a=avg(S.wellness.slice(-14).map(w=>w.hrv).filter(x=>x!=null)),low=a&&wl.hrv<a-4;
+  const hb=hrvBaseline(t);
+  if(hb&&hb.i_nat!=null){
+    chip("HRV",hb.i_nat+"<small> ms</small>",hb.status_nat==="under"?"under dit normale ("+hb.lo+"–"+hb.hi+")":hb.status_nat==="over"?"over dit normale ("+hb.lo+"–"+hb.hi+")":"dit normale "+hb.lo+"–"+hb.hi,hb.status_nat==="under"?"warn":"good");
+  } else if(wl&&wl.hrv!=null){const a=avg(S.wellness.slice(-14).map(w=>w.hrv).filter(x=>x!=null)),low=a&&wl.hrv<a-4;
     chip("HRV",wl.hrv+"<small> ms</small>","snit "+fmt(a,0)+(low?" · lav":""),low?"warn":"good");
   } else chip("HRV","—","");
+  const sr=sleepRhythm(t,14);
+  if(sr) chip("Søvnrytme","±"+Math.round(sr.wakeSd)+"<small> min</small>","sengetid ±"+Math.round(sr.bedSd)+(sr.sjl!=null?" · weekend "+Math.round(sr.sjl)+" min":""),(sr.wakeSd<=45&&sr.bedSd<=60)?"good":(sr.wakeSd>75||sr.bedSd>90)?"warn":"");
+  else chip("Søvnrytme","—","for få nætter");
   // løbestreak
   const cur=S._streakCur||0,ran=!!S._ranToday;
   chip("Streak",cur+"<small> dage</small>",ran?"løbet i dag ✓":(cur?"løb i dag holder kæden":"start i morgen"),ran?"good":(cur?"warn":""));
@@ -1376,6 +1411,14 @@ function dayExtras(t){
     const td=S.checkins.filter(c=>c.log_date===t&&c.energy!=null);
     const m=td.filter(c=>c.slot==="morgen"), l=td.filter(c=>c.slot!=="morgen");
     if(m.length&&l.length) o.energi_morgen_vs_senere_i_dag=[+avg(m.map(c=>c.energy)).toFixed(1),+avg(l.map(c=>c.energy)).toFixed(1)];
+  }catch(e){}
+  try{
+    const hb=hrvBaseline(t);
+    if(hb) o.hrv_personlig_baseline={...hb,note:"Normalområde = 25.-75. percentil af dine seneste 60 nætter. Sammenlign med dig selv, ikke et fast tal."};
+    const s14=sleepRhythm(t,14), s60=sleepRhythm(t,60);
+    if(s14) o.soevn_regelmaessighed={sengetid_spredning_min_14d:Math.round(s14.bedSd),opvaagning_spredning_min_14d:Math.round(s14.wakeSd),
+      weekend_forskydning_min_14d:s14.sjl==null?null:Math.round(s14.sjl),normalt_sengetid_spredning_min_60d:s60?Math.round(s60.bedSd):null,
+      note:"Spredning (standardafvigelse) af tidspunkter; lavere = mere regelmæssig søvnrytme. Uregelmæssighed hænger i forskning sammen med dårligere humør uafhængigt af søvnlængde."};
   }catch(e){}
   return o;
 }
