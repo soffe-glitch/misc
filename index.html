@@ -1266,7 +1266,7 @@ async function logEnergiQuick(v){
   const seg=$("#energiQuickSeg"); if(!seg) return;
   seg.querySelectorAll("button").forEach(b=>{b.disabled=true;b.classList.toggle("sel",b.dataset.v===String(v));});
   try{
-    const row=(await insert("checkins",{log_date:todayISO(),energy:v,mood:v,note:null}))[0];
+    const row=(await insert("checkins",{log_date:todayISO(),energy:v,note:null}))[0];
     S.checkins.push(row); render();
   }catch(e){
     $("#energiCheckMsg").textContent="Kunne ikke gemme: "+e.message;
@@ -1321,6 +1321,17 @@ function dayExtras(t){
   const md=S.meds.find(m=>m.log_date===t)||{}; o.eltroxin_i_dag={morgen:!!md.morning,aften:!!md.evening};
   const ci=S.checkins.filter(c=>c.log_date===t&&(c.energy||c.mood)); if(ci.length) o.energi_checkin_i_dag_1til5=+avg(ci.map(c=>c.energy||c.mood)).toFixed(1);
   const dl=S.daily.find(d=>d.log_date===t)||{}; if(dl.work_load!=null) o.arbejdsbelastning_i_dag_1til5=+dl.work_load;
+  if(dl.comm_load!=null) o.kommunikation_i_dag_1til5=+dl.comm_load;
+  // egen sammenhæng: energi dagen EFTER høj vs. lav kommunikationsbelastning (kun når der er nok dage)
+  try{
+    const dy=S.daily.find(d=>d.log_date===addDays(t,-1))||{};
+    if(dy.comm_load!=null) o.kommunikation_i_gaar_1til5=+dy.comm_load;
+    const eBy={}; S.checkins.forEach(c=>{const v=c.energy||c.mood; if(v==null)return; (eBy[c.log_date]=eBy[c.log_date]||[]).push(v);});
+    const hi=[],lo=[];
+    S.daily.forEach(d=>{ if(d.comm_load==null||!eBy[addDays(d.log_date,1)]) return; (d.comm_load>=4?hi:lo).push(avg(eBy[addDays(d.log_date,1)])); });
+    if(hi.length>=3&&lo.length>=3) o.energi_dagen_efter_kommunikation={efter_hoej_4til5:+avg(hi).toFixed(1),efter_lav_1til3:+avg(lo).toFixed(1),antal_dage:[hi.length,lo.length],
+      note:"Gennemsnitlig energi (1-5) dagen efter. Få dage — fortolk forsigtigt og kun hvis forskellen er tydelig."};
+  }catch(e){}
   return o;
 }
 function smokePayload(t){
@@ -1699,7 +1710,7 @@ async function submitCheckin(){
   const note=$("#checkinNote").value.trim();const mv=segVal("moodSeg");
   if(!note&&!mv){setNote("#noteCheckin","Skriv lidt eller vælg et tal.","err");return;}
   const btn=$("#checkinBtn");btn.disabled=true;setNote("#noteCheckin","Gemmer…");
-  try{const row=(await insert("checkins",{log_date:todayISO(),energy:mv?+mv:null,mood:mv?+mv:null,note:note||null}))[0];
+  try{const row=(await insert("checkins",{log_date:todayISO(),energy:mv?+mv:null,note:note||null}))[0];
     S.checkins.push(row);$("#checkinNote").value="";segReset("moodSeg");setNote("#noteCheckin","Logget ✓","ok");render();
   }catch(e){setNote("#noteCheckin","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
