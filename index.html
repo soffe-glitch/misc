@@ -364,6 +364,15 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="field"><label>Alkohol <span class="hint">(genstande · tom = 0)</span></label>
         <input class="inp" id="alcInp" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
       </div>
+      <div class="field"><label>Koffein</label>
+        <button type="button" class="btn" id="coffeeBtn" style="width:100%">☕ Kaffe efter kl. 14</button>
+      </div>
+      <div class="field"><label>Hvad gav energi i dag? <span class="hint">(tryk, gemmes med det samme)</span></label>
+        <div class="seg multi" id="gaveSeg" style="flex-wrap:wrap">
+          <button type="button" data-v="ude">Ude</button><button type="button" data-v="social">Social</button>
+          <button type="button" data-v="strik">Strik</button><button type="button" data-v="hvile">Hvile</button>
+        </div>
+      </div>
       <button class="pbtn" id="dailyBtn" style="background:var(--energi);width:100%;margin-top:10px">Gem</button>
       <div class="note" id="noteDaily"></div>
     </div>
@@ -667,7 +676,7 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(){const r=await fetch(BOOKS_FN);if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],taskLog:[],events:[],naps:[],sickDays:[],slips:[],quits:[],garmin:[],gacts:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],taskLog:[],ctx:[],events:[],naps:[],sickDays:[],slips:[],quits:[],garmin:[],gacts:[]};
 
 // hændelser (events) fordelt på typer
 function rebuildEventViews(){
@@ -676,6 +685,27 @@ function rebuildEventViews(){
   S.migraines=E.filter(e=>e.kind==="migraene");
   S.slips=E.filter(e=>e.kind==="rygeslip");
   S.quits=E.filter(e=>e.kind==="rygestop");
+}
+
+// vejr og dagslys gemmes pr. dag (Open-Meteo, København) så de kan sammenlignes med søvn, energi og løb
+async function syncContext(){
+  try{
+    const V="temperature_2m_mean,temperature_2m_min,temperature_2m_max,precipitation_sum,cloud_cover_mean,daylight_duration,sunshine_duration";
+    const need=S.ctx.length<300;
+    const url=need
+      ?"https://archive-api.open-meteo.com/v1/archive?latitude=55.68&longitude=12.57&start_date=2024-03-01&end_date="+addDays(todayISO(),-2)+"&daily="+V+"&timezone=Europe%2FCopenhagen"
+      :"https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&daily="+V+"&past_days=2&forecast_days=1&timezone=Europe%2FCopenhagen";
+    const send=async j=>{
+      const d=j&&j.daily; if(!d||!d.time) return;
+      const rows=d.time.map((day,i)=>({log_date:day,temp_mean:d.temperature_2m_mean[i],temp_min:d.temperature_2m_min[i],temp_max:d.temperature_2m_max[i],
+        precip_mm:d.precipitation_sum[i],cloud_pct:d.cloud_cover_mean[i]==null?null:Math.round(d.cloud_cover_mean[i]),
+        daylight_min:d.daylight_duration[i]==null?null:Math.round(d.daylight_duration[i]/60),sunshine_min:d.sunshine_duration[i]==null?null:Math.round(d.sunshine_duration[i]/60)}));
+      await upsert("daily_context",rows,"log_date");
+      rows.forEach(r=>{const i=S.ctx.findIndex(x=>x.log_date===r.log_date); if(i>=0)S.ctx[i]=r; else S.ctx.push(r);});
+    };
+    await send(await (await fetch(url)).json());
+    if(need){ await send(await (await fetch("https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&daily="+V+"&past_days=2&forecast_days=1&timezone=Europe%2FCopenhagen")).json()); }
+  }catch(e){}
 }
 
 async function loadAll(){
@@ -698,6 +728,8 @@ async function loadAll(){
   try{ S.naps=await get("naps","?select=*&order=ts.asc"); }catch(e){ S.naps=[]; }
   try{ S.events=await get("events","?select=*&order=log_date.asc,created_at.asc"); }catch(e){ S.events=[]; }
   rebuildEventViews();
+  try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
+  syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
   try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
                rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake})); }catch(e){ S.garmin=[]; }
@@ -1020,6 +1052,7 @@ function render(){
   renderChores();
   praktiskSpark();
   statusRow();
+  paintDayExtras();
 
   // --- restitution ---
   if(wl){
@@ -1234,28 +1267,31 @@ function energiReaction(e){
   if(e===3) return "Middel dag. Løbet er i hus, så resten er ren bonus.";
   return "Frisk! Godt fundament lagt — dagen er din.";
 }
+function slotNow(){const h=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Copenhagen",hour:"2-digit",hour12:false}).format(new Date())%24;return h<12?"morgen":h<17?"eftermiddag":"aften";}
+// energi måles to gange om dagen: morgen (efter løbet) og "senere" (fra kl. 12)
 function energiCheck(){
   const card=$("#energiCheckCard"); if(!card) return;
-  const t=todayISO();
+  const t=todayISO(), g=slotNow()==="morgen"?"morgen":"senere";
+  const grp=c=>c.slot==="morgen"?"morgen":"senere";
   const withVal=S.checkins.filter(c=>c.energy!=null||c.mood!=null);
-  const todayCheck=withVal.filter(c=>c.log_date===t);
+  const mine=withVal.filter(c=>c.log_date===t&&grp(c)===g);
   const seg=$("#energiQuickSeg");
-  if(todayCheck.length){
-    const e=todayCheck[todayCheck.length-1].energy ?? todayCheck[todayCheck.length-1].mood;
+  if(mine.length){
+    const e=mine[mine.length-1].energy ?? mine[mine.length-1].mood;
     card.style.display="block"; seg.style.display="none";
-    $("#energiCheckTitle").textContent="Tjekket ind i dag ✓";
+    $("#energiCheckTitle").textContent=g==="morgen"?"Morgen-tjek ✓":"Eftermiddags-tjek ✓";
     $("#energiCheckSince").textContent="";
-    $("#energiCheckLead").innerHTML=`Energi <b>${e}/5</b> registreret. Vi ses i morgen efter løbet.`;
+    $("#energiCheckLead").innerHTML=`Energi <b>${e}/5</b> registreret. ${g==="morgen"?"Vi ses igen i eftermiddag.":"Vi ses i morgen efter løbet."}`;
     $("#energiCheckMsg").textContent=energiReaction(e);
     return;
   }
   seg.style.display="";
   const ranToday=S.workouts.some(w=>w.log_date===t&&w.kind==="loeb");
-  if(!ranToday){ card.style.display="none"; return; }   // anker: først efter løbet
+  if(g==="morgen"&&!ranToday){ card.style.display="none"; return; }   // morgen-anker: først efter løbet
   card.style.display="block";
   seg.querySelectorAll("button").forEach(b=>{b.disabled=false;b.classList.remove("sel");});
-  $("#energiCheckTitle").textContent="Hvordan er energien?";
-  $("#energiCheckLead").innerHTML="Du har løbet ✓ — ét tryk, så er du tjekket ind.";
+  $("#energiCheckTitle").textContent=g==="morgen"?"Hvordan er energien?":"Energi nu?";
+  $("#energiCheckLead").innerHTML=g==="morgen"?"Du har løbet ✓ — ét tryk, så er du tjekket ind.":"Ét tryk — hvordan er energien her på eftermiddagen?";
   $("#energiCheckMsg").textContent="";
   const dates=[...new Set(withVal.map(c=>c.log_date))].sort();
   const last=dates.length?dates[dates.length-1]:null;
@@ -1266,7 +1302,7 @@ async function logEnergiQuick(v){
   const seg=$("#energiQuickSeg"); if(!seg) return;
   seg.querySelectorAll("button").forEach(b=>{b.disabled=true;b.classList.toggle("sel",b.dataset.v===String(v));});
   try{
-    const row=(await insert("checkins",{log_date:todayISO(),energy:v,note:null}))[0];
+    const row=(await insert("checkins",{log_date:todayISO(),energy:v,slot:slotNow(),note:null}))[0];
     S.checkins.push(row); render();
   }catch(e){
     $("#energiCheckMsg").textContent="Kunne ikke gemme: "+e.message;
@@ -1332,7 +1368,28 @@ function dayExtras(t){
     if(hi.length>=3&&lo.length>=3) o.energi_dagen_efter_kommunikation={efter_hoej_4til5:+avg(hi).toFixed(1),efter_lav_1til3:+avg(lo).toFixed(1),antal_dage:[hi.length,lo.length],
       note:"Gennemsnitlig energi (1-5) dagen efter. Få dage — fortolk forsigtigt og kun hvis forskellen er tydelig."};
   }catch(e){}
+  try{
+    const cx=S.ctx.find(c=>c.log_date===t); if(cx){ o.dagslys_minutter_i_dag=cx.daylight_min; o.solskin_minutter_i_dag=cx.sunshine_min; }
+    const yd=S.daily.find(d=>d.log_date===addDays(t,-1))||{}; if(yd.late_coffee!=null) o.kaffe_efter_14_i_gaar=!!yd.late_coffee;
+    const gv={}; S.daily.filter(d=>d.log_date>=addDays(t,-14)&&d.gave_energy).forEach(d=>d.gave_energy.forEach(k=>gv[k]=(gv[k]||0)+1));
+    if(Object.keys(gv).length) o.gav_energi_antal_dage_seneste_14=gv;
+    const td=S.checkins.filter(c=>c.log_date===t&&c.energy!=null);
+    const m=td.filter(c=>c.slot==="morgen"), l=td.filter(c=>c.slot!=="morgen");
+    if(m.length&&l.length) o.energi_morgen_vs_senere_i_dag=[+avg(m.map(c=>c.energy)).toFixed(1),+avg(l.map(c=>c.energy)).toFixed(1)];
+  }catch(e){}
   return o;
+}
+function paintDayExtras(){
+  const d=S.daily.find(x=>x.log_date===todayISO())||{};
+  const cb=$("#coffeeBtn"); if(cb){ const on=!!d.late_coffee; cb.textContent=on?"☕ Kaffe efter kl. 14 ✓":"☕ Kaffe efter kl. 14"; cb.style.background=on?"var(--kost-soft)":""; cb.style.borderColor=on?"var(--kost)":""; }
+  const gs=$("#gaveSeg"); if(gs){ const set=new Set(d.gave_energy||[]); gs.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",set.has(b.dataset.v))); }
+}
+async function saveDayField(patch){
+  const t=todayISO();
+  try{ const row=(await upsert("daily_log",{log_date:t,...patch,updated_at:new Date().toISOString()},"log_date"))[0];
+    const i=S.daily.findIndex(x=>x.log_date===t); if(i>=0)S.daily[i]=row; else S.daily.push(row);
+    paintDayExtras();
+  }catch(e){ setNote("#noteDaily","Fejl: "+e.message,"err"); }
 }
 function smokePayload(t){
   try{
@@ -1710,7 +1767,7 @@ async function submitCheckin(){
   const note=$("#checkinNote").value.trim();const mv=segVal("moodSeg");
   if(!note&&!mv){setNote("#noteCheckin","Skriv lidt eller vælg et tal.","err");return;}
   const btn=$("#checkinBtn");btn.disabled=true;setNote("#noteCheckin","Gemmer…");
-  try{const row=(await insert("checkins",{log_date:todayISO(),energy:mv?+mv:null,note:note||null}))[0];
+  try{const row=(await insert("checkins",{log_date:todayISO(),energy:mv?+mv:null,slot:slotNow(),note:note||null}))[0];
     S.checkins.push(row);$("#checkinNote").value="";segReset("moodSeg");setNote("#noteCheckin","Logget ✓","ok");render();
   }catch(e){setNote("#noteCheckin","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
@@ -1790,6 +1847,11 @@ async function doSync(){
 ["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg","eKindSeg"].forEach(seg);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
+$("#coffeeBtn").onclick=()=>{const d=S.daily.find(x=>x.log_date===todayISO())||{};saveDayField({late_coffee:!d.late_coffee});};
+$("#gaveSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  const d=S.daily.find(x=>x.log_date===todayISO())||{}, set=new Set(d.gave_energy||[]);
+  if(set.has(b.dataset.v)) set.delete(b.dataset.v); else set.add(b.dataset.v);
+  saveDayField({gave_energy:[...set]});});
 $("#energiQuickSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>logEnergiQuick(+b.dataset.v));
 $("#napSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>saveNap(+b.dataset.v));
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
