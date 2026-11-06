@@ -361,7 +361,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
           <button type="button" data-v="5">5</button>
         </div>
       </div>
-      <div class="field"><label>Alkohol <span class="hint">(genstande)</span></label>
+      <div class="field"><label>Alkohol <span class="hint">(genstande · tom = 0)</span></label>
         <input class="inp" id="alcInp" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
       </div>
       <button class="pbtn" id="dailyBtn" style="background:var(--energi);width:100%;margin-top:10px">Gem</button>
@@ -370,14 +370,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 
     <div class="logcard card">
       <div class="ch"><h3>Praktisk</h3><span class="hint" id="choreCount">0 i dag</span></div>
-      <div class="seg" id="choreCad">
-        <button type="button" data-v="uge" class="sel">Uge</button>
-        <button type="button" data-v="maaned">Måned</button>
-      </div>
-      <button type="button" class="pbtn" id="choreRandom" style="background:var(--arb);width:100%;margin-top:8px">🎲 Foreslå en opgave</button>
-      <div id="choreSuggest"></div>
-      <div id="choreChips" class="chipwrap" style="margin-top:10px"></div>
-      <button type="button" class="editlink" id="choreEdit">Rediger opgaver</button>
+      <p class="hint" style="margin:0;line-height:1.5">Opgaver planlægges og krydses af i <b>Praktisk</b>-fanen. Hver udført opgave tæller med som overskud i energi-billedet.</p>
     </div>
 
     <div class="logcard card">
@@ -403,19 +396,10 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     </div>
 
     <div class="logcard card">
-      <div class="ch"><h3>Løbe-forhandling</h3><span class="hint">kun når du mærkede modstanden</span></div>
-      <p class="hint" style="margin:0 0 10px;line-height:1.5">Skulle du tale dig selv ud ad døren i dag? Registrér hvordan den endte — så kan vi se, hvornår forhandlingen holder op af sig selv.</p>
-      <div style="display:flex;gap:8px">
-        <button type="button" class="pbtn" id="negRan" style="flex:1;background:var(--good)">Løb alligevel ✓</button>
-        <button type="button" class="pbtn" id="negHome" style="flex:1;background:var(--bad)">Blev hjemme</button>
-      </div>
-      <div class="note" id="noteNeg"></div>
-    </div>
-
-    <div class="logcard card">
       <div class="ch"><h3>Hændelser</h3><span class="hint">sjældnere</span></div>
       <button type="button" class="pbtn" id="sickBtn" style="background:var(--kost);width:100%;margin-bottom:10px">🤒 Syg i dag</button>
       <button type="button" class="pbtn" id="migraineBtn" style="background:var(--warn);width:100%">+ Migræne-anfald</button>
+      <button type="button" class="btn" id="eventBtn" style="width:100%;margin-top:10px">+ Rejse · deadline · ny dosis</button>
       <button type="button" class="btn" id="labBtn2" style="width:100%;margin-top:10px">+ Blodprøve</button>
       <p class="hint" style="margin-top:12px">Vejning og mad logges i <b>Vægttab &amp; log</b>-fanen.</p>
     </div>
@@ -508,21 +492,6 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       </div>
     </div>
     <p class="hint" id="vaneNote" style="margin-top:10px"></p>
-    <div id="vaneNegWrap" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none">
-      <div class="ch" style="margin-bottom:8px"><h3>Forhandlingen</h3><span class="hint">modstanden mod at komme ud</span></div>
-      <div class="streakrow">
-        <div class="streaknum"><div class="v tnum" id="vaneNegWin" style="font-size:34px">—</div><div class="sub">vundet</div></div>
-        <div class="streakmeta">
-          <div><span id="vaneNeg14">—</span> <span class="hint">forhandlinger (14 d)</span></div>
-          <div><span id="vaneNegLast">—</span> <span class="hint">siden sidste</span></div>
-        </div>
-      </div>
-      <p class="hint" id="vaneNegNote" style="margin-top:8px"></p>
-    </div>
-    <div id="vaneFloor" style="display:none;margin-top:14px;border-radius:14px;padding:13px 15px;background:var(--accent-soft);border:1px solid var(--good)">
-      <div style="font-weight:700;font-size:14.5px" id="vaneFloorTitle">—</div>
-      <div class="hint" id="vaneFloorBody" style="margin-top:3px;line-height:1.5">—</div>
-    </div>
   </div>
   </div><div class="blk">
   <div class="grid lead">
@@ -608,84 +577,6 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   </footer>
 </div>
 
-<!-- rygestop: trang-knap + dialoger -->
-<button type="button" class="fab" id="cravFab" style="display:none">🌊 Trang</button>
-
-<div class="dialog" id="cravDialog"><div class="box">
-  <div id="cravForm">
-    <h3>Trang</h3>
-    <p class="hint" style="margin-bottom:6px">10 sekunder. Trangen går over — log den, så ser vi mønstret.</p>
-    <div class="field"><label>Situation</label>
-      <div class="seg" id="cSitSeg" data-val="" style="flex-wrap:wrap">
-        <button type="button" data-v="morgen">Morgen</button><button type="button" data-v="arbejde">Arbejde</button>
-        <button type="button" data-v="alkohol">Alkohol/socialt</button><button type="button" data-v="aften">Aften</button>
-        <button type="button" data-v="andet">Andet</button>
-      </div></div>
-    <div class="field"><label>Styrke</label>
-      <div class="seg" id="cIntSeg" data-val="">
-        <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button>
-      </div></div>
-    <div class="field"><label>Hvad gør jeg i stedet</label>
-      <div class="seg multi" id="cDidSeg" style="flex-wrap:wrap">
-        <button type="button" data-v="vand">Vand</button><button type="button" data-v="te">Te</button>
-        <button type="button" data-v="tyggegummi">Tyggegummi</button><button type="button" data-v="løb">Løb</button>
-        <button type="button" data-v="strik">Strik</button><button type="button" data-v="skrev til Claude">Skrev til Claude</button>
-        <button type="button" data-v="andet">Andet</button>
-      </div></div>
-    <div class="field"><label>Røg jeg?</label>
-      <div class="seg" id="cSmokedSeg" data-val="nej"><button type="button" data-v="nej" class="sel">Nej</button><button type="button" data-v="ja">Ja</button></div></div>
-    <div class="field" id="cSlipFields" style="display:none"><label>Hvor mange smøger?</label><input class="inp" id="cSlipCount" type="number" min="1" value="1" inputmode="numeric"></div>
-    <div class="field"><input class="inp" id="cNote" placeholder="Note (valgfri)"></div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" id="cravCancel" style="flex:1">Annullér</button>
-      <button class="pbtn" id="cravSave" style="flex:1;background:var(--accent);color:var(--bg)">Gem</button>
-    </div>
-    <div class="note" id="noteCrav"></div>
-  </div>
-  <div id="cravDone" style="display:none">
-    <h3 id="cravDoneTitle">Logget ✓</h3>
-    <div class="smokemsg" id="cravDoneMsg" style="margin-top:12px"></div>
-    <button class="pbtn" id="cravClose" style="background:var(--accent);color:var(--bg);width:100%;margin-top:16px">Luk</button>
-  </div>
-</div></div>
-
-<div class="dialog" id="slipDialog"><div class="box">
-  <h3>Log et slip</h3>
-  <p class="hint" style="margin-bottom:6px">Din røgfri-tid nulstilles ikke. Slippet logges separat, så vi kan lære af det.</p>
-  <div class="field"><label>Dato</label><input class="inp" id="sDate" type="date"></div>
-  <div class="field"><label>Situation</label>
-    <div class="seg" id="sSitSeg" data-val="" style="flex-wrap:wrap">
-      <button type="button" data-v="morgen">Morgen</button><button type="button" data-v="arbejde">Arbejde</button>
-      <button type="button" data-v="alkohol">Alkohol/socialt</button><button type="button" data-v="aften">Aften</button>
-      <button type="button" data-v="andet">Andet</button>
-    </div></div>
-  <div class="field"><label>Antal smøger</label><input class="inp" id="sCount" type="number" min="1" value="1" inputmode="numeric"></div>
-  <div class="field"><input class="inp" id="sNote" placeholder="Hvad udløste det?"></div>
-  <div style="display:flex;gap:8px;margin-top:14px">
-    <button class="btn" id="sCancel" style="flex:1">Annullér</button>
-    <button class="pbtn" id="sSave" style="flex:1;background:var(--kost)">Gem</button>
-  </div>
-  <div class="note" id="noteSlip"></div>
-</div></div>
-
-<div class="dialog" id="smokeCfgDialog"><div class="box">
-  <h3>Rygestop-indstillinger</h3>
-  <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="field"><label>Startdato</label><input class="inp" id="qDate" type="date"></div>
-    <div class="field"><label>Starttid</label><input class="inp" id="qTime" type="time" value="00:00"></div>
-  </div>
-  <div class="field"><label>Smøger om dagen før stop</label><input class="inp" id="qBase" type="number" min="1" step="0.5" inputmode="decimal"></div>
-  <div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="field"><label>Pris pr. pakke (kr.)</label><input class="inp" id="qPrice" type="number" min="0" step="0.5" inputmode="decimal"></div>
-    <div class="field"><label>Stk. pr. pakke</label><input class="inp" id="qPack" type="number" min="1" inputmode="numeric"></div>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:14px">
-    <button class="btn" id="qCancel" style="flex:1">Annullér</button>
-    <button class="pbtn" id="qSave" style="flex:1;background:var(--accent);color:var(--bg)">Gem</button>
-  </div>
-  <div class="note" id="noteQ"></div>
-</div></div>
-
 <!-- migræne-dialog -->
 <div class="dialog" id="mDialog"><div class="box">
   <h3>Migræne-anfald</h3>
@@ -727,24 +618,24 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <div class="note" id="noteL"></div>
 </div></div>
 
-<!-- rediger opgaver-dialog -->
-<div class="dialog" id="cDialog"><div class="box">
-  <h3>Rediger opgaver</h3>
-  <p class="hint" style="margin-bottom:6px">Ret navn, hvor tit (dage) den bør gøres, eller slet. Tilføj nye nederst.</p>
-  <div id="choreEditList" style="max-height:46vh;overflow:auto"></div>
-  <div class="field" style="margin-top:12px"><label>Tilføj opgave</label>
-    <input class="inp" id="cNewName" placeholder="Navn">
-    <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-      <div class="seg" id="cNewCad" data-val="uge" style="flex:1">
-        <button type="button" data-v="uge" class="sel">Uge</button>
-        <button type="button" data-v="maaned">Måned</button>
-      </div>
-      <input class="inp" id="cNewInt" type="number" min="1" style="width:74px" placeholder="dage">
-    </div>
-    <button type="button" class="pbtn" id="cAdd" style="background:var(--arb);width:100%;margin-top:8px">+ Tilføj opgave</button>
+<!-- hændelses-dialog -->
+<div class="dialog" id="eDialog"><div class="box">
+  <h3>Hændelse</h3>
+  <p class="hint" style="margin-bottom:6px">Datoer som alt andet kan sammenlignes med.</p>
+  <div class="field"><label>Type</label>
+    <div class="seg" id="eKindSeg" data-val="" style="flex-wrap:wrap">
+      <button type="button" data-v="rejse">Rejse</button><button type="button" data-v="deadline">Deadline</button><button type="button" data-v="dosis">Ny dosis</button>
+    </div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="field"><label>Dato</label><input class="inp" id="eDate" type="date"></div>
+    <div class="field"><label>Til <span class="hint">(valgfri)</span></label><input class="inp" id="eEnd" type="date"></div>
   </div>
-  <div style="display:flex;gap:8px;margin-top:14px"><button type="button" class="btn" id="cClose" style="flex:1">Luk</button></div>
-  <div class="note" id="noteC2"></div>
+  <div class="field"><input class="inp" id="eNote" placeholder="Note (fx Eltroxin 112,5 · Rom · aflevering)"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn" id="eCancel" style="flex:1">Annullér</button>
+    <button class="pbtn" id="eSave" style="flex:1;background:var(--krop)">Gem</button>
+  </div>
+  <div class="note" id="noteE"></div>
 </div></div>
 
 <script>
@@ -776,7 +667,16 @@ async function upsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="
 async function booksGet(){const r=await fetch(BOOKS_FN);if(!r.ok)throw new Error("books: "+r.status);return r.json();}
 
 // ---------- state ----------
-let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],chores:[],choreLog:[],negotiations:[],naps:[],sickDays:[],smokeCfg:null,cravings:[],slips:[],garmin:[],gacts:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],body:[],wellness:[],daily:[],checkins:[],migraines:[],meds:[],labs:[],books:[],planned:[],taskLog:[],events:[],naps:[],sickDays:[],slips:[],quits:[],garmin:[],gacts:[]};
+
+// hændelser (events) fordelt på typer
+function rebuildEventViews(){
+  const E=S.events||[];
+  S.sickDays=E.filter(e=>e.kind==="sygdom");
+  S.migraines=E.filter(e=>e.kind==="migraene");
+  S.slips=E.filter(e=>e.kind==="rygeslip");
+  S.quits=E.filter(e=>e.kind==="rygestop");
+}
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts,body,wellness,daily,checkins,migraines,meds,labs,planned]=await Promise.all([
@@ -785,23 +685,20 @@ async function loadAll(){
     get("nutrition","?select=*&order=log_date.asc"),
     get("workouts","?select=*&order=log_date.desc"),
     get("body_comp","?select=*&order=log_date.asc"),
-    get("wellness","?select=*&order=log_date.asc"),
+    Promise.resolve([]), // wellness (intervals.icu) er udgået; Garmin er eneste kilde
     get("daily_log","?select=*&order=log_date.asc"),
     get("checkins","?select=*&order=ts.asc"),
-    get("migraines","?select=*&order=ts.asc"),
+    Promise.resolve([]), // migræne ligger nu i events
     get("thyroid_meds","?select=*&order=log_date.asc"),
     get("thyroid_labs","?select=*&order=test_date.asc"),
     get("planned","?select=*&order=log_date.asc")
   ]);
   S.planned=planned;
-  try{ const [chores,choreLog]=await Promise.all([get("chores","?select=*&order=sort.asc"),get("chore_log","?select=*&order=log_date.desc,ts.desc")]); S.chores=chores; S.choreLog=choreLog; }catch(e){ S.chores=[]; S.choreLog=[]; }
-  try{ S.negotiations=await get("run_negotiations","?select=*&order=ts.asc"); }catch(e){ S.negotiations=[]; }
+  try{ S.taskLog=await get("task_log","?select=*&order=log_date.desc,ts.desc"); }catch(e){ S.taskLog=[]; }
   try{ S.naps=await get("naps","?select=*&order=ts.asc"); }catch(e){ S.naps=[]; }
-  try{ S.sickDays=await get("sick_days","?select=*&order=log_date.asc"); }catch(e){ S.sickDays=[]; }
-  try{ S.smokeCfg=(await get("smoking_config","?select=*&limit=1"))[0]||null; }catch(e){ S.smokeCfg=null; }
-  try{ S.cravings=await get("cravings","?select=*&order=ts.asc"); }catch(e){ S.cravings=[]; }
-  try{ S.slips=await get("slips","?select=*&order=ts.asc"); }catch(e){ S.slips=[]; }
-  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-60)))
+  try{ S.events=await get("events","?select=*&order=log_date.asc,created_at.asc"); }catch(e){ S.events=[]; }
+  rebuildEventViews();
+  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
                rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake})); }catch(e){ S.garmin=[]; }
   try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
@@ -833,7 +730,7 @@ async function loadAll(){
     });
     S.wellness.sort((a,b)=>a.log_date<b.log_date?-1:1);
   }catch(e){}
-  S.daily=daily; S.checkins=checkins; S.migraines=migraines; S.meds=meds;
+  S.daily=daily; S.checkins=checkins; S.meds=meds;
   S.labs=labs.map(l=>({...l,tsh:l.tsh==null?null:+l.tsh}));
   try{ S.books=await booksGet(); }catch(e){ S.books=[]; }
 }
@@ -1166,8 +1063,9 @@ function sickSet(){ return new Set((S.sickDays||[]).map(x=>x.log_date)); }
 async function toggleSick(d){
   const has=S.sickDays.some(x=>x.log_date===d);
   try{
-    if(has){ await fetch(REST+"sick_days?log_date=eq."+d,{method:"DELETE",headers:HEAD}); S.sickDays=S.sickDays.filter(x=>x.log_date!==d); }
-    else { const row=(await upsert("sick_days",{log_date:d},"log_date"))[0]; S.sickDays.push(row); }
+    if(has){ await fetch(REST+"events?kind=eq.sygdom&log_date=eq."+d,{method:"DELETE",headers:HEAD}); S.events=S.events.filter(x=>!(x.kind==="sygdom"&&x.log_date===d)); }
+    else { const row=(await insert("events",{log_date:d,kind:"sygdom"}))[0]; S.events.push(row); }
+    rebuildEventViews();
     render();
   }catch(e){ const n=$("#streakNote"); if(n) n.textContent="Kunne ikke gemme sygedag: "+e.message; }
 }
@@ -1250,47 +1148,7 @@ function vane(){
   if(sickN) note+=` ${sickN} sygedag${sickN===1?'':'e'} tæller ikke som afbrydelse.`;
   $("#vaneNote").textContent=note;
 
-  // ---- forhandlingen: hyppighed + vinderprocent (automatik-signal) ----
-  const negWrap=$("#vaneNegWrap"), floor=$("#vaneFloor");
-  const negs=S.negotiations.filter(n=>n.log_date>=VANE_START).slice().sort((a,b)=>a.log_date<b.log_date?-1:1);
-  if(!negs.length){ if(negWrap)negWrap.style.display="none"; if(floor)floor.style.display="none"; return; }
-  if(negWrap)negWrap.style.display="block";
-  const won=negs.filter(n=>n.outcome==="loeb").length;
-  $("#vaneNegWin").textContent=Math.round(won/negs.length*100)+"%";
-  const d14=addDays(t,-13), d28=addDays(t,-27);
-  const last14=negs.filter(n=>n.log_date>=d14).length;
-  const prev14=negs.filter(n=>n.log_date>=d28&&n.log_date<d14).length;
-  $("#vaneNeg14").textContent=last14+(last14===1?" gang":" gange");
-  const sinceLast=daysBetween(negs[negs.length-1].log_date,t);
-  $("#vaneNegLast").textContent=sinceLast===0?"i dag":sinceLast===1?"1 dag":sinceLast+" dage";
-  let tnote;
-  if(negs.length<3) tnote=`${won} af ${negs.length} vundet. Mønsteret tegner sig, når der er lidt flere.`;
-  else if(spanDays<28) tnote=`${won} af ${negs.length} vundet indtil nu. Om et par uger kan jeg vise, om forhandlingen bliver sjældnere.`;
-  else if(last14<prev14) tnote=`Forhandlingen dukker sjældnere op end for to uger siden (${last14} mod ${prev14}) — præcis vejen mod automatik.`;
-  else if(last14>prev14) tnote=`Forhandlingen fylder mere end for to uger siden (${last14} mod ${prev14}). Det er oftest søvn eller travlhed, ikke vilje — hold gulvet lavt.`;
-  else tnote=`Stabilt på ${last14} de sidste to uger. Når tallet falder mod nul, er vanen ved at være groet fast.`;
-  $("#vaneNegNote").textContent=tnote;
-
-  // ---- gulv-signal: klar til at hæve minimummet? ----
-  if(!floor) return;
-  const rs=S.wellness.filter(w=>w.sleep_hours!=null).slice(-4);
-  const debt = rs.length>=3 && avg(rs.map(w=>w.sleep_hours+napH(w.log_date)))<6.5;
-  const rare = last14<=1 && sinceLast>=7;
-  if(spanDays<VANE_WINDOW){ floor.style.display="none"; return; }
-  floor.style.display="block";
-  if(rare && !debt && adh>=90){
-    floor.style.borderColor="var(--good)"; floor.style.background="var(--accent-soft)";
-    $("#vaneFloorTitle").textContent="🌱 Klar til at kigge på gulvet";
-    $("#vaneFloorBody").textContent=`Vanen er moden, forhandlingen er stort set holdt op (${last14} på 14 dage), og søvnen er ok. Nu giver det mening at flytte minimummet fra 1 til 2 km — kun hvis du har lyst. Sig til, så justerer vi det.`;
-  } else {
-    floor.style.borderColor="var(--warn)"; floor.style.background="var(--kost-soft)";
-    const mangler=[];
-    if(!rare) mangler.push("forhandlingen dukker stadig op");
-    if(debt) mangler.push("der er søvngæld lige nu");
-    if(adh<90) mangler.push("kæden har huller");
-    $("#vaneFloorTitle").textContent="Modningsvinduet er nået";
-    $("#vaneFloorBody").textContent=`Dag ${spanDays} — men vi venter med at hæve gulvet, til det sidder helt roligt: ${mangler.join(", ")}. Gulvet bliver på 1 km så længe.`;
-  }
+  const fl=$("#vaneFloor"); if(fl) fl.style.display="none";
 }
 function medgrid(){
   const t=todayISO();const ws=weekStart(t);const days=["ma","ti","on","to","fr","lø","sø"];
@@ -1325,68 +1183,17 @@ function renderMedQuick(){
   if(typeof statusRow==="function")statusRow();
 }
 
-// ---------- Praktisk (chores) ----------
-function choreLastDone(id){let m=null;for(const l of S.choreLog){if(l.chore_id===id&&(!m||l.log_date>m))m=l.log_date;}return m;}
-function choreDoneToday(id){const t=todayISO();return S.choreLog.some(l=>l.chore_id===id&&l.log_date===t);}
-function choreScore(c){const ld=choreLastDone(c.id);const ds=ld?daysBetween(ld,todayISO()):9999;return ds/(c.interval_days||7);}
+// ---------- Praktisk: udførte opgaver kommer fra task_log (skrives af Praktisk-fanen) ----------
 function renderChores(){
-  if(!$("#choreChips"))return;
-  const pool=$("#choreCad").getAttribute("data-val")||"uge";
-  const list=S.chores.filter(c=>c.active!==false&&c.cadence===pool).slice().sort((a,b)=>choreScore(b)-choreScore(a));
-  const wrap=$("#choreChips");
-  wrap.innerHTML=list.map(c=>{const done=choreDoneToday(c.id),due=!done&&choreScore(c)>=1;
-    return `<button type="button" class="chorechip${done?' done':due?' due':''}" data-id="${c.id}">${done?'✓ ':''}${esc(c.name)}</button>`;}).join("")||'<div class="empty">Ingen opgaver i denne pool.</div>';
-  wrap.querySelectorAll(".chorechip").forEach(b=>b.onclick=()=>toggleChore(b.dataset.id));
-  const n=S.choreLog.filter(l=>l.log_date===todayISO()).length;
-  $("#choreCount").textContent=n+" i dag";
-}
-async function toggleChore(id){
-  const t=todayISO();const ex=S.choreLog.find(l=>l.chore_id===id&&l.log_date===t);
-  try{
-    if(ex){await fetch(REST+"chore_log?id=eq."+ex.id,{method:"DELETE",headers:HEAD});S.choreLog=S.choreLog.filter(l=>l!==ex);}
-    else{const row=(await insert("chore_log",{chore_id:id,log_date:t}))[0];S.choreLog.unshift(row);}
-    renderChores();praktiskSpark();
-  }catch(e){alert("Kunne ikke gemme: "+e.message);}
-}
-function choreRandom(){
-  const pool=$("#choreCad").getAttribute("data-val")||"uge";
-  const cand=S.chores.filter(c=>c.active!==false&&c.cadence===pool&&!choreDoneToday(c.id)).map(c=>({c,s:choreScore(c)}));
-  const box=$("#choreSuggest");
-  if(!cand.length){box.innerHTML='<div class="suggest">Alt i denne pool er gjort i dag ✓</div>';return;}
-  const due=cand.filter(x=>x.s>=1);let pick;
-  if(due.length){const tot=due.reduce((a,x)=>a+x.s,0);let r=Math.random()*tot;for(const x of due){r-=x.s;if(r<=0){pick=x.c;break;}}if(!pick)pick=due[0].c;}
-  else pick=cand.sort((a,b)=>b.s-a.s)[0].c;
-  const ld=choreLastDone(pick.id);const ds=ld?daysBetween(ld,todayISO()):null;
-  const info=ds==null?"aldrig gjort":(ds===0?"gjort i dag":`sidst for ${ds} ${ds===1?"dag":"dage"} siden`);
-  box.innerHTML=`<div class="suggest"><span>🎯 <b>${esc(pick.name)}</b> <span class="hint">(${info})</span></span><button type="button" class="pbtn" id="choreDid" style="background:var(--krop);padding:7px 12px">Gjort ✓</button></div>`;
-  $("#choreDid").onclick=()=>{toggleChore(pick.id);box.innerHTML="";};
-}
-function renderChoreEdit(){
-  const el=$("#choreEditList");if(!el)return;
-  const rows=S.chores.slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
-  el.innerHTML=rows.map(c=>`<div class="crow" data-id="${c.id}"><input class="nm" value="${esc(c.name)}"><span class="cad">${c.cadence==="maaned"?"MÅ":"UGE"}</span><input class="iv" type="number" min="1" value="${c.interval_days}"><button type="button" class="del">×</button></div>`).join("");
-  el.querySelectorAll(".crow").forEach(r=>{const id=r.dataset.id;
-    r.querySelector(".nm").addEventListener("change",e=>patchChore(id,{name:e.target.value.trim()}));
-    r.querySelector(".iv").addEventListener("change",e=>patchChore(id,{interval_days:Math.max(1,parseInt(e.target.value)||7)}));
-    r.querySelector(".del").onclick=()=>delChore(id,r);});
-}
-async function patchChore(id,body){try{await fetch(REST+"chores?id=eq."+id,{method:"PATCH",headers:{...HEAD,Prefer:"return=minimal"},body:JSON.stringify(body)});const c=S.chores.find(x=>x.id===id);if(c)Object.assign(c,body);renderChores();}catch(e){setNote("#noteC2","Fejl: "+e.message,"err");}}
-async function delChore(id,rowEl){try{await fetch(REST+"chores?id=eq."+id,{method:"DELETE",headers:HEAD});S.chores=S.chores.filter(x=>x.id!==id);rowEl.remove();renderChores();}catch(e){setNote("#noteC2","Fejl: "+e.message,"err");}}
-async function addChore(){
-  const name=$("#cNewName").value.trim();const cad=$("#cNewCad").getAttribute("data-val")||"uge";
-  const iv=parseInt($("#cNewInt").value)||(cad==="maaned"?30:7);
-  if(!name){setNote("#noteC2","Skriv et navn.","err");return;}
-  const id=name.toLowerCase().replace(/æ/g,"ae").replace(/ø/g,"o").replace(/å/g,"aa").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"-"+Math.random().toString(36).slice(2,6);
-  const sort=Math.max(0,...S.chores.map(c=>c.sort||0))+1;
-  try{const row=(await insert("chores",{id,name,cadence:cad,interval_days:iv,sort}))[0];S.chores.push(row);$("#cNewName").value="";$("#cNewInt").value="";renderChoreEdit();renderChores();setNote("#noteC2","Tilføjet ✓","ok");}catch(e){setNote("#noteC2","Fejl: "+e.message,"err");}
+  const el=$("#choreCount"); if(el) el.textContent=S.taskLog.filter(l=>l.log_date===todayISO()).length+" i dag";
 }
 function praktiskSpark(){
   const el=$("#praktiskSpark");if(!el)return;
   const t=todayISO();const map={};for(let i=20;i>=0;i--)map[addDays(t,-i)]=0;
-  S.choreLog.forEach(l=>{if(l.log_date in map)map[l.log_date]++;});
+  S.taskLog.forEach(l=>{if(l.log_date in map)map[l.log_date]++;});
   const pts=Object.keys(map).sort().map(d=>({d,v:map[d]}));
   if(pts.some(p=>p.v>0))spark("praktiskSpark",pts,"var(--arb)","var(--arb-soft)");
-  else el.innerHTML='<div class="empty">Log praktiske ting, så tegnes aktiviteten her.</div>';
+  else el.innerHTML='<div class="empty">Kryds opgaver af i Praktisk-fanen, så tegnes aktiviteten her.</div>';
 }
 // Søvngæld-advarsel: to trin. Måler snit over de seneste nætter mod FASTE grænser,
 // ikke mod dit eget (evt. lave) snit — så kronisk underskud ikke normaliseres væk.
@@ -1519,19 +1326,11 @@ function dayExtras(t){
 function smokePayload(t){
   try{
     const st=smokeStats(); if(!st.started) return null;
-    const hhmm=x=>new Date(x).toLocaleTimeString("da-DK",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Copenhagen"});
-    const cr=st.cravings, y=addDays(t,-1);
-    const perDag={}; cr.forEach(x=>{perDag[x.log_date]=(perDag[x.log_date]||0)+1;});
-    const sit={}, instead={}; cr.forEach(x=>{ if(x.situation) sit[x.situation]=(sit[x.situation]||0)+1; (x.did_instead||[]).forEach(d=>{instead[d]=(instead[d]||0)+1;}); });
-    const ints=cr.map(x=>x.intensity).filter(x=>x!=null);
     return {
-      stopdato:isoOf(st.q), dage_roegfri:+(st.ms/864e5).toFixed(1),
-      cigaretter_ikke_roeget:st.notSmoked, sparet_kr:Math.round(st.saved),
-      udskridninger_antal:st.slipN, sidste_udskridning:st.lastSlip?isoOf(st.lastSlip):null,
-      trang_pr_dag:perDag, trang_i_dag:perDag[t]||0, trang_i_gaar:perDag[y]||0,
-      trang_intensitet_snit_1til5:ints.length?+avg(ints).toFixed(1):null,
-      foer_vs_efter_stop:beforeAfterQuit(st),
-      trang_situationer:sit, gjorde_i_stedet:instead
+      aktuelt_stop:isoOf(st.q), dage_roegfri_siden_aktuelt_stop:+(st.ms/864e5).toFixed(1),
+      forsoeg:st.attempts.map(a=>({stop:a.start,foerste_slip:a.firstSlip,dage:a.days,igangvaerende:a.ongoing})),
+      slip_datoer:(S.slips||[]).map(x=>x.log_date),
+      foer_vs_efter_stop:beforeAfterQuit({q:st.firstQ||st.q})
     };
   }catch(e){ return null; }
 }
@@ -1667,7 +1466,7 @@ function coach(){
   // Matematikkuren styrer (gram); kalorier er kun en nedre grænse. Kun om aftenen (h>=19),
   // efter aftensmadstid — før det ligger hun naturligt lavt og det kan ikke vurderes endnu.
   const kcalToday=sumDay(S.nutrition,t,"calories_in");
-  const choresToday=S.choreLog.filter(l=>l.log_date===t).length;
+  const choresToday=S.taskLog.filter(l=>l.log_date===t).length;
   const stepsRow=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt");
   const stepsToday=stepsRow?stepsRow.steps:0;
   const activeToday = ranToday || choresToday>=3 || stepsToday>=9000;
@@ -1808,30 +1607,28 @@ function weekStart(iso){const d=parseD(iso);const wd=(d.getDay()+6)%7;return add
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 // ---------- RYGESTOP ----------
-const SMOKE_DEFAULT={quit_at:"2026-10-10T00:00:00+02:00",baseline_per_day:15,pack_price:64,pack_size:20,prep:{}};
-const SMOKE_SIT={morgen:"Morgen",arbejde:"Arbejde",alkohol:"Alkohol/socialt",aften:"Aften",andet:"Andet"};
-const SMOKE_TIPS={
-  morgen:"Kaffemaskinen i gang → løbetøj på, mens den brygger → én kop → ud og løb. På dage uden løb drikkes kaffen indenfor ved vinduet, ikke udenfor.",
-  arbejde:"Pauserne var kun til at ryge og forsvinder. Trang efter møder er vane: hent vand, sæt dig igen.",
-  alkohol:"De første 4 uger: ingen alkohol, eller kun hvor ingen ryger. Skift sted, tag vand.",
-  aften:"Ved kapitelskift: te, vand eller tyggegummi i stedet for at gå ud.",
-  andet:"Trangen kommer og går — de fleste bølger klinger af på få minutter. Vand, tyggegummi eller strik, mens den passerer."};
-const SMOKE_PREP=[["last","Ryg den sidste (fredag aften)"],["trash","Smid resten af pakken og lighterne ud"],["wash","Vask jakke, halstørklæde, rygetøj og hår"],["tea","Køb te og sukkerfrit tyggegummi"],["knit","Hav strikketøj klar"]];
 const SMOKE_REASONS=["Jeg lugter ikke af røg (mærkes efter få dage)","Løb føles lettere (mærkes efter få uger)","Huden heler bedre — rygning hæmmer blodgennemstrømning og kollagen"];
 const WEEKDAYS_FULL=["søndag","mandag","tirsdag","onsdag","torsdag","fredag","lørdag"];
 function isoOf(d){return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Copenhagen",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);}
 function cphOffsetMin(d){const v=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Copenhagen",timeZoneName:"longOffset"}).formatToParts(d).find(x=>x.type==="timeZoneName").value;const m=v.match(/GMT([+-])(\d{2}):?(\d{2})?/);return m?(m[1]==="-"?-1:1)*(+m[2]*60+(+m[3]||0)):0;}
 function cphDate(dateStr,timeStr){const [y,mo,d]=dateStr.split("-").map(Number),[h,mi]=(timeStr||"00:00").split(":").map(Number);const base=Date.UTC(y,mo-1,d,h,mi);let t=base;for(let i=0;i<3;i++)t=base-cphOffsetMin(new Date(t))*60000;return new Date(t);}
-function smokeCfg(){return Object.assign({},SMOKE_DEFAULT,S.smokeCfg||{});}
 function dur(ms){ms=Math.max(0,ms);const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);return d>0?{big:d+(d===1?" dag":" dage"),small:h+" t"}:{big:h+" t",small:m+" min"};}
 function smokeStats(now){
-  now=now||new Date();const c=smokeCfg(),q=new Date(c.quit_at),ms=now-q,started=ms>=0;
-  const slips=(S.slips||[]).filter(x=>new Date(x.ts)>=q);
-  const slipN=slips.reduce((a,x)=>a+(x.count||1),0);
-  const notSmoked=started?Math.max(0,Math.floor(c.baseline_per_day*(ms/864e5)-slipN)):0;
-  const lastSlip=slips.length?new Date(Math.max(...slips.map(x=>+new Date(x.ts)))):null;
-  return {c,q,ms,started,slips,slipN,notSmoked,saved:notSmoked*(c.pack_price/c.pack_size),lastSlip,
-    cravings:(S.cravings||[]).filter(x=>new Date(x.ts)>=q)};
+  now=now||new Date();
+  const byDate=(a,b)=>a.log_date<b.log_date?-1:a.log_date>b.log_date?1:0;
+  const quits=(S.quits||[]).slice().sort(byDate), slipsAll=(S.slips||[]).slice().sort(byDate);
+  const last=quits[quits.length-1];
+  const q=last?cphDate(last.log_date,"00:00"):null;
+  const ms=q?now-q:0, started=!!q&&ms>=0;
+  const slips=last?slipsAll.filter(x=>x.log_date>=last.log_date):[];
+  const lastSlip=slips.length?cphDate(slips[slips.length-1].log_date,"00:00"):null;
+  const attempts=quits.map((qq,i)=>{
+    const nxt=quits[i+1]?quits[i+1].log_date:null;
+    const sl=slipsAll.find(x=>x.log_date>=qq.log_date&&(!nxt||x.log_date<nxt));
+    const end=sl?sl.log_date:(nxt||isoOf(now));
+    return {start:qq.log_date,firstSlip:sl?sl.log_date:null,days:Math.max(0,daysBetween(qq.log_date,end)),ongoing:!sl&&!nxt};
+  });
+  return {q,ms,started,slips,slipN:slips.length,slipTotal:slipsAll.length,lastSlip,attempts,firstQ:quits[0]?cphDate(quits[0].log_date,"00:00"):null};
 }
 function firstWorkday(q){let iso=isoOf(q);for(let i=0;i<7;i++){const wd=parseD(iso).getDay();if(wd>=1&&wd<=5)return iso;iso=addDays(iso,1);}return iso;}
 function smokeMilestones(st){
@@ -1847,113 +1644,42 @@ function smokeMilestones(st){
   ].map(m=>({...m,on:st.ms>=+momentAt(m.d)-+q,date:daLabel(dayAt(m.d)),left:+momentAt(m.d)-Date.now()}));
 }
 function renderSmoke(){
-  const card=$("#smokeCard"),body=$("#smokeBody"); if(!card||!body) return;
-  const st=smokeStats(),c=st.c,now=new Date();
-  const fab=$("#cravFab"); if(fab) fab.style.display=(now-st.q>-864e5)?"":"none";
-  const startTxt=WEEKDAYS_FULL[parseD(isoOf(st.q)).getDay()]+" "+daLabel(isoOf(st.q))+" kl. "+st.q.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
-  const reasons='<details class="smoked"><summary>Mine grunde</summary><ol style="margin:4px 0 8px 18px;padding:0;font-size:14px;line-height:1.7">'+SMOKE_REASONS.map(r=>"<li>"+r+"</li>").join("")+'</ol><p class="hint" style="margin:0 0 6px">Trang → log den. Står det mellem rationen og smøgen, vinder røgfri.</p></details>';
-  const edit='<button type="button" class="editlink" id="smokeEdit">Rediger indstillinger</button>';
+  const body=$("#smokeBody"); if(!body) return;
+  const st=smokeStats(),now=new Date();
   if(!st.started){
-    const d=dur(-st.ms);const prep=c.prep||{};
-    $("#smokeSub").textContent="starter "+startTxt;
-    body.innerHTML=`<div class="smokebig tnum">om ${d.big}<small>${d.small}</small></div>
-      <div class="hint" style="margin-top:6px">Sidste smøg fredag aften. Forberedelse:</div>
-      <div class="prep">${SMOKE_PREP.map(([k,t])=>`<label class="${prep[k]?'done':''}"><input type="checkbox" data-prep="${k}" ${prep[k]?'checked':''}><span>${t}</span></label>`).join("")}</div>
-      <div class="smokemsg">Mandag ${daLabel(firstWorkday(st.q))} er første rigtige prøve (arbejdsdag). Pauserne var kun til at ryge og forsvinder.</div>
-      <div style="display:flex;gap:8px;margin-top:14px"><button type="button" class="pbtn" id="smokeCrav" style="flex:1;background:var(--accent);color:var(--bg)">🌊 Trang</button></div>
-      ${reasons}${edit}`;
+    $("#smokeSub").textContent="ikke startet";
+    body.innerHTML=`<div class="hint">Intet rygestop registreret endnu.</div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="pbtn" id="smokeQuit" style="flex:1;background:var(--accent);color:var(--bg)">Start rygestop i dag</button></div>`;
     return;
   }
-  const d=dur(st.ms);
-  $("#smokeSub").textContent="røgfri siden "+startTxt;
-  const sinceSlip=st.lastSlip?dur(now-st.lastSlip):null;
-  // tidslinje: seneste 28 dage siden start
-  const t=todayISO(),first=isoOf(st.q),nDays=Math.min(27,daysBetween(first,t));
-  const slipDays=new Set(st.slips.map(x=>x.log_date||isoOf(new Date(x.ts))));
-  const cravByDay={};st.cravings.forEach(x=>{const k=x.log_date||isoOf(new Date(x.ts));cravByDay[k]=(cravByDay[k]||0)+1;});
+  const d=dur(st.ms),qIso=isoOf(st.q);
+  $("#smokeSub").textContent="røgfri siden "+WEEKDAYS_FULL[parseD(qIso).getDay()]+" "+daLabel(qIso)+(st.attempts.length>1?" · forsøg "+st.attempts.length:"");
+  const t=todayISO(),nDays=Math.min(27,daysBetween(qIso,t));
+  const slipDays=new Set(st.slips.map(x=>x.log_date));
   let strip="";for(let i=nDays;i>=0;i--){const day=addDays(t,-i),slip=slipDays.has(day);
-    strip+=`<span class="fp${day===t?' today':''}" style="background:${slip?'var(--kost)':'var(--accent)'}" title="${daLabel(day)}${slip?': slip':': røgfri'}${cravByDay[day]?' · '+cravByDay[day]+' trang':''}">${slip?'●':''}</span>`;}
-  const wd=firstWorkday(st.q),isFirstWork=t===wd,beforeFirstWork=t<wd;
-  const msg=isFirstWork?`<div class="smokemsg warn"><b>I dag er første rigtige prøve (arbejdsdag).</b> Pauserne var kun til at ryge og forsvinder. Trang efter møder er vane: hent vand, sæt dig igen.</div>`
-    :beforeFirstWork?`<div class="smokemsg warn">Mandag ${daLabel(wd)} er første rigtige prøve (arbejdsdag). Pauserne forsvinder — hent vand, sæt dig igen.</div>`:"";
+    strip+=`<span class="fp${day===t?' today':''}" style="background:${slip?'var(--kost)':'var(--accent)'}" title="${daLabel(day)}${slip?': slip':': røgfri'}">${slip?'●':''}</span>`;}
   const ms=smokeMilestones(st),nextI=ms.findIndex(m=>!m.on);
-  const mileHtml=ms.map((m,i)=>`<div class="mile ${m.on?'on':i===nextI?'next':''}"><span class="dot">${m.on?'✓':''}</span><div><b>${m.t}</b><div class="when">${m.s?m.s+' · ':''}${m.on?'nået '+m.date:(m.range?'':m.date+' · ')+(m.on?'':'om '+(dur(m.left).big+' '+dur(m.left).small))}</div></div></div>`).join("");
+  const mileHtml=ms.map((m,i)=>`<div class="mile ${m.on?'on':i===nextI?'next':''}"><span class="dot">${m.on?'✓':''}</span><div><b>${m.t}</b><div class="when">${m.s?m.s+' · ':''}${m.on?'nået '+m.date:(m.range?'':m.date+' · ')+'om '+(dur(m.left).big+' '+dur(m.left).small)}</div></div></div>`).join("");
+  const longest=Math.max(0,...st.attempts.map(a=>a.ongoing?Math.floor(st.ms/864e5):a.days));
+  const attemptsHtml=st.attempts.map((a,i)=>`<div class="hint" style="margin:3px 0">Forsøg ${i+1}: ${daLabel(a.start)} → ${a.ongoing?'igangværende':a.firstSlip?'slip '+daLabel(a.firstSlip):'nyt stop'} (${a.ongoing?Math.floor(st.ms/864e5):a.days} dage)</div>`).join("");
+  const reasons='<ol style="margin:4px 0 8px 18px;padding:0;font-size:14px;line-height:1.7">'+SMOKE_REASONS.map(r=>"<li>"+r+"</li>").join("")+'</ol>';
   body.innerHTML=`<div class="smokebig tnum">${d.big}<small>${d.small} røgfri</small></div>
-    <div class="hint" style="margin-top:8px"><b>${Math.round(st.saved).toLocaleString("da-DK")} kr.</b> sparet · <b>${st.notSmoked.toLocaleString("da-DK")}</b> ikke røget (est.) · ${sinceSlip?sinceSlip.big+' '+sinceSlip.small+' siden slip':'ingen slip'}</div>
+    <div class="hint" style="margin-top:8px">${st.slipN?st.slipN+' slip siden stop':'ingen slip siden stop'} · længste stræk <b>${longest}</b> dage</div>
     <div class="formstrip" style="margin-top:10px;grid-template-columns:repeat(7,1fr);gap:4px">${strip}</div>
-    ${msg}
-    <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="pbtn" id="smokeCrav" style="flex:2;background:var(--accent);color:var(--bg)">🌊 Trang nu</button><button type="button" class="btn" id="smokeSlip" style="flex:1">Log slip</button></div>
-    <details class="smoked"><summary>Milepæle, grunde og indstillinger</summary>${mileHtml}${reasons}${edit}</details>`;
+    <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn" id="smokeSlip" style="flex:1">Jeg røg i dag</button><button type="button" class="btn" id="smokeQuit" style="flex:1">Nyt stop i dag</button></div>
+    <details class="smoked"><summary>Forsøg, milepæle og grunde</summary>${attemptsHtml}${mileHtml}${reasons}</details>`;
 }
-function autoSituation(){const h=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Copenhagen",hour:"2-digit",hour12:false}).format(new Date())%24;const wd=new Date().getDay();
-  if(h<10)return "morgen"; if(h>=18)return "aften"; if(wd>=1&&wd<=5&&h>=10&&h<17)return "arbejde"; return "andet";}
-function selSeg(id,v){const el=$("#"+id);el.setAttribute("data-val",v||"");el.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.v===v));}
-function openCrav(){
-  segReset("cIntSeg");$("#cDidSeg").querySelectorAll("button").forEach(b=>b.classList.remove("sel"));
-  selSeg("cSitSeg",autoSituation());selSeg("cSmokedSeg","nej");$("#cSlipFields").style.display="none";$("#cSlipCount").value="1";$("#cNote").value="";setNote("#noteCrav","");
-  $("#cravForm").style.display="";$("#cravDone").style.display="none";$("#cravDialog").classList.add("open");
-}
-function openSlip(){$("#sDate").value=todayISO();selSeg("sSitSeg",autoSituation());$("#sCount").value="1";$("#sNote").value="";setNote("#noteSlip","");$("#slipDialog").classList.add("open");}
-function openSmokeCfg(){const c=smokeCfg(),q=new Date(c.quit_at);
-  $("#qDate").value=isoOf(q);$("#qTime").value=q.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"}).replace(".",":");
-  $("#qBase").value=c.baseline_per_day;$("#qPrice").value=c.pack_price;$("#qPack").value=c.pack_size;setNote("#noteQ","");$("#smokeCfgDialog").classList.add("open");}
-function showCravDone(sit,smoked){
-  const st=smokeStats(),n=st.cravings.length,d=dur(st.ms);
-  $("#cravForm").style.display="none";$("#cravDone").style.display="";
-  if(smoked){
-    $("#cravDoneTitle").textContent="Slip logget";
-    $("#cravDoneMsg").innerHTML="Et slip er data, ikke et nederlag. Din røgfri-tid nulstilles ikke"+(st.started?" ("+d.big+" "+d.small+" siden stop)":"")+". Skriv i noten, hvad der udløste det, så ved du, hvad du skal forberede. Står det mellem rationen og smøgen, vinder røgfri.";
-  } else {
-    $("#cravDoneTitle").textContent="Logget ✓";
-    $("#cravDoneMsg").innerHTML=(SMOKE_TIPS[sit]||SMOKE_TIPS.andet)+(st.started?"<br><br>"+n+" trang-"+(n===1?"bølge":"bølger")+" logget — og stadig røgfri i "+d.big+" "+d.small+".":"");
-  }
-}
-async function saveCraving(){
-  const sit=segVal("cSitSeg"); if(!sit){setNote("#noteCrav","Vælg en situation.","err");return;}
-  const intv=segVal("cIntSeg"),did=[...$("#cDidSeg").querySelectorAll("button.sel")].map(b=>b.dataset.v);
-  const smoked=$("#cSmokedSeg").getAttribute("data-val")==="ja",note=$("#cNote").value.trim();
-  const cnt=Math.max(1,parseInt($("#cSlipCount").value||"1",10)||1),now=new Date();
-  const btn=$("#cravSave");btn.disabled=true;setNote("#noteCrav","Gemmer…");
-  try{
-    const row=(await insert("cravings",{ts:now.toISOString(),log_date:isoOf(now),situation:sit,intensity:intv?+intv:null,did_instead:did,smoked,note:note||null}))[0];
-    S.cravings.push(row);
-    if(smoked){const sr=(await insert("slips",{ts:now.toISOString(),log_date:isoOf(now),situation:sit,count:cnt,note:note||null,craving_id:row.id}))[0];S.slips.push(sr);}
-    renderSmoke();showCravDone(sit,smoked);
-  }catch(e){setNote("#noteCrav","Kunne ikke gemme: "+e.message,"err");}finally{btn.disabled=false;}
-}
-async function saveSlip(){
-  const day=$("#sDate").value; if(!day){setNote("#noteSlip","Vælg en dato.","err");return;}
-  const sit=segVal("sSitSeg"),cnt=Math.max(1,parseInt($("#sCount").value||"1",10)||1),note=$("#sNote").value.trim();
-  const ts=day===todayISO()?new Date():cphDate(day,"12:00");
-  const btn=$("#sSave");btn.disabled=true;setNote("#noteSlip","Gemmer…");
-  try{const row=(await insert("slips",{ts:ts.toISOString(),log_date:day,situation:sit,count:cnt,note:note||null}))[0];
-    S.slips.push(row);renderSmoke();$("#slipDialog").classList.remove("open");
-  }catch(e){setNote("#noteSlip","Kunne ikke gemme: "+e.message,"err");}finally{btn.disabled=false;}
-}
-async function saveSmokeCfg(){
-  const date=$("#qDate").value,time=$("#qTime").value||"00:00";
-  const base=parseFloat($("#qBase").value),price=parseFloat($("#qPrice").value),pack=parseInt($("#qPack").value,10);
-  if(!date||!(base>0)||!(price>=0)||!(pack>0)){setNote("#noteQ","Udfyld alle felter.","err");return;}
-  const btn=$("#qSave");btn.disabled=true;setNote("#noteQ","Gemmer…");
-  try{const row=(await upsert("smoking_config",{id:1,quit_at:cphDate(date,time).toISOString(),baseline_per_day:base,pack_price:price,pack_size:pack},"id"))[0];
-    S.smokeCfg=Object.assign({},S.smokeCfg||{},row);renderSmoke();$("#smokeCfgDialog").classList.remove("open");
-  }catch(e){setNote("#noteQ","Kunne ikke gemme: "+e.message,"err");}finally{btn.disabled=false;}
-}
-async function savePrep(k,v){
-  const prep=Object.assign({},smokeCfg().prep||{});prep[k]=v;S.smokeCfg=Object.assign({},S.smokeCfg||{},{prep});renderSmoke();
-  try{await upsert("smoking_config",{id:1,prep},"id");}catch(e){/* vises igen ved næste indlæsning; ikke kritisk */}
+// ét tryk: slip eller nyt stop logges som hændelse (ingen antal)
+async function logSmokeEvent(kind){
+  const msg=kind==="rygeslip"?"Log at du røg i dag? Din røgfri-tid nulstilles ikke.":"Start et nyt rygestop i dag? Tælleren starter forfra.";
+  if(!confirm(msg)) return;
+  try{ const row=(await insert("events",{log_date:todayISO(),kind}))[0]; S.events.push(row); rebuildEventViews(); render(); }
+  catch(e){ alert("Kunne ikke gemme: "+e.message); }
 }
 function initSmoke(){
-  seg("cSitSeg");seg("cIntSeg");seg("sSitSeg");
-  $("#cDidSeg").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>b.classList.toggle("sel")));
-  $("#cSmokedSeg").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{selSeg("cSmokedSeg",b.dataset.v);$("#cSlipFields").style.display=b.dataset.v==="ja"?"":"none";}));
-  $("#cravFab").onclick=openCrav;$("#cravCancel").onclick=()=>$("#cravDialog").classList.remove("open");$("#cravClose").onclick=()=>$("#cravDialog").classList.remove("open");
-  $("#cravSave").onclick=saveCraving;$("#sCancel").onclick=()=>$("#slipDialog").classList.remove("open");$("#sSave").onclick=saveSlip;
-  $("#qCancel").onclick=()=>$("#smokeCfgDialog").classList.remove("open");$("#qSave").onclick=saveSmokeCfg;
   $("#coachMore").addEventListener("click",()=>{const p=$("#coachText"),open=p.classList.toggle("clamp")===false;$("#coachMore").textContent=open?"Vis mindre ▴":"Læs hele briefen ▾";});
   $("#smokeBody").addEventListener("click",e=>{
-    if(e.target.closest("#smokeCrav"))openCrav();else if(e.target.closest("#smokeSlip"))openSlip();else if(e.target.closest("#smokeEdit"))openSmokeCfg();});
-  $("#smokeBody").addEventListener("change",e=>{const k=e.target.dataset&&e.target.dataset.prep;if(k)savePrep(k,e.target.checked);});
+    if(e.target.closest("#smokeSlip"))logSmokeEvent("rygeslip");else if(e.target.closest("#smokeQuit"))logSmokeEvent("rygestop");});
   setInterval(renderSmoke,60000);
 }
 
@@ -1979,9 +1705,11 @@ async function submitCheckin(){
 }
 async function submitDaily(){
   const dt=segVal("dayTypeSeg"),cl=segVal("commSeg"),wk=segVal("workSeg"),al=$("#alcInp").value;
-  if(!dt&&!cl&&!wk&&al==="") {setNote("#noteDaily","Udfyld mindst ét felt.","err");return;}
+  const ex=S.daily.find(d=>d.log_date===todayISO())||{};
   const btn=$("#dailyBtn");btn.disabled=true;setNote("#noteDaily","Gemmer…");
-  const body={log_date:todayISO(),day_type:dt,comm_load:cl?+cl:null,work_load:wk?+wk:null,alcohol_units:al===""?null:+al,updated_at:new Date().toISOString()};
+  // tom alkohol-rubrik = 0 (hvis dagen ikke allerede har en værdi); øvrige felter overskrives ikke med tomt
+  const body={log_date:todayISO(),day_type:dt||ex.day_type||null,comm_load:cl?+cl:(ex.comm_load??null),work_load:wk?+wk:(ex.work_load??null),
+    alcohol_units:al!==""?+al:(ex.alcohol_units!=null?+ex.alcohol_units:0),updated_at:new Date().toISOString()};
   try{const row=(await upsert("daily_log",body,"log_date"))[0];
     const i=S.daily.findIndex(d=>d.log_date===row.log_date);if(i>=0)S.daily[i]=row;else S.daily.push(row);
     setNote("#noteDaily","Gemt ✓","ok");render();
@@ -2000,23 +1728,23 @@ async function saveNap(min){
     setTimeout(()=>{setNote("#noteNap","");seg.querySelectorAll("button").forEach(b=>{b.disabled=false;b.classList.remove("sel");});},2600);
   }catch(e){ setNote("#noteNap","Fejl: "+e.message,"err"); seg.querySelectorAll("button").forEach(b=>b.disabled=false); }
 }
-async function saveNegotiation(outcome){
-  const id=outcome==="loeb"?"#negRan":"#negHome";
-  const b1=$("#negRan"),b2=$("#negHome");b1.disabled=true;b2.disabled=true;setNote("#noteNeg","Gemmer…");
-  try{const row=(await insert("run_negotiations",{log_date:todayISO(),outcome}))[0];
-    S.negotiations.push(row);
-    setNote("#noteNeg",outcome==="loeb"?"Registreret — og du vandt den ✓":"Registreret. Den tæller også; i morgen er en ny chance.","ok");
-    render();
-    setTimeout(()=>setNote("#noteNeg",""),2600);
-  }catch(e){setNote("#noteNeg","Fejl: "+e.message,"err");}finally{b1.disabled=false;b2.disabled=false;}
-}
 async function saveMigraine(){
   const intv=segVal("mIntSeg"),tr=segVal("mTrigSeg"),note=$("#mNote").value.trim();
   const btn=$("#mSave");btn.disabled=true;setNote("#noteM","Gemmer…");
-  try{const row=(await insert("migraines",{log_date:todayISO(),intensity:intv?+intv:null,trigger:tr,note:note||null}))[0];
-    S.migraines.push(row);setNote("#noteM","Logget ✓","ok");
+  try{const row=(await insert("events",{log_date:todayISO(),kind:"migraene",intensity:intv?+intv:null,trigger:tr,note:note||null}))[0];
+    S.events.push(row);rebuildEventViews();setNote("#noteM","Logget ✓","ok");
     setTimeout(()=>{$("#mDialog").classList.remove("open");segReset("mIntSeg");segReset("mTrigSeg");$("#mNote").value="";setNote("#noteM","");render();},600);
   }catch(e){setNote("#noteM","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
+}
+async function saveEvent(){
+  const kind=segVal("eKindSeg"),dt=$("#eDate").value,end=$("#eEnd").value,note=$("#eNote").value.trim();
+  if(!kind){setNote("#noteE","Vælg en type.","err");return;}
+  if(!dt){setNote("#noteE","Vælg en dato.","err");return;}
+  const btn=$("#eSave");btn.disabled=true;setNote("#noteE","Gemmer…");
+  try{const row=(await insert("events",{log_date:dt,end_date:end||null,kind,note:note||null}))[0];
+    S.events.push(row);rebuildEventViews();setNote("#noteE","Gemt ✓","ok");
+    setTimeout(()=>{$("#eDialog").classList.remove("open");segReset("eKindSeg");$("#eEnd").value="";$("#eNote").value="";setNote("#noteE","");render();},600);
+  }catch(e){setNote("#noteE","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
 async function saveLab(){
   const pn=v=>{v=(v||"").trim().replace(",",".");return v===""?null:parseFloat(v);};
@@ -2048,13 +1776,11 @@ async function doSync(){
   $("#themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}try{syncFrameTheme()}catch(e){}};})();
 
 // ---------- wire up ----------
-["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg"].forEach(seg);
+["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg","eKindSeg"].forEach(seg);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
 $("#energiQuickSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>logEnergiQuick(+b.dataset.v));
 $("#napSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>saveNap(+b.dataset.v));
-$("#negRan").onclick=()=>saveNegotiation("loeb");
-$("#negHome").onclick=()=>saveNegotiation("hjemme");
 $("#migraineBtn").onclick=()=>$("#mDialog").classList.add("open");
 initSmoke();
 $("#sickBtn").onclick=()=>toggleSick(todayISO());
@@ -2073,13 +1799,9 @@ $("#lCancel").onclick=()=>$("#lDialog").classList.remove("open");
 $("#lSave").onclick=saveLab;
 $("#medMorn").onclick=()=>toggleMed(todayISO(),"morning");
 $("#medEve").onclick=()=>toggleMed(todayISO(),"evening");
-// praktisk / chores
-(function(){const cc=$("#choreCad");if(cc){cc.setAttribute("data-val","uge");cc.querySelectorAll("button").forEach(b=>b.onclick=()=>{cc.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");cc.setAttribute("data-val",b.dataset.v);$("#choreSuggest").innerHTML="";renderChores();});}
-  const nc=$("#cNewCad");if(nc){nc.setAttribute("data-val","uge");nc.querySelectorAll("button").forEach(b=>b.onclick=()=>{nc.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");nc.setAttribute("data-val",b.dataset.v);});}})();
-$("#choreRandom").onclick=choreRandom;
-$("#choreEdit").onclick=()=>{renderChoreEdit();$("#cDialog").classList.add("open");};
-$("#cClose").onclick=()=>$("#cDialog").classList.remove("open");
-$("#cAdd").onclick=addChore;
+$("#eventBtn").onclick=()=>{$("#eDate").value=todayISO();$("#eDialog").classList.add("open");};
+$("#eCancel").onclick=()=>$("#eDialog").classList.remove("open");
+$("#eSave").onclick=saveEvent;
 $("#syncBtn").onclick=doSync;
 window.addEventListener("scroll",hideTT,{passive:true});
 
@@ -2206,7 +1928,7 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(
     const cur=()=>{let b=0,dm=1e9;cards.forEach((c,i)=>{const d=Math.abs(c.offsetLeft-cards[0].offsetLeft-wrap.scrollLeft);if(d<dm){dm=d;b=i;}});return b;};
     const mark=i=>{ if(!bar) return; [...bar.children].forEach((b,j)=>b.classList.toggle('on',j===i)); wrap.style.height=(cards[i].offsetHeight+12)+'px'; };
     if(!bar){
-      const short={'Medicin i dag':'Medicin','Lur i dag':'Lur','Løbe-forhandling':'Forhandling'};
+      const short={'Medicin i dag':'Medicin','Lur i dag':'Lur'};
       bar=document.createElement('div'); bar.id='logtabs'; bar.className='logtabs';
       bar.innerHTML=cards.map((c,i)=>{const t=c.querySelector('h3').textContent.trim();return `<button type="button" data-i="${i}">${short[t]||t}</button>`;}).join('');
       wrap.parentNode.insertBefore(bar,wrap);

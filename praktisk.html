@@ -109,6 +109,8 @@ header h1{font-size:30px;line-height:1.1}
 .toggle{background:none;border:0;color:var(--accent-ink);font-weight:600;padding:6px 0}
 .empty{background:var(--surface);border:1px dashed var(--border);border-radius:16px;padding:22px;color:var(--muted);text-align:center}
 .note{color:var(--faint);font-size:13px}
+.plan{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.plan input{border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:6px 8px;min-height:36px}
 @media (prefers-reduced-motion:no-preference){.hero h2{transition:opacity .15s}}
 </style>
 </head>
@@ -150,6 +152,7 @@ header h1{font-size:30px;line-height:1.1}
     </div>
   </form>
 
+  <section id="planSec"></section>
   <section id="ready"></section>
   <section id="later"></section>
   <section id="doneSec"></section>
@@ -185,7 +188,14 @@ const isLater=t=>!doneToday(t)&&!(t.done&&!isRecurring(t))&&(isSnoozed(t)||(isRe
 const isDoneList=t=>doneToday(t)||(t.done&&!isRecurring(t));
 function lateDays(t){ return isRecurring(t)&&t.lastDone!=null? today()-(t.lastDone+t.repeat):0; }
 
+const isOpenTask=t=>!doneToday(t)&&!(t.done&&!isRecurring(t));
+const isPlannedNow=t=>t.planned!=null&&t.planned<=today()&&isOpenTask(t);
 function candidates(){
+  const planned=tasks.filter(isPlannedNow).sort((a,b)=>(a.plannedTime||"99:99").localeCompare(b.plannedTime||"99:99"));
+  const rest=candidatesRest().filter(t=>!planned.includes(t));
+  return [...planned,...rest];
+}
+function candidatesRest(){
   return tasks.filter(isReady)
     .filter(t=>t.energy<=energy)
     .filter(t=>!maxMin||t.min<=maxMin)
@@ -193,12 +203,28 @@ function candidates(){
 }
 
 /* ---- render ---- */
+function planLabel(n,time){
+  const diff=n-today(), tm=time?" kl. "+time:"";
+  if(diff===0) return "i dag"+tm;
+  if(diff===1) return "i morgen"+tm;
+  if(diff<0) return "overskredet ("+new Date(n*864e5).toLocaleDateString("da-DK",{day:"numeric",month:"short",timeZone:"UTC"})+")";
+  return new Date(n*864e5).toLocaleDateString("da-DK",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"})+tm;
+}
+function planEditor(t){
+  if(open!==t.id||isDoneList(t)) return "";
+  return `<div class="plan"><button class="del" style="color:var(--ink)" data-act="plan-today" data-id="${t.id}">I dag</button>
+    <button class="del" style="color:var(--ink)" data-act="plan-tomorrow" data-id="${t.id}">I morgen</button>
+    <input type="date" data-pdate="${t.id}" value="${t.planned!=null?dayToISO(t.planned):""}" aria-label="Planlagt dato">
+    <input type="time" data-ptime="${t.id}" value="${t.plannedTime||""}" aria-label="Planlagt tid">
+    ${t.planned!=null?`<button class="del" style="color:var(--ink)" data-act="unplan" data-id="${t.id}">Fjern plan</button>`:""}</div>`;
+}
 function chipsFor(t,extra){
   const c=[];
   if(extra) c.push(extra);
   c.push(`<span class="chip tnum">${fmtMin(t.min)}</span>`);
   c.push(`<span class="chip">${ENERGY[t.energy]} energi</span>`);
   if(isRecurring(t)) c.push(`<span class="chip">${repeatLabel(t.repeat)}</span>`);
+  if(t.planned!=null) c.push(`<span class="chip tnum">📅 ${planLabel(t.planned,t.plannedTime)}</span>`);
   return c.join("");
 }
 function renderHero(){
@@ -213,7 +239,7 @@ function renderHero(){
     h.innerHTML=`<div class="eyebrow">Næste skridt</div><h2>${msg}</h2><p class="why">${sub}</p>`;return;
   }
   const t=c[skip%c.length], late=lateDays(t);
-  const why = late>0 ? `Den skulle have været gjort for ${late} ${late===1?"dag":"dage"} siden.`
+  const why = isPlannedNow(t) ? `Planlagt til ${planLabel(t.planned,t.plannedTime)}.` : late>0 ? `Den skulle have været gjort for ${late} ${late===1?"dag":"dage"} siden.`
     : t.min<=15 ? "Den er hurtig, så det er nemt at komme i gang." : "Den passer til den energi og tid, du har valgt.";
   h.innerHTML=`<div class="eyebrow">Start her · ${esc(t.area)}</div>
     <h2>${esc(t.title)}</h2>
@@ -239,7 +265,7 @@ function rowHTML(t,kind){
   return `<div class="row ${isDone?"done":""}">
     <button class="check" data-act="${isDone?"undo":"done"}" data-id="${t.id}" aria-label="${isDone?"Marker som ikke gjort":"Marker som gjort"}: ${esc(t.title)}">${isDone?'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':""}</button>
     <div class="body"><button class="t" data-act="open" data-id="${t.id}">${esc(t.title)}</button>
-      <div class="chips">${chipsFor(t,extra)}</div>${more}</div></div>`;
+      <div class="chips">${chipsFor(t,extra)}</div>${more}${planEditor(t)}</div></div>`;
 }
 function groupByArea(list,kind){
   const by={};list.forEach(t=>(by[t.area]??=[]).push(t));
@@ -254,6 +280,10 @@ function render(){
   const ready=tasks.filter(isReady), later=tasks.filter(isLater), done=tasks.filter(isDoneList);
   $("count").textContent=ready.length?`${ready.length} at gøre · ca. ${fmtMin(ready.reduce((s,t)=>s+t.min,0))}`:"";
   renderHero(); renderFilters();
+  const plans=tasks.filter(t=>t.planned!=null&&isOpenTask(t)).sort((a,b)=>(a.planned-b.planned)||((a.plannedTime||"99:99").localeCompare(b.plannedTime||"99:99")));
+  $("planSec").innerHTML = plans.length
+    ? `<div class="sec-h"><h2>Planlagt</h2><button class="toggle" data-act="ics">Hent til kalender</button></div><div class="rows" style="margin-top:10px">${plans.map(t=>rowHTML(t,"ready")).join("")}</div>`
+    : "";
   $("ready").innerHTML = ready.length
     ? `<div class="sec-h"><h2>Alle opgaver</h2></div><div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">${groupByArea(ready,"ready")}</div>`
     : `<div class="empty">Ingen åbne opgaver. Tilføj en ovenfor.</div>`;
@@ -266,8 +296,8 @@ function render(){
 /* ---- actions ---- */
 const byId=id=>tasks.find(t=>t.id===id);
 function patch(id,p){const t=byId(id);if(!t)return;Object.assign(t,p);render();store&&store.save(t)}
-function markDone(id){const t=byId(id);if(!t)return;skip=0;patch(id,{done:!isRecurring(t),lastDone:today()})}
-function undo(id){const t=byId(id);if(!t)return;patch(id,{done:false,lastDone:null})}
+function markDone(id){const t=byId(id);if(!t)return;skip=0;patch(id,{done:!isRecurring(t),lastDone:today(),planned:null,plannedTime:null});logDone(t)}
+function undo(id){const t=byId(id);if(!t)return;patch(id,{done:false,lastDone:null});unlogDone(id)}
 
 document.addEventListener("change",e=>{const el=e.target;if(!el.dataset||!el.dataset.ev)return;const n=Math.max(0,Math.min(365,Math.round(+el.value)||0));const t=byId(el.dataset.ev);if(!t)return;patch(t.id,{repeat:n,done:n>0?false:t.done})});
 document.addEventListener("click",e=>{
@@ -289,6 +319,42 @@ document.addEventListener("click",e=>{
   else if(act==="toggleLater"){showLater=!showLater;render()}
 });
 
+document.addEventListener("change",e=>{
+  const el=e.target;if(!el.dataset)return;
+  if(el.dataset.pdate){const t=byId(el.dataset.pdate);if(!t)return;patch(t.id,el.value?{planned:isoToDay(el.value)}:{planned:null,plannedTime:null})}
+  else if(el.dataset.ptime){const t=byId(el.dataset.ptime);if(!t)return;patch(t.id,{plannedTime:el.value||null,planned:t.planned!=null?t.planned:today()})}
+});
+document.addEventListener("click",e=>{
+  const el=e.target.closest("button");if(!el)return;
+  const {act,id}=el.dataset;
+  if(act==="plan-today")patch(id,{planned:today()});
+  else if(act==="plan-tomorrow")patch(id,{planned:today()+1});
+  else if(act==="unplan")patch(id,{planned:null,plannedTime:null});
+  else if(act==="ics")downloadICS();
+});
+// kalenderfil med de planlagte opgaver (åbnes i Kalender på iPhone/Mac)
+function downloadICS(){
+  const list=tasks.filter(t=>t.planned!=null&&isOpenTask(t));
+  if(!list.length){say("Ingen planlagte opgaver at hente.");return}
+  const z=n=>String(n).padStart(2,"0"), q=x=>String(x).replace(/\\/g,"\\\\").replace(/[;,]/g,m=>"\\"+m).replace(/\n/g,"\\n");
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//misc//praktisk//DA","CALSCALE:GREGORIAN"];
+  list.forEach(t=>{
+    const d=dayToISO(t.planned).replace(/-/g,"");
+    L.push("BEGIN:VEVENT","UID:"+t.id+"@misc","DTSTAMP:"+stamp);
+    if(t.plannedTime){
+      const [h,m]=t.plannedTime.split(":").map(Number), tot=Math.min(h*60+m+(t.min||15),1439);
+      L.push("DTSTART:"+d+"T"+z(h)+z(m)+"00","DTEND:"+d+"T"+z(Math.floor(tot/60))+z(tot%60)+"00","BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+q(t.title),"TRIGGER:-PT10M","END:VALARM");
+    } else L.push("DTSTART;VALUE=DATE:"+d);
+    L.push("SUMMARY:"+q(t.title),"DESCRIPTION:"+q(t.area+" · "+t.min+" min"),"END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([L.join("\r\n")],{type:"text/calendar"}));
+  a.download="praktisk-plan.ics";document.body.appendChild(a);a.click();a.remove();
+  say(list.length+" planlagte opgaver hentet som kalenderfil.");
+}
+
 $("aArea").innerHTML=AREAS.map(a=>`<option>${esc(a)}</option>`).join("");
 $("aRepeat").addEventListener("change",()=>{$("aDaysWrap").hidden=$("aRepeat").value!=="custom"});
 $("addForm").addEventListener("submit",e=>{
@@ -305,9 +371,13 @@ const KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
 const HEAD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
 const dayToISO=n=>{const d=new Date(n*864e5);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")};
 const isoToDay=s=>{if(!s)return null;const [y,m,d]=s.split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
-const toRow=t=>({id:t.id,title:t.title,area:t.area,minutes:t.min,energy:t.energy,repeat_days:t.repeat,last_done:t.lastDone==null?null:dayToISO(t.lastDone),done:!!t.done,snooze_until:t.snooze==null?null:dayToISO(t.snooze)});
-const fromRow=r=>({id:r.id,title:r.title,area:r.area,min:r.minutes,energy:r.energy,repeat:r.repeat_days,lastDone:isoToDay(r.last_done),done:r.done,snooze:isoToDay(r.snooze_until)});
+const toRow=t=>({id:t.id,title:t.title,area:t.area,minutes:t.min,energy:t.energy,repeat_days:t.repeat,last_done:t.lastDone==null?null:dayToISO(t.lastDone),done:!!t.done,snooze_until:t.snooze==null?null:dayToISO(t.snooze),planned_for:t.planned==null?null:dayToISO(t.planned),planned_time:t.plannedTime||null});
+const fromRow=r=>({id:r.id,title:r.title,area:r.area,min:r.minutes,energy:r.energy,repeat:r.repeat_days,lastDone:isoToDay(r.last_done),done:r.done,snooze:isoToDay(r.snooze_until),planned:isoToDay(r.planned_for),plannedTime:r.planned_time?r.planned_time.slice(0,5):null});
 const say=m=>{$("status").textContent=m};
+// opgavehistorik: én række i task_log hver gang en opgave krydses af (bruges til overskud/energi i Livsstil)
+const LOG="https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/task_log";
+const logDone=t=>req(LOG,{method:"POST",headers:{...HEAD,Prefer:"return=minimal"},body:JSON.stringify({task_id:t.id,title:t.title,area:t.area,minutes:t.min,energy:t.energy,log_date:dayToISO(today())})}).catch(e=>say("Kunne ikke logge: "+e.message));
+const unlogDone=id=>req(LOG+"?task_id=eq."+id+"&log_date=eq."+dayToISO(today()),{method:"DELETE",headers:HEAD}).catch(e=>say("Kunne ikke fortryde log: "+e.message));
 async function req(url,opt){const r=await fetch(url,opt);if(!r.ok)throw new Error(r.status+" "+(await r.text()));return r}
 store={
   save:t=>req(SB+"?on_conflict=id",{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(toRow(t))}).catch(e=>say("Kunne ikke gemme: "+e.message)),
