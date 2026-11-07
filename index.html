@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <script src="auth.js?v=20261012"></script>
 <script src="readiness.js?v=1"></script>
+<script src="connections.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sofies Livsstil</title>
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -196,6 +197,10 @@ svg{display:block; width:100%; height:auto; overflow:visible}
 .insight:last-child{border-bottom:0}
 .insight .ic{flex:none; width:34px;height:34px;border-radius:12px; display:grid;place-items:center; font-size:16px}
 .insight b{font-weight:600} .insight p{margin:2px 0 0; font-size:13px; color:var(--muted)}
+#bigCard .insight p{color:var(--ink); font-size:14px; line-height:1.55}
+#bigCard .good{color:var(--good); font-weight:600} #bigCard .bad{color:var(--warn); font-weight:600} #bigCard .dim{color:var(--muted); font-size:12px}
+#bigCard .bpc svg{width:100%; height:auto; display:block; margin-top:8px} #bigCard .bpc .cap{font-size:11.5px; color:var(--muted); margin-top:6px}
+#bigCard details{margin-top:6px} #bigCard summary{cursor:pointer; color:var(--accent-ink); font-weight:600; font-size:13.5px; padding:10px 0; list-style:none}
 .runrow{display:grid; grid-template-columns:52px 1fr auto; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:13.5px}
 .runrow:last-child{border-bottom:0} .runrow .d{color:var(--muted); font-size:12px; font-weight:600}
 .field{margin-top:12px}
@@ -244,6 +249,15 @@ footer{margin-top:44px; text-align:center; color:var(--faint); font-size:12px; l
 .seg.multi button.sel{background:var(--accent);border-color:var(--accent)}
 .fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;height:50px;padding:0 20px;border:0;border-radius:99px;background:var(--accent);color:var(--bg);font:inherit;font-weight:700;font-size:15px;box-shadow:0 6px 24px rgba(0,0,0,.28);cursor:pointer}
 .fab:active{transform:scale(.97)}
+details.fold{margin:0 0 14px; border:1px solid var(--border); border-radius:var(--r); background:var(--surface)}
+details.fold>summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:15px 18px; font-weight:600; font-size:15px; color:var(--ink)}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary .hint{font-weight:400}
+details.fold>summary::after{content:"›"; color:var(--muted); font-size:20px; line-height:1; transition:transform .2s; margin-left:auto}
+details.fold[open]>summary::after{transform:rotate(90deg)}
+details.fold>.card,details.fold>.grid>.card{border:0; box-shadow:none; background:transparent; padding:2px 18px 16px}
+details.fold>.grid{gap:0; margin:0!important}
+details.fold>.card{margin:0!important}
 details.smoked{margin-top:12px;border-top:1px solid var(--border);padding-top:4px}
 details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10px 2px;color:var(--ink)}
 </style>
@@ -252,10 +266,10 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 <div class="tooltip" id="tooltip"></div>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><div class="eyebrow">Livsstil</div><h1>Sofies dashboard</h1><div class="hint" id="sub" style="margin-top:6px">indlæser…</div></div>
+    <div class="brand"><div class="eyebrow">Livsstil</div><h1>Sofies dashboard</h1><div class="hint" id="sub" style="margin-top:6px">indlæser…</div><div class="hint" id="garminStatus" style="margin-top:2px"></div></div>
     <div class="tools">
       <a class="btn" href="run.html" style="text-decoration:none;color:var(--trae);border-color:var(--trae-soft)" title="Åbn run-dashboard">🏃 Run</a>
-      <button class="btn" id="syncBtn" title="Hent nyeste fra Withings + intervals.icu">↻ Synk</button>
+      <button class="btn" id="syncBtn" title="Hent nyeste fra Garmin, Withings og intervals.icu">↻ Synk</button>
       <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
       <button class="btn" id="lockBtn" title="Face ID-lås på denne enhed" style="display:none">🔓</button>
       <button class="btn" id="pwBtn" title="Skift adgangskode">🔑</button>
@@ -452,7 +466,8 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   </div><div class="blk">
   <details class="card smoked" style="margin-top:14px"><summary>Vægt vs. fedt% — recomposition-tjek</summary><div class="ch" style="margin-top:10px"><h2 style="display:none">Vægt vs. fedt%</h2><span class="hint">recomposition-tjek · vægt kan stå stille mens fedt falder</span></div><div id="fatChart"><div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen.</div></div></details>
   </div><div class="blk">
-  <div class="grid g2" style="margin-top:14px">
+  <details class="fold" id="foldMed"><summary><span>Medicin &amp; blodprøver</span><span class="hint">Eltroxin og TSH</span></summary>
+  <div class="grid g2">
     <div class="card">
       <div class="ch"><h2>Medicin</h2><span class="hint">Eltroxin · klik for at logge</span></div>
       <div class="medgrid" id="medgrid"></div>
@@ -464,6 +479,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <button type="button" class="btn" id="labBtn" style="margin-top:10px">+ Tilføj blodprøve</button>
     </div>
   </div>
+  </details>
 
   </div><div class="blk">
   <!-- TRÆNING -->
@@ -483,8 +499,9 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
   </div><div class="blk">
+  <details class="fold" id="foldVane"><summary><span>Vane-modning 🌱</span><span class="hint">hvornår løbet kører af sig selv</span></summary>
   <div class="card" id="vaneCard" style="margin-bottom:14px">
-    <div class="ch"><h2>Vane-modning 🌱</h2><span class="hint">hvornår løbet kører af sig selv</span></div>
+    <div class="ch" style="display:none"><h2>Vane-modning 🌱</h2></div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 6px">
       <span id="vaneDays" style="font-weight:600">—</span>
       <span class="hint" id="vanePct">—</span>
@@ -502,6 +519,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     </div>
     <p class="hint" id="vaneNote" style="margin-top:10px"></p>
   </div>
+  </details>
   </div><div class="blk">
   <div class="grid lead">
     <div class="card">
@@ -545,7 +563,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 
   </div></div><!-- /dash -->
   <!-- LIV: ARBEJDE, VEJR & LÆSNING -->
-  <div class="section-label"><span class="bar" style="background:var(--arb)"></span>Liv — arbejde, vejr & læsning</div>
+  <details class="fold" id="foldLiv" style="margin-top:34px"><summary><span>Arbejde, vejr &amp; læsning</span><span class="hint">tryk for at åbne</span></summary>
   <div class="grid g3">
     <div class="card">
       <div class="ch"><h3>Arbejdsbelastning</h3><span class="hint">fra dagens log</span></div>
@@ -566,11 +584,13 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <p class="hint" style="margin-top:8px" id="readNote"></p>
     </div>
   </div>
+  </details>
 
   <!-- SAMMENHÆNGE -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge — hvorfor</div>
+  <div class="card" id="bigCard" style="margin-bottom:14px"></div>
   <div class="card" id="hypoCard" style="margin-bottom:14px"></div>
-  <div class="card" id="insights"></div>
+  <details class="fold" id="foldIns"><summary><span>Flere iagttagelser</span><span class="hint">vægt vs. fedt% m.m.</span></summary><div class="card" id="insights"></div></details>
   </div><!-- /viewLiv -->
 
   <div id="viewVaegt" hidden>
@@ -656,6 +676,7 @@ const REST=SB+"/rest/v1/";
 const HEAD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
 const FN_INT=SB+"/functions/v1/sync-intervals";
 const FN_WITH=SB+"/functions/v1/sync-withings";
+const FN_GARMIN=SB+"/functions/v1/sync-garmin-official";
 const FN_COACH=SB+"/functions/v1/ai-coach";
 const BOOKS_FN="https://fhlotfddxcpczokbvzdq.supabase.co/functions/v1/books-read"; // tabellen er låst; funktionen svarer kun til dig (login-token følger med via auth.js)
 
@@ -731,11 +752,13 @@ async function loadAll(){
   rebuildEventViews();
   try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
   syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
+  try{ const gs=await get("garmin_misc","?select=data&kind=eq.official_sync_status"); S.gsync=gs[0]&&gs[0].data||null; }catch(e){ S.gsync=null; }
   try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_start,sleep_end,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
                rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end})); }catch(e){ S.garmin=[]; }
   try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
   try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
+  bigStart();
   S.settings=settings[0];
   S.weighins=weighins.map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
@@ -1125,7 +1148,54 @@ function render(){
   coach();
   insights();
   hypotheses();
+  bigPicture();
+  paintGarminStatus();
   $("#foot").textContent="Sidst opdateret "+now.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
+}
+
+// ---------- Det store billede: sammenhænge på de LANGE data (Garmin 2,5 år, vægt, løb) – motor i connections.js ----------
+// Dagens log har kun uger af data; Garmin har hundredvis af dage. Her kobles søvn, stress, løb, vægt og ugerytme på tværs.
+let bigDone=false;
+function bigStart(){ if(!S.bigP&&typeof Connections!=="undefined") S.bigP=Connections.run().then(r=>{S.big=r;return r;}).catch(()=>null); return S.bigP||null; }
+async function bigReady(ms){ const p=bigStart(); if(!p) return null; return Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]); }
+function bigBars(el,c){
+  const v=c.data, n=v.length; if(!n) return;
+  const w=340,h=124,mL=6,mR=6,mT=18,mB=22;
+  const lo=c.zero?Math.min(0,...v):(c.min!=null?c.min:Math.min(...v)), hi=Math.max(c.zero?0:lo+1e-9,...v), span=(hi-lo)||1;
+  const bw=(w-mL-mR)/n, Y=x=>mT+(hi-x)/span*(h-mT-mB), y0=Y(c.zero?0:lo);
+  const f=x=>Math.abs(x)>=10?String(Math.round(x)):(Math.round(x*10)/10).toString().replace(".",",");
+  let svg="";
+  v.forEach((x,i)=>{const y=Y(x),top=Math.min(y,y0),ht=Math.max(1.5,Math.abs(y-y0)),cx=mL+i*bw+bw/2,neg=x<0;
+    svg+=`<rect x="${(mL+i*bw+bw*.18).toFixed(1)}" y="${top.toFixed(1)}" width="${(bw*.64).toFixed(1)}" height="${ht.toFixed(1)}" rx="3" fill="${neg?"var(--warn)":"var(--accent)"}" opacity=".85"/>`+
+         `<text x="${cx.toFixed(1)}" y="${(neg?top+ht+11:top-4).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--ink)">${(x>0&&c.zero?"+":"")+f(x)}</text>`+
+         `<text x="${cx.toFixed(1)}" y="${h-6}" text-anchor="middle" font-size="9.5" fill="var(--muted)">${c.labels[i]}</text>`;});
+  if(c.zero) svg+=`<line x1="${mL}" x2="${w-mR}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${svg}</svg><div class="cap">${c.unit}</div>`;
+}
+async function bigPicture(){
+  const el=$("#bigCard"); if(!el||bigDone||typeof Connections==="undefined") return;
+  bigDone=true;
+  el.innerHTML=`<div class="ch"><h2>Det store billede</h2><span class="hint">analyserer dine data…</span></div>`;
+  try{
+    const res=await bigStart();
+    if(!res) throw new Error("ingen data");
+    const ic={"Søvn":["😴","trae"],"Stress":["⚡","energi"],"Ugerytme":["📅","accent"],"Vægt":["⚖️","trae"],"Løb og krop":["🏃","accent"],"Stort billede":["🔭","accent"],"Langsigtet":["📈","accent"],"Uge for uge":["🗓️","trae"]};
+    let k=0; const charts=[];
+    const row=f=>{const [e,c]=ic[f.kicker]||["🔎","accent"], id="bpc"+(k++); if(f.chart) charts.push([id,f.chart]);
+      return `<div class="insight"><div class="ic" style="background:var(--${c}-soft,var(--accent-soft));color:var(--${c},var(--accent))">${e}</div><div style="flex:1;min-width:0"><b>${f.title}</b><p>${f.html}</p>${f.chart?`<div class="bpc" id="${id}"></div>`:""}</div></div>`;};
+    const top=res.findings.slice(0,3), rest=res.findings.slice(3);
+    el.innerHTML=`<div class="ch"><h2>Det store billede</h2><span class="hint">${res.days} dage siden ${res.from.slice(0,7)}</span></div>`+
+      top.map(row).join("")+
+      (rest.length?`<details><summary>Se ${rest.length} fund mere ›</summary>${rest.map(row).join("")}</details>`:"")+
+      (res.none.length?`<p class="hint" style="margin:10px 0 0">Undersøgt uden tydeligt resultat: ${res.none.join(", ")}.</p>`:"")+
+      `<p class="hint" style="margin:8px 0 0">Sammenhænge i dine lange data — ikke bevis for årsag. Kun forskelle der holder statistisk vises.</p>`;
+    charts.forEach(([id,c])=>{const t=$("#"+id); if(!t) return;
+      if(c.type==="line"){
+        const pts=(a)=>a.map((v,i)=>v==null?null:{d:c.labels[i],v}).filter(Boolean);
+        t.innerHTML=`<div id="${id}a"></div><div class="cap">${c.unit} · kvartal for kvartal</div><div id="${id}b" style="margin-top:6px"></div><div class="cap">${c.unit2}</div>`;
+        spark(id+"a",pts(c.data),"var(--accent)","var(--accent-soft)"); if(c.data2) spark(id+"b",pts(c.data2),"var(--warn)","transparent");
+      } else bigBars(t,c);});
+  }catch(e){ el.innerHTML=`<div class="ch"><h2>Det store billede</h2></div><p class="hint">Kunne ikke hente de lange data: ${String(e.message||e)}</p>`; }
 }
 
 // sygedage: bryder hverken kæden eller tæller som afbrydelse (hvile er en del af vanen)
@@ -1418,6 +1488,7 @@ function dayExtras(t){
     const hy=hypoTests().filter(r=>r.status==="tydelig"||r.status==="antydning").map(r=>({spoergsmaal:r.q,styrke:r.status,[r.expLabel]:r.m1,[r.ctlLabel]:r.m2,dage:[r.n1,r.n2]}));
     if(hy.length) o.egne_hypoteser_antydninger=hy;
   }catch(e){}
+  try{ const bp=bigPatternForCoach(t); if(bp) o.langsigtet_moenster=bp; }catch(e){}
   try{
     const hb=hrvBaseline(t);
     if(hb) o.hrv_personlig_baseline={...hb,note:"Normalområde = 25.-75. percentil af dine seneste 60 nætter. Sammenlign med dig selv, ikke et fast tal."};
@@ -1427,6 +1498,24 @@ function dayExtras(t){
       note:"Spredning (standardafvigelse) af tidspunkter; lavere = mere regelmæssig søvnrytme. Uregelmæssighed hænger i forskning sammen med dårligere humør uafhængigt af søvnlængde."};
   }catch(e){}
   return o;
+}
+// ét langsigtet mønster pr. dag til coachen – valgt efter hvad der passer til dagen (ikke tilfældigt), så den ikke gentager det samme
+function bigPatternForCoach(t){
+  const F=(S.big&&S.big.findings||[]).filter(f=>f.id!=="long"&&f.id!=="weekly"); if(!F.length) return null;
+  const G=S.garmin||[], gT=G.find(g=>g.log_date===t), gY=G.find(g=>g.log_date===addDays(t,-1)), gB=G.filter(g=>g.log_date<t).slice(-21);
+  const avgSt=avg(gB.map(g=>g.stress).filter(v=>v>0));
+  const lateBed=gT&&gT.bed_ts?(()=>{const d=new Date(gT.bed_ts);const h=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Copenhagen",hour:"2-digit",hour12:false}).format(d);return h>=0&&h<5||h>=24;})():false;
+  const dow=new Date(t+"T12:00:00").getDay(), ranY=(S.gacts||[]).some(a=>a.log_date===addDays(t,-1)&&/running/.test(a.type||""));
+  const want=[];
+  if(lateBed||(gT&&gT.sleep_h!=null&&gT.sleep_h<6.5)) want.push("bed");
+  if(gY&&gY.stress>0&&avgSt&&gY.stress>avgSt+7) want.push("stress");
+  if(dow===6||dow===0||dow===1) want.push("week");
+  if(ranY) want.push("run");
+  let f=want.map(id=>F.find(x=>x.id===id)).find(Boolean);
+  if(!f){ const doy=Math.floor((new Date(t+"T12:00:00")-new Date(new Date(t).getFullYear(),0,0))/864e5); f=F[doy%F.length]; }
+  const txt=String(f.html).replace(/<br\s*\/?>/g," ").replace(/<[^>]+>/g,"").replace(/\s+/g," ").trim();
+  return {emne:f.title,fund:txt,
+    note:"Baggrund fra 2,5 års egne data. Nævn det KUN hvis det hjælper med at forklare dagens tal – højst én kort sætning, aldrig som regel eller opsang, og ikke hvis det ikke passer til i dag. Det er sammenhæng i data, ikke bevis for årsag."};
 }
 function paintDayExtras(){
   const d=S.daily.find(x=>x.log_date===todayISO())||{};
@@ -1478,6 +1567,7 @@ async function aiCoach(){
   if(!gT && new Date().getHours()<9) return;
   if(aiCoach._busy) return; aiCoach._busy=true;
   try{
+    await bigReady(3500);   // lange mønstre med i payload, men vent højst 3,5 sek.
     const r=await fetch(FN_COACH,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},
       body:JSON.stringify({surface:"livsstil",tab:"overview",trigger:"dashboard",data:coachPayload()})});
     if(r.ok){ const j=await r.json(); if(j&&j.ok&&j.content){ el.textContent=j.content; el.dataset.ai="1"; hideNudge(); coachTime(Date.now(),true); try{localStorage.setItem(LSK,JSON.stringify({date:t,fp,text:j.content,ts:Date.now(),n:((c&&c.n)||0)+1}));}catch(e){} } }
@@ -1922,13 +2012,27 @@ async function doSync(){
   if(doSync._busy)return; doSync._busy=true;
   const btn=$("#syncBtn");btn.disabled=true;const old=btn.textContent;btn.textContent="synker…";
   const opt={headers:{apikey:KEY,Authorization:"Bearer "+KEY}};
-  try{await Promise.all([fetch(FN_INT+"?days=30",opt),fetch(FN_WITH+"?days=30",opt)]);
+  try{const rs=await Promise.allSettled([fetch(FN_INT+"?days=30",opt),fetch(FN_WITH+"?days=30",opt),fetch(FN_GARMIN+"?days=2&maxFit=5",{method:"POST",headers:{...opt.headers,"Content-Type":"application/json"}})]);
+    let gErr=null; try{ const gr=rs[2].status==="fulfilled"?await rs[2].value.json():null; if(!gr||!gr.ok) gErr=(gr&&(gr.note||gr.error))||"Garmin svarede ikke"; }catch(e){ gErr="Garmin svarede ikke"; }
+    S.gErr=gErr;
     await loadAll();render();
     try{if(frame&&frame.getAttribute("src")&&frame.contentWindow)frame.contentWindow.location.reload();}catch(e){}
     btn.textContent="✓ opdateret";
   }catch(e){btn.textContent="↻ Synk";alert("Synk-fejl: "+e.message);}
   finally{doSync._busy=false;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1500);}
 }
+
+// ---------- Garmin: status for sidste hentning ----------
+function paintGarminStatus(){
+  const el=$("#garminStatus"); if(!el) return;
+  const at=S.gsync&&S.gsync.at?new Date(S.gsync.at):null;
+  if(S.gErr){ el.innerHTML=`<span style="color:var(--warn)">Garmin: ${String(S.gErr).slice(0,90)}</span>`; return; }
+  if(!at||isNaN(at)){ el.textContent=""; return; }
+  const m=Math.round((Date.now()-at.getTime())/60000), tm=at.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
+  const when=m<1?"lige nu":m<60?`for ${m} min. siden`:at.toDateString()===new Date().toDateString()?"kl. "+tm:at.toLocaleDateString("da-DK",{day:"numeric",month:"short"})+" kl. "+tm;
+  el.innerHTML=`Garmin hentet ${when}`+(m>36*60?` <span style="color:var(--warn)">· ældre end 1½ døgn – tjek synkroniseringen</span>`:"");
+}
+setInterval(paintGarminStatus,60000);
 
 // ---------- theme ----------
 (function(){const r=document.documentElement;let th=null;try{th=localStorage.getItem("liv-theme")}catch(e){}
