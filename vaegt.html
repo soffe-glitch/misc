@@ -265,6 +265,12 @@ async function loadAll(){
 // målvægt-linje fra (startdato, startvægt) til (slutdato, slutvægt)
 function malvaegt(iso,endW){
   const s=S.settings;
+  // justeret linje (fx rygestop): starter forfra fra (dato, vægt) og slutter stadig på målvægten på slutdatoen
+  if(s.line_adj_date&&s.line_adj_weight!=null&&iso>=s.line_adj_date){
+    const spanDays=Math.max(1,daysBetween(s.line_adj_date,s.kur_end_date));
+    const d=Math.max(0,Math.min(spanDays,daysBetween(s.line_adj_date,iso)));
+    return +s.line_adj_weight-((+s.line_adj_weight-endW)/spanDays)*d;
+  }
   const totalDays=daysBetween(s.kur_start_date,s.kur_end_date)+1; // antal kurdage inkl. begge dage (100)
   let dayNum=daysBetween(s.kur_start_date,iso)+1;                 // dag 1 = kur-start (allerede ét dagstab under start)
   dayNum=Math.max(1,Math.min(totalDays,dayNum));
@@ -339,7 +345,28 @@ function planHtml(st){
     else if(r4!=null) txt+=` Trenden bevæger sig ikke mod målet i de seneste 4 uger endnu.`;
     lines.push(`<div>${txt}</div>`);
   }
+  // justering af linjen (fx rygestop)
+  if(s.line_adj_date){
+    lines.push(`<div style="color:var(--muted);font-size:13px">Linjen er <b>justeret ${fmtD(s.line_adj_date)}</b> og starter forfra fra ${kg(+s.line_adj_weight)}${s.line_adj_note?` (${esc(s.line_adj_note)})`:""}. Den oprindelige linje vises svagt. <a href="#" id="adjUndo">Fortryd justeringen</a></div>`);
+  } else {
+    lines.push(`<div style="color:var(--muted);font-size:13px">Steg vægten pga. fx rygestop eller sygdom? <a href="#" id="adjDo">Justér linjen fra i dag</a> (starter forfra fra din trend ${kg(tNow)}).</div>`);
+  }
   return lines.join("");
+}
+async function saveAdj(patch){
+  const r=await fetch(REST+"settings?id=eq."+S.settings.id,{method:"PATCH",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(patch)});
+  if(!r.ok) throw new Error("settings: "+r.status+" "+(await r.text()).slice(0,120));
+  const row=(await r.json())[0]; if(row) S.settings=row;
+}
+function wireAdj(){
+  const tr=trendSeries(), tNow=[...tr].reverse().find(v=>v!=null);
+  const d=$("#adjDo"), u=$("#adjUndo");
+  if(d) d.onclick=async e=>{e.preventDefault(); const s=S.settings, w=Math.round(tNow*10)/10, left=Math.max(1,daysBetween(todayISO(),s.kur_end_date)), need=(w-s.kur_basis_weight)/(left/7);
+    if(!confirm(`Justér linjen?\n\nDen starter forfra i dag fra din trend (${num(w,1)} kg) og slutter stadig på ${num(s.kur_basis_weight,1)} kg den ${fmtD(s.kur_end_date)} — ca. ${num(need,2)} kg/uge.\nDen oprindelige linje vises svagt, og du kan fortryde.`)) return;
+    const note=prompt("Kort note (valgfrit), fx rygestop:","rygestop")||null;
+    try{ await saveAdj({line_adj_date:todayISO(),line_adj_weight:w,line_adj_note:note}); render(); }catch(err){ alert("Kunne ikke gemme: "+err.message); }};
+  if(u) u.onclick=async e=>{e.preventDefault(); if(!confirm("Fortryd justeringen og gå tilbage til den oprindelige linje?")) return;
+    try{ await saveAdj({line_adj_date:null,line_adj_weight:null,line_adj_note:null}); render(); }catch(err){ alert("Kunne ikke gemme: "+err.message); }};
 }
 
 const tt=$("#tooltip");
@@ -361,8 +388,13 @@ function weightChart(){
   for(let m=0;m<6;m++){const d=new Date(start.getFullYear(),start.getMonth()+m,1); if(d.getTime()<x0||d.getTime()>x1)continue; const x=X(d.getTime());
     xticks+=`<text x="${x}" y="${h-8}" text-anchor="middle" class="axis-t">${MONTHS[d.getMonth()]}</text><line x1="${x}" x2="${x}" y1="${mT}" y2="${h-mB}" stroke="var(--grid)" opacity=".6"/>`;}
   // to målvægt-linjer
+  const adj=s.line_adj_date&&s.line_adj_weight!=null?{t:parseD(s.line_adj_date).getTime(),w:+s.line_adj_weight}:null;
+  // oprindelig linje: sidste dag før justeringen (hvis justeret), ellers hele vejen
+  const origEnd=adj?s.line_adj_date:s.kur_end_date;
   const lineReal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,s.kur_basis_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.kur_basis_weight))}`;
   const lineGoal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,s.goal_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.goal_weight))}`;
+  const adjReal=adj?`M ${X(adj.t)} ${Y(adj.w)} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.kur_basis_weight))}`:"";
+  const adjGoal=adj?`M ${X(adj.t)} ${Y(adj.w)} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.goal_weight))}`:"";
   // faktisk (morgen)
   let dPath="",area="",dots="",trendPath="";
   const TR=trendSeries(); TR.forEach((v,i)=>{ if(v==null) return; const x=X(parseD(M[i].log_date).getTime()),y=Y(v); trendPath+=(trendPath?"L":"M")+x+" "+y+" "; });
@@ -376,8 +408,12 @@ function weightChart(){
   return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Vægtudvikling">
     <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
     ${grid}${xticks}
-    <path d="${lineGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity=".55"/>
-    <path d="${lineReal}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="6 4" fill="none" opacity=".8"/>
+    <path d="${lineGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity="${adj?.2:.55}"/>
+    <path d="${lineReal}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="6 4" fill="none" opacity="${adj?.28:.8}"/>
+    ${adj?`<path d="${adjGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity=".55"/>
+    <path d="${adjReal}" stroke="var(--accent-ink)" stroke-width="2" stroke-dasharray="6 4" fill="none" opacity=".9"/>
+    <circle cx="${X(adj.t)}" cy="${Y(adj.w)}" r="4" fill="var(--surface)" stroke="var(--accent-ink)" stroke-width="2"/>
+    <text x="${X(adj.t)}" y="${Y(adj.w)-9}" text-anchor="middle" class="axis-t" fill="var(--accent-ink)">justeret</text>`:""}
     <text x="${X(x1)}" y="${Y(s.kur_basis_weight)+13}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">63,5</text>
     <text x="${X(x1)}" y="${Y(s.goal_weight)+13}" text-anchor="end" class="axis-t">62</text>
     ${M.length?`<path d="${area}" fill="url(#wg)"/><path d="${dPath}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" opacity=".45"/>`:""}
@@ -596,6 +632,7 @@ function render(){
   </div></section>`;
 
   bindWeightHover($("#wchart"));
+  wireAdj();
   bindBars($("#kchart"));
   wireForms();
   bindSync();
