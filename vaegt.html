@@ -257,8 +257,8 @@ async function loadAll(){
   S.weighins=weighins.filter(w=>w.log_date>=kurStart).map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
-  try{ S.garmin=(await apiGet("garmin_daily","?select=log_date,kcal_total,kcal_active,kcal_bmr,updated_at&order=log_date.asc&log_date=gte."+addDays(todayISO(),-30)))
-        .map(g=>({log_date:g.log_date,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr,upd:g.updated_at})); }
+  try{ S.garmin=(await apiGet("garmin_daily","?select=log_date,kcal_total,kcal_active,kcal_bmr,last_sync:raw->stats->>lastSyncTimestampGMT&order=log_date.asc&log_date=gte."+addDays(todayISO(),-30)))
+        .map(g=>({log_date:g.log_date,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr,ls:g.last_sync?new Date(g.last_sync+"Z"):null})); }
   catch(e){ S.garmin=[]; }
 }
 
@@ -464,7 +464,12 @@ function ebData(){
   const pts=days.map(d=>{
     const g=gmap[d]; const eat=Math.round(kmap[d]||0); let burn=null, prelim=false;
     if(g&&g.kt!=null){
-      if(d===t){ const fresh=g.upd&&new Date(g.upd).getHours()>=20; if(fresh){ prelim=true; burn=(bmrFull!=null&&g.ka!=null)?bmrFull+g.ka:g.kt; } }
+      if(d===t){
+        // Brug Garmins EGEN synk-tid for dagens tal (ikke updated_at, som andre synk-job også rører).
+        // Først efter kl. 18 er dagens aktive forbrug nogenlunde komplet.
+        const fresh=g.ls&&todayISO()===t&&g.ls.getHours()>=18;
+        if(fresh){ prelim=true; burn=(bmrFull!=null&&g.ka!=null)?bmrFull+g.ka:g.kt; }
+      }
       else burn=g.kt;
     }
     if(burn==null||eat<=0) return {d,v:null,eat,miss:eat<=0,nog:burn==null};
@@ -483,7 +488,7 @@ function ebChart(){
   pts.forEach((p,i)=>{
     const x=mL+i*bw+bw*0.16, bwi=bw*0.68, cx=x+bwi/2;
     if(i%2===0||i===pts.length-1) gl+=`<text x="${cx}" y="${h-6}" text-anchor="middle" class="axis-t">${fmtD(p.d)}</text>`;
-    if(p.v==null){ const why=p.miss?"ikke logget":"Garmin opdaterer kl. 20";
+    if(p.v==null){ const why=p.miss?"ikke logget":"afventer Garmin-synk";
       bars+=`<circle cx="${cx}" cy="${z}" r="3" fill="var(--faint)" class="ebar" data-tip="${esc("<b>"+fmtD(p.d)+"</b> — "+why)}" style="cursor:pointer"/>`; return; }
     const y=Y(Math.max(0,p.v)), hh=Math.abs(Y(p.v)-z), col=p.v>=0?"var(--accent)":"var(--bad)", op=p.low?0.35:(p.prelim?0.6:0.92);
     const tip=`<b>${fmtD(p.d)}${p.prelim?" (foreløbigt)":""}</b><br>${p.v>=0?"Underskud":"Overskud"} ${num(Math.abs(p.v),0)} kcal<br>spist ${num(p.eat,0)} · forbrug ~${num(p.burn,0)}${p.low?"<br><i>under 900 kcal logget – måske ikke hele dagen</i>":""}`;
@@ -498,7 +503,7 @@ function ebStats(){
   const s7=last7.length?`<div class="v tnum" style="${sum<0?"color:var(--bad)":""}">${sum<0?"−":""}${num(Math.abs(sum),0)}<small> kcal</small></div><div class="sub">${sum>=0?"≈ "+num(sum/7700,2)+" kg fedt":"overskud ≈ "+num(Math.abs(sum)/7700,2)+" kg"} · ${last7.length} af 7 dage logget</div>`
                        :`<div class="v tnum">—</div><div class="sub">ingen loggede dage</div>`;
   const sT=td.v!=null?`<div class="v tnum" style="${td.v<0?"color:var(--bad)":""}">${td.v<0?"−":""}${num(Math.abs(td.v),0)}<small> kcal</small></div><div class="sub">spist ${num(td.eat,0)} · forbrug ~${num(td.burn,0)}</div>`
-                     :`<div class="v tnum">—</div><div class="sub">${td.nog?"Garmin opdaterer dagen kl. 20":"log mad for i dag"}</div>`;
+                     :`<div class="v tnum">—</div><div class="sub">${td.nog?"afventer aftenens Garmin-synk fra Macen":"log mad for i dag"}</div>`;
   return `<div class="mini-grid" style="margin-top:12px"><div class="mini"><div class="k">Underskud, seneste 7 dage</div>${s7}</div><div class="mini"><div class="k">I dag (foreløbigt)</div>${sT}</div></div>`;
 }
 function bindEb(container){
