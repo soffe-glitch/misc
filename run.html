@@ -126,6 +126,18 @@ tr:hover td { background:var(--card2); }
 .df-more summary::after { content:"›"; transition:transform .2s; font-size:18px; line-height:1; }
 .df-more[open] summary::after { transform:rotate(90deg); }
 .df-more summary::-webkit-details-marker { display:none; }
+.flat { padding:16px 2px 12px; border-top:1px solid var(--border); margin-bottom:2px; }
+.flat-h { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+.flat-h b { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.09em; font-weight:700; }
+.flat-h span { font-size:12px; font-weight:600; }
+.wk { display:grid; grid-template-columns:minmax(76px,1.3fr) repeat(3,1fr); gap:2px 10px; align-items:baseline; }
+.wk .wh { font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:700; padding-bottom:4px; }
+.wk .wl { font-size:14px; font-weight:600; padding:8px 0; border-top:1px solid var(--border); }
+.wk .wl small { display:block; font-size:11px; color:var(--muted); font-weight:400; }
+.wk .wv { font-family:"Fraunces",Georgia,serif; font-size:24px; padding:6px 0; border-top:1px solid var(--border); }
+.wk .wv small { font-family:"Hanken Grotesk",sans-serif; font-size:11px; color:var(--muted); display:block; margin-top:-2px; }
+.ov-sum { font-size:13px; color:var(--muted); margin:-2px 0 10px; }
+.flat .hb-head { margin-top:2px; }
 .ra-sum { font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
 .ra-sum b { color:var(--text); font-weight:600; }
 .ra-table { width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -347,7 +359,6 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
   <div class="page active" id="p-overview" style="display:none">
     <div class="ov-top">
       <div id="coach-overview"></div>
-      <div id="recent-activity-summary"></div>
     </div>
     <div class="card" id="df-card">
       <div id="df-score"></div>
@@ -355,10 +366,11 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       <details class="df-more"><summary>Hvad påvirker din dagsform?</summary><div id="df-factors"></div></details>
       <div id="df-workout"></div>
     </div>
+    <div id="recent-activity-summary"></div>
     <div id="habit-mini"></div>
-    <div class="grid g6 statstrip" id="summary"></div>
     <div class="card chartcard">
       <div class="ch-head"><h3>Udvikling</h3><div class="segctl" id="ovSeg"><button type="button" class="on" data-pane="cWeekly">Distance</button><button type="button" class="" data-pane="cPace">Pace</button><button type="button" class="" data-pane="cHR">Puls</button><button type="button" class="" data-pane="cEF">Effektivitet</button><button type="button" class="" data-pane="cZones">Zoner</button></div></div>
+      <div id="ov-sum" class="ov-sum"></div>
       <div class="chpane on" data-pane="cWeekly"><div class="ch tall"><canvas id="cWeekly"></canvas></div>
         <div class="help">Viser din samlede distance pr. uge. <span class="good">J&aelig;vn stigning</span> er ideelt &mdash; store pludselige hop er en grund til at s&aelig;tte tempoet ned.</div>
       </div>
@@ -836,7 +848,7 @@ function renderHabit() {
   const pct = Math.min(100, Math.round(h.span / HABIT_WINDOW * 100));
   const head = `<div class="hb-head"><div class="hb-day">Dag ${h.span}<small> af ${HABIT_WINDOW}</small></div><span class="hint" style="font-size:12px;color:var(--muted)">${pct}% af modningsvinduet</span></div><div class="hb-bar"><i style="width:${pct}%"></i></div>`;
   const mini = document.getElementById('habit-mini');
-  if (mini) mini.innerHTML = `<div class="card"><div class="lbl">Løbevane</div>${head}${habitStrip(h, 21)}<div class="hb-msg">${habitMsg(h)}</div></div>`;
+  if (mini) mini.innerHTML = `<section class="flat"><div class="flat-h"><b>Løbevane</b></div>${head}${habitStrip(h, 21)}<div class="hb-msg">${habitMsg(h)}</div></section>`;
   const full = document.getElementById('hb-full');
   if (full) full.innerHTML = `
     <p style="font-size:13.5px;color:var(--muted);line-height:1.65;margin-bottom:12px">Målet er at løbe <b style="color:var(--text)">dagligt — mindst 1 km</b> på dage uden program. Sygedage tæller ikke som afbrydelser. Markér dem i Livsstil-dashboardet.</p>
@@ -1010,48 +1022,16 @@ function renderRecentSummary(allRuns) {
   const avgKmPerWeek = (s30.km / weeksIn30).toFixed(0);
 
   const el = document.getElementById('recent-activity-summary');
+  const pc = v => (v ? fmtPace(v) : '-');
   el.innerHTML = `
-    <div class="grid g2">
-      <div class="card" style="border-left:3px solid ${statusColor};">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h3 style="margin:0; font-size:14px;">Seneste 7 dage</h3>
-          <span style="font-size:12px; font-weight:600; color:${statusColor};">${statusText}</span>
-        </div>
-        <div class="tri">
-          <div>
-            <div class="lbl">L\u00f8beture</div>
-            <div class="val" style="font-size:22px; color:var(--accent2)">${s7.count}</div>
-          </div>
-          <div>
-            <div class="lbl">Kilometer</div>
-            <div class="val" style="font-size:22px; color:var(--green)">${s7.km.toFixed(1)}</div>
-          </div>
-          <div>
-            <div class="lbl">Gns. pace</div>
-            <div class="val" style="font-size:22px; color:var(--orange)">${s7.paceVal ? fmtPace(s7.paceVal) : '-'}</div>
-          </div>
-        </div>
+    <section class="flat">
+      <div class="flat-h"><b>Din træning</b><span style="color:${statusColor}">${statusText}</span></div>
+      <div class="wk">
+        <div class="wh"></div><div class="wh">Løb</div><div class="wh">Km</div><div class="wh">Pace</div>
+        <div class="wl">7 dage</div><div class="wv" style="color:var(--accent2)">${s7.count}</div><div class="wv" style="color:var(--green)">${s7.km.toFixed(1)}</div><div class="wv" style="color:var(--orange)">${pc(s7.paceVal)}</div>
+        <div class="wl">30 dage<small>${avgRunsPerWeek} løb og ${avgKmPerWeek} km pr. uge</small></div><div class="wv" style="color:var(--accent2)">${s30.count}</div><div class="wv" style="color:var(--green)">${s30.km.toFixed(1)}</div><div class="wv" style="color:var(--orange)">${pc(s30.paceVal)}</div>
       </div>
-      <div class="card">
-        <h3 style="margin:0 0 12px 0; font-size:14px;">Seneste 30 dage</h3>
-        <div class="tri">
-          <div>
-            <div class="lbl">L\u00f8beture</div>
-            <div class="val" style="font-size:22px; color:var(--accent2)">${s30.count}</div>
-            <div class="sub">${avgRunsPerWeek}/uge gns.</div>
-          </div>
-          <div>
-            <div class="lbl">Kilometer</div>
-            <div class="val" style="font-size:22px; color:var(--green)">${s30.km.toFixed(1)}</div>
-            <div class="sub">${avgKmPerWeek} km/uge gns.</div>
-          </div>
-          <div>
-            <div class="lbl">Gns. pace</div>
-            <div class="val" style="font-size:22px; color:var(--orange)">${s30.paceVal ? fmtPace(s30.paceVal) : '-'}</div>
-          </div>
-        </div>
-      </div>
-    </div>`;
+    </section>`;
 }
 
 function renderOverview(r) {
@@ -1065,14 +1045,8 @@ function renderOverview(r) {
   const longest = r.reduce((m,a) => Math.max(m,(a.distance||0)/1000), 0);
   const avgEF = avg(r.map(a => ef(a)).filter(Boolean));
 
-  document.getElementById('summary').innerHTML = `
-    <div class="card"><div class="lbl">Antal l&oslash;b</div><div class="val" style="color:var(--accent2)">${r.length}</div></div>
-    <div class="card"><div class="lbl">Total distance</div><div class="val" style="color:var(--green)">${dist.toFixed(0)} km</div></div>
-    <div class="card"><div class="lbl">Total tid</div><div class="val" style="color:var(--blue)">${fmtDur(time)}</div></div>
-    <div class="card"><div class="lbl">Gns. pace</div><div class="val" style="color:var(--orange)">${fmtPace(avgPace)}</div><div class="sub">min/km</div></div>
-    <div class="card"><div class="lbl">Gns. puls</div><div class="val" style="color:var(--pink)">${avgHR?Math.round(avgHR):'-'} bpm</div><div class="sub">Lavere ved samme pace = bedre</div></div>
-    <div class="card"><div class="lbl">Efficiency Factor</div><div class="val" style="color:var(--cyan)">${avgEF?avgEF.toFixed(2):'-'}</div><div class="sub">Hastighed &divide; puls &mdash; h&oslash;jere = bedre form</div></div>
-  `;
+  const per = { 1: 'seneste måned', 3: 'seneste 3 måneder', 6: 'seneste 6 måneder', 12: 'seneste år', 0: 'alle år' }[months] || '';
+  document.getElementById('ov-sum').textContent = r.length ? `${per.charAt(0).toUpperCase() + per.slice(1)}: ${r.length} løb · ${dist.toFixed(0)} km · ${fmtDur(time)} · gns. ${fmtPace(avgPace)}/km${avgHR ? ' · puls ' + Math.round(avgHR) : ''}` : 'Ingen løb i perioden.';
   renderWeekly(r);
   renderEF(r);
   renderPaceChart(r);
