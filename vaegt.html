@@ -115,6 +115,8 @@ header.top{display:flex; align-items:flex-end; justify-content:space-between; ga
 .card h2{font-size:20px}
 .card .hint{font-size:12.5px; color:var(--muted)}
 .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:12px}
+.plan{margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:14px; line-height:1.6; display:grid; gap:8px}
+.plan b{font-weight:600}
 .legend i{display:inline-block; width:18px; height:3px; border-radius:2px; vertical-align:middle; margin-right:5px}
 .legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 5px,transparent 5px 9px); height:2px}
 
@@ -301,6 +303,45 @@ function stats(){
   return {cur,lost,target,vsPlan,daysLeft,pct,rate,latest,projReal,projGoal};
 }
 
+// ---- Trend og tempo: enkeltvejninger svinger ±0,5 kg (vand, ugedag) — trenden er det, der tæller ----
+function trendSeries(){ // 7-dages gennemsnit af morgenvægt (kræver mindst 3 vejninger i vinduet)
+  const M=morningSeries();
+  return M.map(d=>{const t=parseD(d.log_date).getTime();
+    const win=M.filter(x=>{const dt=(t-parseD(x.log_date).getTime())/86400000;return dt>=0&&dt<7;});
+    return win.length>=3?win.reduce((a,x)=>a+x.weight_kg,0)/win.length:null;});
+}
+function rateOver(days){ // kg/uge tabt (+ = tab, − = stigning): regressionslinje over seneste N dage af morgenvejninger
+  const M=morningSeries(); if(!M.length) return null;
+  const last=parseD(M[M.length-1].log_date).getTime();
+  const P=M.filter(w=>(last-parseD(w.log_date).getTime())/86400000<days); if(P.length<Math.min(8,Math.round(days/3))) return null;
+  const d0=parseD(P[0].log_date).getTime(), xs=P.map(w=>(parseD(w.log_date).getTime()-d0)/86400000), ys=P.map(w=>w.weight_kg);
+  const n=xs.length, sx=xs.reduce((a,b)=>a+b,0), sy=ys.reduce((a,b)=>a+b,0), sxy=xs.reduce((a,x,i)=>a+x*ys[i],0), sxx=xs.reduce((a,x)=>a+x*x,0), den=n*sxx-sx*sx;
+  return den>0?-((n*sxy-sx*sy)/den)*7:null;
+}
+const sgn=(v,d=2)=>(v>=0?"−":"+")+num(Math.abs(v),d);
+function planHtml(st){
+  const s=S.settings, M=morningSeries(), tr=trendSeries();
+  const tNow=[...tr].reverse().find(v=>v!=null); if(tNow==null||!M.length) return "";
+  const lastD=M[M.length-1].log_date;
+  let t7=null; const target=addDays(lastD,-7); M.forEach((d,i)=>{ if(d.log_date<=target&&tr[i]!=null) t7=tr[i]; });
+  const r4=rateOver(28), rAll=st.rate, left=Math.max(1,daysBetween(lastD,s.kur_end_date)), toGo=tNow-s.kur_basis_weight, need=toGo/(left/7);
+  const lines=[];
+  lines.push(`<div><b>Trend ${kg(tNow)}</b> (7-dages gennemsnit)${t7!=null?` · ${tNow>t7+0.05?"▲":tNow<t7-0.05?"▼":"►"} ${num(Math.abs(tNow-t7),1)} kg mod for en uge siden`:""}. Enkeltvejninger svinger ofte ±0,5 kg (vand og ugedag), så det er trenden, der tæller.</div>`);
+  const rt=(v)=>Math.abs(v)<0.05?"stort set flad":(v>0?"tab ":"stigning ")+num(Math.abs(v),2)+" kg/uge";
+  lines.push(`<div><b>Tempo</b>: ${r4!=null?`${rt(r4)} de seneste 4 uger`:"for få vejninger til 4-ugers tempo"}${rAll!=null?` · ${rt(rAll)} siden kurstart`:""}.</div>`);
+  if(toGo<=0) lines.push(`<div style="color:var(--good)"><b>Du er nået ${kg(s.kur_basis_weight)}</b> på trenden ✓</div>`);
+  else {
+    const okRange=need>=0.3&&need<=0.7, high=need>0.7;
+    let txt=`Til ${kg(s.kur_basis_weight)} (${num(toGo,1)} kg) på ${left} dage skal tempoet være <b>${num(need,2)} kg/uge</b> fra trenden nu.`;
+    if(okRange) txt+=` Det ligger inden for det realistiske (0,3–0,7 kg/uge).`;
+    else if(high){ const d5=addDays(lastD,Math.round(toGo/0.5*7)); txt+=` Det er højt (over 0,7 kg/uge). Med 0,5 kg/uge, som er mere realistisk, nås ${kg(s.kur_basis_weight)} omkring <b>${fmtD(d5)}</b>.`; }
+    if(r4!=null&&r4>0.05){ const dr=addDays(lastD,Math.round(toGo/r4*7)); txt+=` Med de seneste 4 ugers tempo nås det omkring ${fmtD(dr)}.`; }
+    else if(r4!=null) txt+=` Trenden bevæger sig ikke mod målet i de seneste 4 uger endnu.`;
+    lines.push(`<div>${txt}</div>`);
+  }
+  return lines.join("");
+}
+
 const tt=$("#tooltip");
 function showTT(html,x,y){tt.innerHTML=html;tt.style.opacity=1;tt.style.left=(x+14)+"px";tt.style.top=(y+14)+"px";}
 function hideTT(){tt.style.opacity=0;}
@@ -323,13 +364,14 @@ function weightChart(){
   const lineReal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,s.kur_basis_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.kur_basis_weight))}`;
   const lineGoal=`M ${X(x0)} ${Y(malvaegt(s.kur_start_date,s.goal_weight))} L ${X(x1)} ${Y(malvaegt(s.kur_end_date,s.goal_weight))}`;
   // faktisk (morgen)
-  let dPath="",area="",dots="";
+  let dPath="",area="",dots="",trendPath="";
+  const TR=trendSeries(); TR.forEach((v,i)=>{ if(v==null) return; const x=X(parseD(M[i].log_date).getTime()),y=Y(v); trendPath+=(trendPath?"L":"M")+x+" "+y+" "; });
   if(M.length){
     M.forEach((d,i)=>{const x=X(parseD(d.log_date).getTime()),y=Y(d.weight_kg);dPath+=(i?"L":"M")+x+" "+y+" ";});
     const lx=X(parseD(M[M.length-1].log_date).getTime()), fx=X(parseD(M[0].log_date).getTime());
     area=`${dPath} L ${lx} ${Y(yMin)} L ${fx} ${Y(yMin)} Z`;
     M.forEach((d,i)=>{const x=X(parseD(d.log_date).getTime()),y=Y(d.weight_kg),big=i===M.length-1;
-      dots+=`<circle cx="${x}" cy="${y}" r="${big?5:3.5}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" data-i="${i}" class="wdot" style="cursor:pointer"/>`;});
+      dots+=`<circle cx="${x}" cy="${y}" r="${big?5:3}" fill="var(--accent)" fill-opacity="${big?1:.55}" stroke="var(--surface)" stroke-width="2" data-i="${i}" class="wdot" style="cursor:pointer"/>`;});
   }
   return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Vægtudvikling">
     <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
@@ -338,7 +380,8 @@ function weightChart(){
     <path d="${lineReal}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="6 4" fill="none" opacity=".8"/>
     <text x="${X(x1)}" y="${Y(s.kur_basis_weight)+13}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">63,5</text>
     <text x="${X(x1)}" y="${Y(s.goal_weight)+13}" text-anchor="end" class="axis-t">62</text>
-    ${M.length?`<path d="${area}" fill="url(#wg)"/><path d="${dPath}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`:""}
+    ${M.length?`<path d="${area}" fill="url(#wg)"/><path d="${dPath}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" opacity=".45"/>`:""}
+    ${trendPath?`<path d="${trendPath}" fill="none" stroke="var(--accent-ink)" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>`:""}
     ${dots}
   </svg>`;
 }
@@ -441,8 +484,9 @@ function render(){
   const planTag=st.vsPlan>=0?`<span class="dot" style="background:var(--good)"></span> ${gram(st.vsPlan*1000)} foran linjen`:`<span class="dot" style="background:var(--warn)"></span> ${gram(-st.vsPlan*1000)} bagud`;
   $("#statusLine").innerHTML=`${planTag} · morgenvægt ${kg(st.cur)} (${fmtD(st.latest.log_date)})`;
 
-  const rate=st.rate!=null?num(st.rate,2)+" kg/uge":"–";
-  const rateSub=st.rate!=null?(st.rate>=0.4&&st.rate<=0.7?"på sporet":st.rate>0.7?"hurtigt":st.rate>0?"langsomt":"stigende"):"log flere morgenvejninger";
+  const r4=rateOver(28);
+  const rate=r4!=null?sgn(r4)+" kg/uge":"–";
+  const rateSub=r4!=null?(r4>=0.4&&r4<=0.7?"på sporet · 4 uger":r4>0.7?"hurtigt · 4 uger":r4>0.05?"langsomt · 4 uger":Math.abs(r4)<=0.05?"flad · 4 uger":"stigende · 4 uger"):"log flere morgenvejninger";
 
   // kcal map for charts
   const kMap={};
@@ -493,10 +537,12 @@ function render(){
       <div class="ch"><h2>Vægtudvikling</h2><span class="hint">morgenvægt mod målvægt-linjerne</span></div>
       <div id="wchart">${weightChart()}</div>
       <div class="legend">
-        <span style="color:var(--accent)"><i style="background:var(--accent)"></i>morgenvægt</span>
+        <span style="color:var(--accent-ink)"><i style="background:var(--accent-ink);height:4px"></i>7-dages trend</span>
+        <span style="color:var(--accent)"><i style="background:var(--accent);opacity:.55"></i>morgenvægt</span>
         <span style="color:var(--accent-ink)"><i class="dash" style="color:var(--accent-ink)"></i>målvægt 63,5</span>
         <span><i class="dash" style="color:var(--muted)"></i>målvægt 62</span>
       </div>
+      <div class="plan">${planHtml(st)}</div>
     </div>
     <div class="card">
       <div class="ch"><h2>Log</h2></div>
