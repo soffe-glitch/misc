@@ -297,7 +297,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 
     </div>
     <div class="grid g2" style="align-content:start">
-      <div class="tile"><div class="k">Til aftensmad</div><div class="v tnum" id="tRation">—</div><div class="sub" id="tRationSub">vej før aften</div></div>
+      <div class="tile"><div class="k">Kalorier tilbage</div><div class="v tnum" id="tRation">—</div><div class="sub" id="tRationSub">af dagsmålet</div></div>
       <div class="tile" style="display:none"><div class="k">Kalorier i dag</div><div class="v tnum" id="tKcal">—</div><div class="meter"><i id="tKcalBar" style="width:0%;background:var(--accent)"></i></div></div>
       <div class="tile"><div class="k">Dagens træning</div><div class="v" style="font-size:16px" id="tTrain">—</div><div class="sub" id="tTrainSub"></div></div>
       <div class="tile" style="display:none"><div class="k">Restitution</div><div class="v" style="font-size:16px" id="tRest">—</div><div class="sub" id="tRestSub"></div></div>
@@ -1024,11 +1024,11 @@ function render(){
   // --- I dag tiles ---
   const foraften=weighToday("foraften"),morg=weighToday("morgen");
   const wNow=foraften||morg||(M.length?M[M.length-1]:null);
-  if(wNow){
-    const target=malvaegt(t,+s.kur_basis_weight);const raw=(target-wNow.weight_kg)*1000;
-    const ration=Math.max(s.ration_floor_g||600,Math.round(raw));
-    $("#tRation").innerHTML=ration+'<small> g</small>';
-    $("#tRationSub").textContent=(foraften?"før-aften ":(morg?"morgen ":"seneste "))+fmt(wNow.weight_kg,1)+" kg";
+  { // kaloriestyret (gram-rationen er droppet 7/11-2026)
+    const eaten=sumDay(S.nutrition,t,"calories_in"), tg=+s.calorie_target||1600, lim=+s.calorie_limit||1900, left=tg-eaten;
+    $("#tRation").innerHTML=(left>=0?Math.round(left):"+"+Math.round(-left))+'<small> kcal</small>';
+    $("#tRation").style.color=left>=0?"":(eaten>lim?"var(--bad)":"var(--warn)");
+    $("#tRationSub").textContent=eaten>0?(left>=0?`spist ${Math.round(eaten)} af ${tg}`:`over dagsmålet · grænse ${lim}`):`dagsmål ${tg} · intet logget`;
   }
   const kcal=sumDay(S.nutrition,t,"calories_in");
   $("#tKcal").innerHTML=kcal?`${kcal}<small> / ${s.calorie_target}</small>`:'—';
@@ -1463,8 +1463,7 @@ function coachPayload(){
 function dayExtras(t){
   const s=S.settings||{},M=morning(),o={};
   try{ const wN=weighToday("foraften")||weighToday("morgen")||(M.length?M[M.length-1]:null);
-    if(wN&&s.kur_basis_weight){ o.aftensmad_ration_gram=Math.max(s.ration_floor_g||600,Math.round((malvaegt(t,+s.kur_basis_weight)-wN.weight_kg)*1000));
-      o.ration_baseret_paa=weighToday("foraften")?"før-aften-vejning":weighToday("morgen")?"morgenvejning":"seneste vejning"; } }catch(e){}
+    if(s.calorie_target){ o.kcal_tilbage_i_dag=Math.round((+s.calorie_target)-sumDay(S.nutrition,t,"calories_in")); o.styring="kalorier (dagsmål "+s.calorie_target+", grænse "+(s.calorie_limit||1900)+"); matematikkurens gram-ration er droppet"; } }catch(e){}
   const pl=S.planned.filter(p=>p.log_date===t).map(p=>p.name||"planlagt pas"); o.planlagt_i_dag_fra_soeren=pl.length?pl:null;
   const sr=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt"); o.skridt_i_dag=sr?sr.steps:null; o.skridt_maal=7000;
   const md=S.meds.find(m=>m.log_date===t)||{}; o.eltroxin_i_dag={morgen:!!md.morning,aften:!!md.evening};
@@ -1672,11 +1671,11 @@ function coach(){
     const yKcal=sumDay(S.nutrition,yday,"calories_in");
     const yMorning=M.find(w=>w.log_date===yday);
     if((yAlc>0||yKcal>(+s.calorie_target)+400)&&yMorning&&cur>yMorning.weight_kg) w2+=" — men tallet er lidt vand-løftet efter i går, så din reelle position er bedre";
-    parts.push(w2+". Aftenrationen sættes af før-aften-vejningen.");
+    parts.push(w2+".");
   } else parts.push("Vej dig i morgen tidlig, så følger jeg kurven herfra.");
 
   // ---- brændstof-tjek: blid nudge hvis underforsynet (kalorier under 1200-gulvet) ----
-  // Matematikkuren styrer (gram); kalorier er kun en nedre grænse. Kun om aftenen (h>=19),
+  // Kun om aftenen (h>=19),
   // efter aftensmadstid — før det ligger hun naturligt lavt og det kan ikke vurderes endnu.
   const kcalToday=sumDay(S.nutrition,t,"calories_in");
   const choresToday=S.taskLog.filter(l=>l.log_date===t).length;
@@ -1685,7 +1684,7 @@ function coach(){
   const activeToday = ranToday || choresToday>=3 || stepsToday>=9000;
   if(h>=19 && kcalToday>0 && kcalToday<1200){
     const act = ranToday?"du har løbet i dag":activeToday?"du har været en del på benene i dag":null;
-    parts.push(`<b>Brændstof:</b> du har logget ~${Math.round(kcalToday)} kcal indtil nu${act?` og ${act}`:""} — under 1.200-gulvet. Kuren styrer efter gram, men giv gerne kroppen lidt mere i aften (fx en skyr eller lidt rugsprø); det modarbejder ikke vægttabet.`);
+    parts.push(`<b>Brændstof:</b> du har logget ~${Math.round(kcalToday)} kcal indtil nu${act?` og ${act}`:""} — under 1.200-gulvet. Giv gerne kroppen lidt mere i aften (fx yoghurt eller lidt rugsprø); det modarbejder ikke vægttabet.`);
   }
 
   $("#coachText").innerHTML=parts.join(" "); coachTime(null,false);
