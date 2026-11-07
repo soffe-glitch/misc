@@ -205,7 +205,7 @@ body.embed .wrap{padding:8px 4px 28px;max-width:none}
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <div class="eyebrow">Projekt Vægttab · Matematikkuren</div>
+      <div class="eyebrow">Projekt Vægttab · kaloriestyret</div>
       <h1>Sofies dashboard</h1>
       <div class="status-line" id="statusLine"><span class="dot" style="background:var(--faint)"></span> Forbinder…</div>
     </div>
@@ -214,7 +214,7 @@ body.embed .wrap{padding:8px 4px 28px;max-width:none}
 
   <div class="err-banner" id="errBanner"></div>
   <div id="app"><div class="loading">Henter dine data…</div></div>
-  <footer>Data gemmes i din egen Supabase-database · Matematikkuren efter Jens Bøgh</footer>
+  <footer>Data gemmes i din egen Supabase-database</footer>
 </div>
 <div class="tt" id="tooltip"></div>
 
@@ -533,47 +533,30 @@ function render(){
   const FLOOR=s.ration_floor_g||600;
   const withFloor=x=>Math.max(FLOOR,Math.round(x));
 
-  // hero action
+  // hero action — KALORIESTYRET (matematikkurens gram-ration er droppet 7/11-2026)
+  const LIMIT=+s.calorie_limit||1900;
+  const kcalEaten=sumDay(S.nutrition,t,"calories_in");
+  const left=s.calorie_target-kcalEaten;
   let big,sub;
-  if(aToday){
-    // gulvet (FLOOR) er en DAGS-guardrail og gælder IKKE aftensmåltidet alene
-    const raw=(targetToday-aToday.weight_kg)*1000, v=Math.max(0,Math.round(raw));
-    big=gram(v);
-    sub=(raw<=0?`på linjen · spis let `:`plads til aftensmad · `)+`vejet ${num(aToday.weight_kg,1)} kg før aftensmad`;
-  } else if(mToday){
-    const raw=(targetToday-mToday.weight_kg)*1000, v=withFloor(raw);
-    big=gram(v);
-    sub=(raw<FLOOR?`minimum ${FLOOR} g · `:``)+`dagens madbudget · vej dig igen før aftensmad`;
-  } else {
-    big="Vej dig";sub=`ingen morgenvejning i dag · dagens målvægt er ${num(targetToday,1)} kg`;
-  }
-  const heroActLabel=aToday?"Til aftensmad":mToday?"Dagens madbudget":"I dag";
-
+  if(kcalEaten<=0){ big=num(s.calorie_target,0)+" kcal"; sub=`dagens budget · intet logget endnu`; }
+  else if(left>=0){ big=num(left,0)+" kcal"; sub=`tilbage af ${num(s.calorie_target,0)} · spist ${num(kcalEaten,0)}`; }
+  else { big=num(-left,0)+" kcal"; sub=`over dagsmålet · ${kcalEaten<=LIMIT?num(LIMIT-kcalEaten,0)+" til grænsen på "+num(LIMIT,0):"over grænsen på "+num(LIMIT,0)}`; }
+  const heroActLabel=kcalEaten>0&&left<0?"Over dagsmålet":"Tilbage i dag";
   // today totals
   const kcalToday=sumDay(S.nutrition,t,"calories_in");
   const kcalRem=s.calorie_target-kcalToday;
   const kcalPct=Math.min(100,kcalToday/s.calorie_target*100);
   const kcalCol=kcalToday>s.calorie_target?"var(--bad)":"var(--accent)";
-  // blid nedre guardrail: matematikkuren styrer, men markér hvis kalorier ryger for lavt (<1200)
+  // blid nedre guardrail: markér hvis kalorier ryger for lavt (<1200)
   const KCAL_FLOOR=1200;
   const kcalLow=kcalToday>0&&kcalToday<KCAL_FLOOR;
   const kcalSub=kcalLow?"under 1.200 · spis lidt mere":(kcalRem>=0?num(kcalRem,0)+" tilbage":num(-kcalRem,0)+" over");
   const kcalSubCol=kcalLow?"var(--warn)":"";
-  // madration (gram) — dagens ration fra MORGENVEJNING (opdaterer ikke efter før-aften-vejning)
-  const gramsToday=sumDay(S.nutrition,t,"grams");
-  const ration=mToday?withFloor((targetToday-mToday.weight_kg)*1000):null;
-  const gramsRem=ration!=null?ration-gramsToday:null;
-  const gramsPct=(ration&&ration>0)?Math.min(100,gramsToday/ration*100):(gramsToday>0?100:0);
-  // balance: gram-rationen slår kun rød når du OGSÅ er over kaloriemålet.
-  // over gram men under kalorier = gulv-artefakt, ikke overspisning → grøn med forklaring.
-  const gramsOver=(ration!=null&&gramsToday>ration);
-  const kcalOver=kcalToday>=s.calorie_target;
-  const gramsCol=(gramsOver&&kcalOver)?"var(--bad)":"var(--accent)";
-  const gramsSub = ration==null ? "" :
-    (gramsRem>=0 ? num(gramsRem,0)+" g tilbage"
-     : (!kcalOver ? num(-gramsRem,0)+" g over · "+num(kcalRem,0)+" kcal under mål"
-        : num(-gramsRem,0)+" g over · "+num(-kcalRem,0)+" kcal over"));
-
+  // snit af de seneste 7 loggede dage (eksklusiv i dag)
+  const kByDay={}; S.nutrition.forEach(n=>{ if(n.log_date<t) kByDay[n.log_date]=(kByDay[n.log_date]||0)+(n.calories_in||0); });
+  const last7=Object.keys(kByDay).filter(d=>d>=addDays(t,-7)&&kByDay[d]>0).sort();
+  const avg7=last7.length?Math.round(last7.reduce((a,d)=>a+kByDay[d],0)/last7.length):null;
+  const avgCol=avg7==null?"":avg7>s.calorie_target?"var(--warn)":"var(--accent)";
   const goalPct=((s.start_weight-s.goal_weight)/(s.start_weight-s.kur_basis_weight))*100;
   const planTag=st.vsPlan>=0?`<span class="dot" style="background:var(--good)"></span> ${gram(st.vsPlan*1000)} foran linjen`:`<span class="dot" style="background:var(--warn)"></span> ${gram(-st.vsPlan*1000)} bagud`;
   $("#statusLine").innerHTML=`${planTag} · morgenvægt ${kg(st.cur)} (${fmtD(st.latest.log_date)})`;
@@ -604,17 +587,17 @@ function render(){
       <div class="action-big tnum">${big}</div>
       <div class="action-sub">${sub}</div>
       <div class="action-meta">
-        <div class="m"><div class="k">Dagens målvægt</div><div class="v tnum">${num(targetToday,1)} kg</div></div>
+        <div class="m"><div class="k">Dagsmål</div><div class="v tnum">${num(s.calorie_target,0)} kcal</div></div>
+        <div class="m"><div class="k">Grænse</div><div class="v tnum">${num(LIMIT,0)} kcal</div></div>
         <div class="m"><div class="k">Morgenvejning</div><div class="v tnum">${mToday?num(mToday.weight_kg,1)+" kg":"—"}</div></div>
-        <div class="m"><div class="k">Før aftensmad</div><div class="v tnum">${aToday?num(aToday.weight_kg,1)+" kg":"—"}</div></div>
       </div>
     </div>
   </section>
 
   <section class="stats" style="grid-template-columns:repeat(2,1fr)">
-    <div class="tile"><div class="k">Madration i dag</div><div class="v tnum">${ration!=null?num(gramsToday,0):"—"}${ration!=null?`<small> / ${num(ration,0)} g</small>`:""}</div>
-      ${ration!=null?`<div class="meter"><i style="width:${gramsPct}%;background:${gramsCol}"></i></div>
-      <div class="sub" style="color:${gramsCol}">${gramsSub}</div>`:`<div class="meter"><i style="width:0%"></i></div><div class="sub">vej dig i morges</div>`}</div>
+    <div class="tile"><div class="k">Snit, seneste 7 dage</div><div class="v tnum">${avg7!=null?num(avg7,0):"—"}<small> kcal</small></div>
+      <div class="meter"><i style="width:${avg7?Math.min(100,avg7/s.calorie_target*100):0}%;background:${avgCol}"></i></div>
+      <div class="sub">${avg7!=null?last7.length+" af 7 dage logget · mål "+num(s.calorie_target,0):"ingen loggede dage"}</div></div>
     <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ${s.calorie_target}</small></div>
       <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
       <div class="sub" style="color:${kcalSubCol}">${kcalSub}</div></div>
