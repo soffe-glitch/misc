@@ -3,7 +3,7 @@
 VO2max, træningsstatus og lap-data (splits/løbeteknik) – og find Garmins fulde endpoint-liste.
 
     export GARMIN_PERSONAL_API_KEY=din-nøgle        (uden anførselstegn)
-    pip3 install fitparse                            (kun til FIT-delen; resten virker uden)
+    pip3 install fitdecode                           (kun til FIT-delen; resten virker uden)
     python3 tools/garmin_api_gaps.py
 
 Rapporten indeholder kun feltnavne og tal for dine egne værdier (VO2max, trin osv.) – ingen
@@ -19,6 +19,27 @@ from garmin_api_compare import get_token, api, http, flatten  # noqa: E402
 INTERESTING = re.compile(r"vo2|max_?met|aerobic|anaerobic|training_?effect|recovery|performance|lactate|stamina|readiness|training_?status|load", re.I)
 PERSONAL = re.compile(r"name|mail|birth|gender|height|weight|photo|image|url|address|phone|guid|pk$|id$|user_?profile", re.I)
 GPS = re.compile(r"position|lat|long|polyline", re.I)
+
+
+def parse_fit(data):
+    """Returnerer [(beskednavn, [(feltnavn, værdi), ...]), ...]. Bruger fitdecode (anbefalet) eller fitparse."""
+    try:
+        import fitdecode
+    except ImportError:
+        fitdecode = None
+    if fitdecode is not None:
+        out = []
+        with fitdecode.FitReader(io.BytesIO(data), check_crc=fitdecode.CrcCheck.DISABLED) as fr:
+            for fr_ in fr:
+                if isinstance(fr_, fitdecode.FitDataMessage):
+                    out.append((fr_.name, [(f.name, f.value) for f in fr_.fields]))
+        return out
+    try:
+        import fitparse
+    except ImportError:
+        raise ImportError("Installer en FIT-læser og kør igen:  pip3 install fitdecode")
+    ff = fitparse.FitFile(io.BytesIO(data))
+    return [(m.name, [(f.name or f"felt_{f.def_num}", f.value) for f in m.fields]) for m in ff.get_messages()]
 
 
 def jget(token, path):
@@ -134,54 +155,50 @@ def main():
         return
     print(f"  {name}: {len(fit_bytes)} bytes")
     try:
-        import fitparse
-    except ImportError:
-        print("  Installer FIT-læseren og kør igen:  pip3 install fitparse")
+        msgs = parse_fit(fit_bytes)
+    except ImportError as e:
+        print("  " + str(e))
         return
-    try:
-        ff = fitparse.FitFile(io.BytesIO(fit_bytes))
-        msgs = list(ff.get_messages())
     except Exception as e:
-        print("  fitparse kunne ikke læse filen:", e)
+        print("  kunne ikke læse FIT-filen:", e)
         return
-    counts = Counter(m.name for m in msgs)
+    counts = Counter(n for n, _ in msgs)
     print("  beskedtyper:", dict(counts.most_common()))
 
     for mtype in ("lap", "session"):
-        ms = [m for m in msgs if m.name == mtype]
+        ms = [f for n, f in msgs if n == mtype]
         if not ms:
             continue
         names = OrderedDict()
-        for m in ms:
-            for f in m.fields:
-                if f.value is not None and not GPS.search(f.name or ""):
-                    names.setdefault(f.name or f"felt_{f.def_num}", f.value)
+        for fields in ms:
+            for k, v in fields:
+                if v is not None and not GPS.search(str(k)):
+                    names.setdefault(k, v)
         print(f"\n  {mtype}: {len(ms)} stk. Felter med værdi (første eksempel):")
         print("   ", "; ".join(f"{k}={v}" for k, v in list(names.items())[:70]))
 
     # ledetråde i ALLE beskedtyper (VO2max, træningseffekt, status …)
     print("\n  Felter hvis navn tyder på VO2max/effekt/belastning/status, i alle beskedtyper:")
     found = OrderedDict()
-    for m in msgs:
-        for f in m.fields:
-            nm = f.name or f"felt_{f.def_num}"
-            if f.value is not None and INTERESTING.search(f"{m.name}.{nm}"):
-                found.setdefault(f"{m.name}.{nm}", f.value)
+    for n, fields in msgs:
+        for k, v in fields:
+            if v is not None and INTERESTING.search(f"{n}.{k}"):
+                found.setdefault(f"{n}.{k}", v)
     for k, v in list(found.items())[:40]:
         print(f"    {k} = {v}")
     if not found:
         print("    ingen")
-    unknown = sorted({m.name for m in msgs if str(m.name).startswith("unknown")})
+    unknown = sorted({n for n, _ in msgs if str(n).startswith("unknown")})
     if unknown:
         print("  ukendte beskedtyper (kan skjule fx fysiologiske målinger):", ", ".join(unknown))
 
-    rec = [m for m in msgs if m.name == "record"]
+    rec = [f for n, f in msgs if n == "record"]
     if rec:
         rn = OrderedDict()
-        for m in rec[:50]:
-            for f in m.fields:
-                if f.value is not None and not GPS.search(f.name or ""):
-                    rn.setdefault(f.name or f"felt_{f.def_num}", f.value)
+        for fields in rec[:50]:
+            for k, v in fields:
+                if v is not None and not GPS.search(str(k)):
+                    rn.setdefault(k, v)
         print(f"\n  record (sekund-for-sekund): {len(rec)} punkter. Felter:", ", ".join(rn.keys()))
 
     print("\nFærdig. Send rapporten ovenfor tilbage – den indeholder ingen nøgle, token eller GPS.")
