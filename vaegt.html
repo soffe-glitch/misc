@@ -241,8 +241,6 @@ const gram=n=>Math.round(n).toLocaleString("da-DK")+" g";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 async function apiGet(t,qs=""){const P=/[?&]limit=/.test(qs)?0:1000,U=REST+t+qs+(qs?"&":"?");let all=[];for(let o=0;;o+=P){const r=await fetch(P?U+"limit="+P+"&offset="+o:REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));const j=await r.json();all=all.concat(j);if(!P||j.length<P)return all;}}
-async function apiUpsert(t,body,oc){const r=await fetch(REST+t+(oc?("?on_conflict="+oc):""),{method:"POST",headers:{...HEAD,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
-async function apiInsert(t,body){const r=await fetch(REST+t,{method:"POST",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify(body)});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));return r.json();}
 
 let S={settings:null,weighins:[],nutrition:[],workouts:[]};
 
@@ -568,7 +566,7 @@ function render(){
     <div class="tile"><div class="k">Tempo</div><div class="v tnum" style="font-size:20px">${rate}</div><div class="sub">${rateSub}</div></div>
   </section>
 
-  <section class="cards c2a">
+  <section class="cards">
     <div class="card">
       <div class="ch"><h2>Vægtudvikling</h2><span class="hint">morgenvægt mod målvægt-linjerne</span></div>
       <div id="wchart">${weightChart()}</div>
@@ -579,34 +577,6 @@ function render(){
         <span><i class="dash" style="color:var(--muted)"></i>målvægt 62</span>
       </div>
       <div class="plan">${planHtml(st)}</div>
-    </div>
-    <div class="card">
-      <div class="ch"><h2>Log</h2></div>
-      <div class="tabs" id="tabs">
-        <button data-t="w" class="on">Vejning</button>
-        <button data-t="c">Mad</button>
-      </div>
-      <form id="formW">
-        <div id="liveBudget"></div>
-        <div class="row2">
-          <div class="field"><label>Dato</label><input type="date" id="w_date"></div>
-          <div class="field"><label>Tidspunkt</label><select id="w_moment"><option value="morgen">Morgen</option><option value="foraften">Før aftensmad</option><option value="sengetid">Sengetid</option></select></div>
-        </div>
-        <div class="field"><label>Vægt (kg)</label><input type="number" step="0.1" id="w_kg" placeholder="fx 67,8" inputmode="decimal"></div>
-        <button class="btn" type="submit">Gem vejning</button>
-        <div class="form-note" id="noteW"></div>
-      </form>
-      <form id="formC" hidden>
-        ${ration!=null?`<div class="budget-live">Dagens ration: ${num(ration,0)} g · spist ${num(gramsToday,0)} g · <b>${gramsRem>=0?num(gramsRem,0)+" g tilbage":num(-gramsRem,0)+" g over"}</b></div>`:``}
-        <div class="row2">
-          <div class="field"><label>Dato</label><input type="date" id="c_date"></div>
-          <div class="field"><label>Måltid</label><select id="c_meal"><option value="">—</option><option>Morgenmad</option><option>Frokost</option><option>Aftensmad</option><option>Snack</option></select></div>
-        </div>
-        <div class="field"><label>Gram mad</label><input type="number" id="c_grams" placeholder="fx 300" inputmode="numeric"></div>
-        <div class="field"><label>Kalorier (kcal, valgfrit)</label><input type="number" id="c_kcal" placeholder="fx 450" inputmode="numeric"></div>
-        <button class="btn" type="submit">Gem mad</button>
-        <div class="form-note" id="noteC">Gram mad er kurens kerne — kalorier er valgfrit oveni.</div>
-      </form>
     </div>
   </section>
 
@@ -634,7 +604,6 @@ function render(){
   bindWeightHover($("#wchart"));
   wireAdj();
   bindBars($("#kchart"));
-  wireForms();
   bindSync();
   renderLog();
 }
@@ -680,56 +649,6 @@ function renderLog(){
   items.sort((a,b)=> a.date!==b.date?(a.date<b.date?1:-1):a.ord-b.ord);
   $("#logCount").textContent=items.length+" poster";
   $("#logList").innerHTML=items.slice(0,80).map(it=>`<div class="log-row"><div class="d tnum">${fmtD(it.date)}</div><div class="m">${it.html}</div></div>`).join("")||`<div style="color:var(--muted);padding:16px 4px">Ingen poster endnu.</div>`;
-}
-
-function setNote(el,msg,cls){const n=$(el);n.textContent=msg;n.className="form-note"+(cls?" "+cls:"");}
-function updateLiveBudget(){
-  const el=$("#liveBudget"); if(!el)return;
-  const dt=$("#w_date").value, mom=$("#w_moment").value, kgv=parseFloat(($("#w_kg").value||"").replace(",","."));
-  if(!kgv||mom==="sengetid"){el.innerHTML="";return;}
-  const target=malvaegt(dt,S.settings.kur_basis_weight); const raw=(target-kgv)*1000;
-  const FLOOR=S.settings.ration_floor_g||600;
-  // gulvet gælder kun DAGENS ration (morgenvejning), ikke aftensmåltidet alene
-  const isEve=mom==="foraften";
-  const v=isEve?Math.max(0,Math.round(raw)):Math.max(FLOOR,Math.round(raw));
-  const label=isEve?"Til aftensmad":"Dagens madbudget";
-  el.className="budget-live";
-  el.innerHTML = `${label}: ${gram(v)}${(!isEve&&raw<FLOOR)?" (minimum)":""} (målvægt ${num(target,1)} kg)`;
-  el.style.background="var(--accent-soft)"; el.style.color="var(--accent-ink)";
-}
-function wireForms(){
-  const t=todayISO();
-  ["#w_date","#c_date"].forEach(s=>$(s).value=t);
-  $("#tabs").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
-    $("#tabs").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
-    const k=b.dataset.t;$("#formW").hidden=k!=="w";$("#formC").hidden=k!=="c";}));
-  $("#w_kg").addEventListener("input",updateLiveBudget);
-  $("#w_moment").addEventListener("change",updateLiveBudget);
-  $("#w_date").addEventListener("change",updateLiveBudget);
-
-  $("#formW").addEventListener("submit",async e=>{e.preventDefault();
-    const kgv=parseFloat(($("#w_kg").value||"").replace(",","."));
-    if(!kgv){setNote("#noteW","Skriv en vægt.","err");return;}
-    const btn=e.target.querySelector("button");btn.disabled=true;setNote("#noteW","Gemmer…");
-    try{const row=await apiUpsert("weighins",{log_date:$("#w_date").value,moment:$("#w_moment").value,weight_kg:kgv},"log_date,moment");
-      mergeWeigh(row[0]);$("#w_kg").value="";$("#liveBudget").innerHTML="";setNote("#noteW","Gemt ✓","ok");render();
-    }catch(err){setNote("#noteW","Fejl: "+err.message,"err");}finally{btn.disabled=false;}});
-
-  $("#formC").addEventListener("submit",async e=>{e.preventDefault();
-    const g=$("#c_grams").value===""?null:parseInt($("#c_grams").value,10);
-    const v=$("#c_kcal").value===""?null:parseInt($("#c_kcal").value,10);
-    if(!g&&!v){setNote("#noteC","Skriv gram mad eller kalorier.","err");return;}
-    const btn=e.target.querySelector("button");btn.disabled=true;setNote("#noteC","Gemmer…");
-    try{const row=await apiInsert("nutrition",{log_date:$("#c_date").value,grams:g,calories_in:v,label:$("#c_meal").value||null});
-      S.nutrition.push({...row[0],calories_in:row[0].calories_in==null?null:+row[0].calories_in,grams:row[0].grams==null?null:+row[0].grams});
-      $("#c_grams").value="";$("#c_kcal").value="";setNote("#noteC","Gemt ✓","ok");render();
-    }catch(err){setNote("#noteC","Fejl: "+err.message,"err");}finally{btn.disabled=false;}});
-}
-function mergeWeigh(row){
-  const n={...row,weight_kg:+row.weight_kg};
-  const i=S.weighins.findIndex(x=>x.log_date===n.log_date&&x.moment===n.moment);
-  if(i>=0)S.weighins[i]=n;else S.weighins.push(n);
-  S.weighins.sort((a,b)=>a.log_date<b.log_date?-1:1);
 }
 
 // Indlejret som fane? Skjul egen header/footer; temaet styres af forsiden.
