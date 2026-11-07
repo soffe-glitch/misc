@@ -242,7 +242,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 
 async function apiGet(t,qs=""){const P=/[?&]limit=/.test(qs)?0:1000,U=REST+t+qs+(qs?"&":"?");let all=[];for(let o=0;;o+=P){const r=await fetch(P?U+"limit="+P+"&offset="+o:REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));const j=await r.json();all=all.concat(j);if(!P||j.length<P)return all;}}
 
-let S={settings:null,weighins:[],nutrition:[],workouts:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],burn:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts]=await Promise.all([
@@ -257,6 +257,19 @@ async function loadAll(){
   S.weighins=weighins.filter(w=>w.log_date>=kurStart).map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
+  try{ S.burn=(await apiGet("garmin_daily","?select=log_date,kcal_total,kcal_active&kcal_total=not.is.null&order=log_date.desc&limit=60")).map(r=>({log_date:r.log_date,total:+r.kcal_total,active:+r.kcal_active})); }catch(e){ S.burn=[]; }
+}
+
+// ---- Energibalance: indtag (din mad-log) mod forbrænding (Garmin) ----
+function energyInfo(days=14){
+  const today=new Date().toISOString().slice(0,10), from=addDays(today,-days);
+  const intake={}; S.nutrition.forEach(n=>{ if(n.calories_in!=null) intake[n.log_date]=(intake[n.log_date]||0)+n.calories_in; });
+  // i dag er ikke slut (forbrændingen er delvis), og dage uden rimelig logning (<800 kcal) tæller ikke som underskud
+  const rows=S.burn.filter(b=>b.log_date<today&&b.log_date>=from&&intake[b.log_date]>=800).map(b=>({d:b.log_date,inn:intake[b.log_date],burn:b.total}));
+  if(rows.length<3) return null;
+  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  const inn=avg(rows.map(r=>r.inn)), burn=avg(rows.map(r=>r.burn)), def=burn-inn;
+  return {n:rows.length,inn,burn,def,kgWeek:def*7/7700};
 }
 
 // ---- Matematikkur math ----
@@ -342,6 +355,14 @@ function planHtml(st){
     if(r4!=null&&r4>0.05){ const dr=addDays(lastD,Math.round(toGo/r4*7)); txt+=` Med de seneste 4 ugers tempo nås det omkring ${fmtD(dr)}.`; }
     else if(r4!=null) txt+=` Trenden bevæger sig ikke mod målet i de seneste 4 uger endnu.`;
     lines.push(`<div>${txt}</div>`);
+  }
+  const en=energyInfo();
+  if(en){
+    const kw=en.kgWeek, obs=r4;
+    let txt=`<b>Energi</b> (${en.n} dage med logget mad, seneste 2 uger): du spiser i snit ${num(en.inn,0)} kcal og forbrænder ${num(en.burn,0)} kcal ifølge Garmin. `;
+    txt+=en.def>0?`Det er et underskud på ca. <b>${num(en.def,0)} kcal/dag</b>, hvilket svarer til omkring ${num(kw,2)} kg/uge.`:`Du ligger ${num(-en.def,0)} kcal/dag over forbrændingen, så vægten bør ikke falde af kalorier alene.`;
+    if(en.def>0&&obs!=null) txt+=Math.abs(obs-kw)<=0.25?` Det passer godt med trenden.`:(obs<kw?` Trenden falder langsommere (${num(Math.max(obs,0),2)} kg/uge), fx pga. vand eller fordi mad eller forbrænding er opgjort for højt/lavt.`:` Trenden falder hurtigere end tallene siger.`);
+    lines.push(`<div>${txt}</div><div style="color:var(--muted);font-size:13px">Garmins forbrænding er et estimat (typisk ±10 %), og 7.700 kcal ≈ 1 kg er en tommelfingerregel.</div>`);
   }
   // justering af linjen (fx rygestop)
   if(s.line_adj_date){
