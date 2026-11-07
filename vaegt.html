@@ -257,9 +257,11 @@ async function loadAll(){
   S.weighins=weighins.filter(w=>w.log_date>=kurStart).map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
-  try{ S.garmin=(await apiGet("garmin_daily","?select=log_date,kcal_total,kcal_active,kcal_bmr,last_sync:raw->stats->>lastSyncTimestampGMT&order=log_date.asc&log_date=gte."+addDays(todayISO(),-30)))
+  try{ S.garmin=(await apiGet("garmin_daily","?select=log_date,kcal_total,kcal_active,kcal_bmr,last_sync:raw->stats->>lastSyncTimestampGMT&order=log_date.asc&log_date=gte."+addDays(todayISO(),-35)))
         .map(g=>({log_date:g.log_date,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr,ls:g.last_sync?new Date(g.last_sync+"Z"):null})); }
   catch(e){ S.garmin=[]; }
+  try{ const ga=await apiGet("garmin_activities","?select=calories&log_date=eq."+todayISO()); S.gactsKcalToday=ga.reduce((a,x)=>a+(+x.calories||0),0); }
+  catch(e){ S.gactsKcalToday=0; }
 }
 
 // ---- Matematikkur math ----
@@ -451,6 +453,32 @@ function dayBars(map, target, unit, colOK, colOver, id){
     <line x1="${mL}" x2="${w-mR}" y1="${ty}" y2="${ty}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="4 3"/>
     <text x="${w-mR}" y="${ty-4}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">${unit==="g"?"loft "+target:"mål "+target}</text></svg>`;
 }
+// ---- Dagsbudget = dagens (skønnede) forbrug − ønsket underskud (settings.daily_deficit, std. 300) ----
+// Forbrug i dag = Garmins hvileforbrug for et helt døgn (snit af seneste 7 dage)
+//   + max(dit normale aktive forbrug [snit 28 dage], dagens aktive forbrug [Garmin-stats / aktiviteter / løbe-km×66])
+//   + korrektion (settings.garmin_kcal_correction, std. −250).
+// Så er budgettet "en almindelig dag" om morgenen og vokser, når du træner.
+function dayBudget(){
+  const s=S.settings||{}, t=todayISO();
+  const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
+  const deficit=(s.daily_deficit==null)?300:+s.daily_deficit;
+  const G=(S.garmin||[]).filter(g=>g.kt!=null);
+  const past=G.filter(g=>g.log_date<t);
+  const bmrs=past.filter(g=>g.kb!=null&&g.kb>1000).slice(-7).map(g=>g.kb);
+  const acts=past.filter(g=>g.ka!=null&&g.log_date>=addDays(t,-28)).map(g=>g.ka);
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const bmrFull=mean(bmrs), typAct=mean(acts);
+  if(bmrFull==null){ const tg=+s.calorie_target||1600; return {ok:false,budget:tg,burn:tg+deficit,deficit,src:"fast dagsmål (ingen Garmin-data)"}; }
+  const gT=G.find(g=>g.log_date===t);
+  const statAct=gT&&gT.ka!=null?gT.ka:0;
+  const actKcal=(S.gactsKcalToday||0);
+  const runKm=(S.workouts||[]).filter(w=>w.log_date===t&&w.kind==="loeb").reduce((a,w)=>a+(+w.distance_km||0),0);
+  const actToday=Math.max(statAct, actKcal>0?actKcal:runKm*66);  // Garmins aktivitets-kcal når de findes, ellers løbe-km×66
+  const usedAct=Math.max(typAct||0, actToday);
+  const burn=Math.round(bmrFull+usedAct+corr);
+  const src=actToday>(typAct||0)?(actToday===actKcal&&actKcal>0?"Garmin-aktiviteter i dag":actToday===statAct?"Garmin i dag":"løbe-km i dag"):"normal dag";
+  return {ok:true,budget:burn-deficit,burn,deficit,corr,bmrFull:Math.round(bmrFull),typAct:Math.round(typAct||0),actToday:Math.round(actToday),src};
+}
 // ---- Energibalance: Garmins forbrug (korrigeret med settings.garmin_kcal_correction, std. −250) minus logget indtag ----
 // Positiv = underskud. Dage uden madlog tæller ikke som underskud. I dag vises først efter Garmin-synk kl. 20.
 function ebData(){
@@ -464,12 +492,7 @@ function ebData(){
   const pts=days.map(d=>{
     const g=gmap[d]; const eat=Math.round(kmap[d]||0); let burn=null, prelim=false;
     if(g&&g.kt!=null){
-      if(d===t){
-        // Brug Garmins EGEN synk-tid for dagens tal (ikke updated_at, som andre synk-job også rører).
-        // Først efter kl. 18 er dagens aktive forbrug nogenlunde komplet.
-        const fresh=g.ls&&todayISO()===t&&g.ls.getHours()>=18;
-        if(fresh){ prelim=true; burn=(bmrFull!=null&&g.ka!=null)?bmrFull+g.ka:g.kt; }
-      }
+      if(d===t){ const B=dayBudget(); if(B.ok){ prelim=true; burn=B.burn-corr; } }  // skønnet forbrug for hele dagen
       else burn=g.kt;
     }
     if(burn==null||eat<=0) return {d,v:null,eat,miss:eat<=0,nog:burn==null};
@@ -494,7 +517,8 @@ function ebChart(){
     const tip=`<b>${fmtD(p.d)}${p.prelim?" (foreløbigt)":""}</b><br>${p.v>=0?"Underskud":"Overskud"} ${num(Math.abs(p.v),0)} kcal<br>spist ${num(p.eat,0)} · forbrug ~${num(p.burn,0)}${p.low?"<br><i>under 900 kcal logget – måske ikke hele dagen</i>":""}`;
     bars+=`<rect x="${x}" y="${p.v>=0?z-hh:z}" width="${bwi}" height="${Math.max(1,hh)}" rx="3" fill="${col}" opacity="${op}"${p.prelim?` stroke="${col}" stroke-dasharray="3 2"`:""} class="ebar" data-tip="${esc(tip)}" style="cursor:pointer"/>`;
   });
-  return `<svg viewBox="0 0 ${w} ${h}" role="img">${gl}<line x1="${mL}" x2="${w-mR}" y1="${z}" y2="${z}" stroke="var(--accent-ink)" stroke-width="1.2"/>${bars}</svg>`;
+  const dfc=(S.settings&&S.settings.daily_deficit!=null)?+S.settings.daily_deficit:300, yd=Y(dfc);
+  return `<svg viewBox="0 0 ${w} ${h}" role="img">${gl}<line x1="${mL}" x2="${w-mR}" y1="${z}" y2="${z}" stroke="var(--accent-ink)" stroke-width="1.2"/><line x1="${mL}" x2="${w-mR}" y1="${yd}" y2="${yd}" stroke="var(--accent-ink)" stroke-width="1.2" stroke-dasharray="4 3" opacity=".7"/><text x="${w-mR}" y="${yd-4}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">mål ${dfc}</text>${bars}</svg>`;
 }
 function ebStats(){
   const {pts,t}=ebData();
@@ -538,20 +562,20 @@ function render(){
   const FLOOR=s.ration_floor_g||600;
   const withFloor=x=>Math.max(FLOOR,Math.round(x));
 
-  // hero action — KALORIESTYRET (matematikkurens gram-ration er droppet 7/11-2026)
-  const LIMIT=+s.calorie_limit||1900;
+  // hero action — dagsbudget = skønnet forbrug i dag − ønsket underskud
+  const B=dayBudget();
   const kcalEaten=sumDay(S.nutrition,t,"calories_in");
-  const left=s.calorie_target-kcalEaten;
+  const left=B.budget-kcalEaten;
   let big,sub;
-  if(kcalEaten<=0){ big=num(s.calorie_target,0)+" kcal"; sub=`dagens budget · intet logget endnu`; }
-  else if(left>=0){ big=num(left,0)+" kcal"; sub=`tilbage af ${num(s.calorie_target,0)} · spist ${num(kcalEaten,0)}`; }
-  else { big=num(-left,0)+" kcal"; sub=`over dagsmålet · ${kcalEaten<=LIMIT?num(LIMIT-kcalEaten,0)+" til grænsen på "+num(LIMIT,0):"over grænsen på "+num(LIMIT,0)}`; }
-  const heroActLabel=kcalEaten>0&&left<0?"Over dagsmålet":"Tilbage i dag";
+  if(kcalEaten<=0){ big=num(B.budget,0)+" kcal"; sub=`dagens budget · intet logget endnu`; }
+  else if(left>=0){ big=num(left,0)+" kcal"; sub=`tilbage af ~${num(B.budget,0)} · spist ${num(kcalEaten,0)}`; }
+  else { big=num(-left,0)+" kcal"; sub=kcalEaten<=B.burn?`over budgettet · stadig ~${num(B.burn-kcalEaten,0)} kcal under dit forbrug`:`over dit forbrug på ~${num(B.burn,0)} i dag`; }
+  const heroActLabel=kcalEaten>0&&left<0?"Over budgettet":"Tilbage i dag";
   // today totals
   const kcalToday=sumDay(S.nutrition,t,"calories_in");
-  const kcalRem=s.calorie_target-kcalToday;
-  const kcalPct=Math.min(100,kcalToday/s.calorie_target*100);
-  const kcalCol=kcalToday>s.calorie_target?"var(--bad)":"var(--accent)";
+  const kcalRem=B.budget-kcalToday;
+  const kcalPct=Math.min(100,kcalToday/B.budget*100);
+  const kcalCol=kcalToday>B.burn?"var(--bad)":kcalToday>B.budget?"var(--warn)":"var(--accent)";
   // blid nedre guardrail: markér hvis kalorier ryger for lavt (<1200)
   const KCAL_FLOOR=1200;
   const kcalLow=kcalToday>0&&kcalToday<KCAL_FLOOR;
@@ -592,8 +616,8 @@ function render(){
       <div class="action-big tnum">${big}</div>
       <div class="action-sub">${sub}</div>
       <div class="action-meta">
-        <div class="m"><div class="k">Dagsmål</div><div class="v tnum">${num(s.calorie_target,0)} kcal</div></div>
-        <div class="m"><div class="k">Grænse</div><div class="v tnum">${num(LIMIT,0)} kcal</div></div>
+        <div class="m"><div class="k">Forbrug i dag</div><div class="v tnum">~${num(B.burn,0)} kcal</div></div>
+        <div class="m"><div class="k">Underskud-mål</div><div class="v tnum">${num(B.deficit,0)} kcal</div></div>
         <div class="m"><div class="k">Morgenvejning</div><div class="v tnum">${mToday?num(mToday.weight_kg,1)+" kg":"—"}</div></div>
       </div>
     </div>
@@ -603,7 +627,7 @@ function render(){
     <div class="tile"><div class="k">Snit, seneste 7 dage</div><div class="v tnum">${avg7!=null?num(avg7,0):"—"}<small> kcal</small></div>
       <div class="meter"><i style="width:${avg7?Math.min(100,avg7/s.calorie_target*100):0}%;background:${avgCol}"></i></div>
       <div class="sub">${avg7!=null?last7.length+" af 7 dage logget · mål "+num(s.calorie_target,0):"ingen loggede dage"}</div></div>
-    <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ${s.calorie_target}</small></div>
+    <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ~${num(B.budget,0)}</small></div>
       <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
       <div class="sub" style="color:${kcalSubCol}">${kcalSub}</div></div>
   </section>
