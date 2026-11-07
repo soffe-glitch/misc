@@ -242,7 +242,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 
 async function apiGet(t,qs=""){const P=/[?&]limit=/.test(qs)?0:1000,U=REST+t+qs+(qs?"&":"?");let all=[];for(let o=0;;o+=P){const r=await fetch(P?U+"limit="+P+"&offset="+o:REST+t+qs,{headers:HEAD});if(!r.ok)throw new Error(t+": "+r.status+" "+(await r.text()));const j=await r.json();all=all.concat(j);if(!P||j.length<P)return all;}}
 
-let S={settings:null,weighins:[],nutrition:[],workouts:[]};
+let S={settings:null,weighins:[],nutrition:[],workouts:[],garmin:[]};
 
 async function loadAll(){
   const [settings,weighins,nutrition,workouts]=await Promise.all([
@@ -257,6 +257,9 @@ async function loadAll(){
   S.weighins=weighins.filter(w=>w.log_date>=kurStart).map(w=>({...w,weight_kg:+w.weight_kg}));
   S.nutrition=nutrition.map(n=>({...n,calories_in:n.calories_in==null?null:+n.calories_in,grams:n.grams==null?null:+n.grams}));
   S.workouts=workouts.map(w=>({...w,distance_km:w.distance_km==null?null:+w.distance_km}));
+  try{ S.garmin=(await apiGet("garmin_daily","?select=log_date,kcal_total,kcal_active,kcal_bmr,updated_at&order=log_date.asc&log_date=gte."+addDays(todayISO(),-30)))
+        .map(g=>({log_date:g.log_date,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr,upd:g.updated_at})); }
+  catch(e){ S.garmin=[]; }
 }
 
 // ---- Matematikkur math ----
@@ -448,6 +451,63 @@ function dayBars(map, target, unit, colOK, colOver, id){
     <line x1="${mL}" x2="${w-mR}" y1="${ty}" y2="${ty}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="4 3"/>
     <text x="${w-mR}" y="${ty-4}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">${unit==="g"?"loft "+target:"mål "+target}</text></svg>`;
 }
+// ---- Energibalance: Garmins forbrug (korrigeret med settings.garmin_kcal_correction, std. −250) minus logget indtag ----
+// Positiv = underskud. Dage uden madlog tæller ikke som underskud. I dag vises først efter Garmin-synk kl. 20.
+function ebData(){
+  const s=S.settings||{}; const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
+  const t=todayISO();
+  const kmap={}; S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
+  const gmap={}; (S.garmin||[]).forEach(g=>{gmap[g.log_date]=g;});
+  const prevB=(S.garmin||[]).filter(g=>g.log_date<t&&g.kb!=null&&g.kb>1000).slice(-7).map(g=>g.kb);
+  const bmrFull=prevB.length?prevB.reduce((a,b)=>a+b,0)/prevB.length:null;
+  const days=[]; for(let i=13;i>=0;i--) days.push(addDays(t,-i));
+  const pts=days.map(d=>{
+    const g=gmap[d]; const eat=Math.round(kmap[d]||0); let burn=null, prelim=false;
+    if(g&&g.kt!=null){
+      if(d===t){ const fresh=g.upd&&new Date(g.upd).getHours()>=20; if(fresh){ prelim=true; burn=(bmrFull!=null&&g.ka!=null)?bmrFull+g.ka:g.kt; } }
+      else burn=g.kt;
+    }
+    if(burn==null||eat<=0) return {d,v:null,eat,miss:eat<=0,nog:burn==null};
+    const adj=Math.round(burn+corr); return {d,v:adj-eat,eat,burn:adj,prelim,low:eat<900};
+  });
+  return {pts,corr,t};
+}
+function ebChart(){
+  const {pts}=ebData(); const have=pts.filter(p=>p.v!=null);
+  if(!have.length) return `<div style="color:var(--muted);font-size:13px;padding:24px 0;text-align:center">Kræver både madlog og Garmin-data.</div>`;
+  const w=680,h=200,mL=44,mR=8,mT=12,mB=22; const mx=Math.max(400,...have.map(p=>Math.abs(p.v)))*1.12;
+  const z=mT+(h-mT-mB)/2, half=(h-mT-mB)/2, Y=v=>z-(v/mx)*half, bw=(w-mL-mR)/pts.length;
+  let gl="",bars="";
+  const step=mx>1200?500:250;
+  for(let v=-Math.floor(mx/step)*step; v<=mx; v+=step){ const y=Y(v); gl+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-5}" y="${y+3}" text-anchor="end" class="axis-t">${v>0?"+":""}${v}</text>`; }
+  pts.forEach((p,i)=>{
+    const x=mL+i*bw+bw*0.16, bwi=bw*0.68, cx=x+bwi/2;
+    if(i%2===0||i===pts.length-1) gl+=`<text x="${cx}" y="${h-6}" text-anchor="middle" class="axis-t">${fmtD(p.d)}</text>`;
+    if(p.v==null){ const why=p.miss?"ikke logget":"Garmin opdaterer kl. 20";
+      bars+=`<circle cx="${cx}" cy="${z}" r="3" fill="var(--faint)" class="ebar" data-tip="${esc("<b>"+fmtD(p.d)+"</b> — "+why)}" style="cursor:pointer"/>`; return; }
+    const y=Y(Math.max(0,p.v)), hh=Math.abs(Y(p.v)-z), col=p.v>=0?"var(--accent)":"var(--bad)", op=p.low?0.35:(p.prelim?0.6:0.92);
+    const tip=`<b>${fmtD(p.d)}${p.prelim?" (foreløbigt)":""}</b><br>${p.v>=0?"Underskud":"Overskud"} ${num(Math.abs(p.v),0)} kcal<br>spist ${num(p.eat,0)} · forbrug ~${num(p.burn,0)}${p.low?"<br><i>under 900 kcal logget – måske ikke hele dagen</i>":""}`;
+    bars+=`<rect x="${x}" y="${p.v>=0?z-hh:z}" width="${bwi}" height="${Math.max(1,hh)}" rx="3" fill="${col}" opacity="${op}"${p.prelim?` stroke="${col}" stroke-dasharray="3 2"`:""} class="ebar" data-tip="${esc(tip)}" style="cursor:pointer"/>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" role="img">${gl}<line x1="${mL}" x2="${w-mR}" y1="${z}" y2="${z}" stroke="var(--accent-ink)" stroke-width="1.2"/>${bars}</svg>`;
+}
+function ebStats(){
+  const {pts,t}=ebData();
+  const last7=pts.filter(p=>p.d<t).slice(-7).filter(p=>p.v!=null);
+  const sum=last7.reduce((a,p)=>a+p.v,0); const td=pts[pts.length-1];
+  const s7=last7.length?`<div class="v tnum" style="${sum<0?"color:var(--bad)":""}">${sum<0?"−":""}${num(Math.abs(sum),0)}<small> kcal</small></div><div class="sub">${sum>=0?"≈ "+num(sum/7700,2)+" kg fedt":"overskud ≈ "+num(Math.abs(sum)/7700,2)+" kg"} · ${last7.length} af 7 dage logget</div>`
+                       :`<div class="v tnum">—</div><div class="sub">ingen loggede dage</div>`;
+  const sT=td.v!=null?`<div class="v tnum" style="${td.v<0?"color:var(--bad)":""}">${td.v<0?"−":""}${num(Math.abs(td.v),0)}<small> kcal</small></div><div class="sub">spist ${num(td.eat,0)} · forbrug ~${num(td.burn,0)}</div>`
+                     :`<div class="v tnum">—</div><div class="sub">${td.nog?"Garmin opdaterer dagen kl. 20":"log mad for i dag"}</div>`;
+  return `<div class="mini-grid" style="margin-top:12px"><div class="mini"><div class="k">Underskud, seneste 7 dage</div>${s7}</div><div class="mini"><div class="k">I dag (foreløbigt)</div>${sT}</div></div>`;
+}
+function bindEb(container){
+  if(!container) return;
+  container.querySelectorAll(".ebar").forEach(b=>{
+    b.addEventListener("mousemove",e=>showTT(b.dataset.tip,e.clientX,e.clientY));
+    b.addEventListener("mouseleave",hideTT);
+  });
+}
 function bindBars(container){
   container.querySelectorAll(".dbar").forEach(b=>{
     b.addEventListener("mousemove",e=>{showTT(`<b>${fmtD(b.dataset.d)}</b> — ${num(b.dataset.v,0)} kcal`,e.clientX,e.clientY);});
@@ -597,6 +657,18 @@ function render(){
   </section>
 
   <section class="cards"><div class="card">
+    <div class="ch"><h2>Energibalance</h2><span class="hint">Garmins forbrug minus det, du har spist · seneste 14 dage</span></div>
+    <div id="ebchart">${ebChart()}</div>
+    <div class="legend">
+      <span style="color:var(--accent)"><i style="background:var(--accent);height:8px"></i>underskud (op)</span>
+      <span style="color:var(--bad)"><i style="background:var(--bad);height:8px"></i>overskud (ned)</span>
+      <span><i style="background:var(--faint);height:6px;width:6px;border-radius:50%"></i>ikke logget</span>
+      <span>Garmin korrigeret ${(S.settings&&S.settings.garmin_kcal_correction!=null)?S.settings.garmin_kcal_correction:-250} kcal/dag · lyse søjler = under 900 kcal logget</span>
+    </div>
+    ${ebStats()}
+  </div></section>
+
+  <section class="cards"><div class="card">
     <div class="ch"><h2>Seneste aktivitet</h2><span class="hint" id="logCount"></span></div>
     <div class="log-list" id="logList"></div>
   </div></section>`;
@@ -604,6 +676,7 @@ function render(){
   bindWeightHover($("#wchart"));
   wireAdj();
   bindBars($("#kchart"));
+  bindEb($("#ebchart"));
   bindSync();
   renderLog();
 }
