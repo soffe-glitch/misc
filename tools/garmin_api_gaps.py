@@ -129,13 +129,17 @@ def main():
     print(f"  {len(acts)} aktiviteter de seneste 30 dage")
     by_type = Counter((a.get("activityType") or {}).get("typeKey", "?") for a in acts)
     print("  typer:", dict(by_type))
-    run = next((a for a in acts if (a.get("activityType") or {}).get("typeKey") in ("running", "treadmill_running", "trail_running")), None)
+    kind = lambda a: (a.get("activityType") or {}).get("typeKey")
+    run = (next((a for a in acts if kind(a) in ("running", "trail_running") and (a.get("distance") or 0) >= 3000), None)
+           or next((a for a in acts if kind(a) in ("running", "trail_running")), None)
+           or next((a for a in acts if kind(a) == "treadmill_running"), None))
     if acts:
         hunt_json("aktivitetsliste (første 3)", acts[:3])
     if not run:
         print("  (intet løb i perioden – FIT-delen springes over)")
         return
     aid = run["activityId"]
+    print(f"  valgt løb til FIT-test: type={kind(run)}, {round((run.get('distance') or 0) / 1000, 1)} km")
     st, det = jget(token, f"/activity-service/activity/{aid}")
     if det:
         hunt_json("aktivitetsdetalje (løb)", det)
@@ -191,6 +195,53 @@ def main():
     unknown = sorted({n for n, _ in msgs if str(n).startswith("unknown")})
     if unknown:
         print("  ukendte beskedtyper (kan skjule fx fysiologiske målinger):", ", ".join(unknown))
+
+    # løbeteknik (jordkontakt, vertikal bevægelse, skridtlængde, effekt) – hvor findes de?
+    dyn = re.compile(r"(?<![a-z])stance|vertical|step_length|ground|stride|cycle_length|power|balance", re.I)
+    dyn_found = OrderedDict()
+    for n, fields in msgs:
+        for k, v in fields:
+            if v is not None and dyn.search(str(k)):
+                dyn_found.setdefault(f"{n}.{k}", v)
+    print("\n  Løbeteknik-felter (jordkontakt, vertikal bevægelse, skridtlængde …):")
+    for k, v in list(dyn_found.items())[:30]:
+        print(f"    {k} = {v}")
+    if not dyn_found:
+        print("    ingen")
+
+    # split / time_in_zone: kun feltnavne
+    for mtype in ("split", "split_summary", "time_in_zone"):
+        ms = [f for n, f in msgs if n == mtype]
+        if ms:
+            print(f"\n  {mtype}: {len(ms)} stk. Felter:", ", ".join(k for k, v in ms[0] if v is not None and not GPS.search(str(k))))
+
+    # ukendte beskedtyper: vis indholdet (kun første besked), og se om en værdi ligner din VO2max
+    db_vo2 = None
+    st, body = http("GET", "https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_activities?select=vo2max,aerobic_te,training_load&activity_id=eq." + str(aid),
+                    {"apikey": "sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv", "Authorization": "Bearer sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv"})
+    try:
+        rows = json.loads(body) if st == 200 else []
+        db_vo2 = float(rows[0]["vo2max"]) if rows and rows[0].get("vo2max") is not None else None
+        print(f"\n  Din database har for dette løb: {rows[0] if rows else '(ikke fundet)'}")
+    except Exception:
+        pass
+    divisors = [1, 2, 3.5, 10, 16, 18.2857, 64, 100, 128, 256, 1000, 1024, 3584, 18724.57, 65536]
+    print("\n  Ukendte beskedtyper (første besked; GPS udeladt):")
+    seen = Counter(n for n, _ in msgs)
+    cand = []
+    for n, fields in msgs:
+        if not str(n).startswith("unknown") or seen[n] > 50 or n in {x for x, _ in cand}:
+            continue
+        cand.append((n, fields))
+    for n, fields in cand:
+        vals = [(k, v) for k, v in fields if v is not None and not GPS.search(str(k))]
+        print(f"    {n} ({seen[n]} stk.): " + "; ".join(f"{k}={v}" for k, v in vals[:25]))
+        if db_vo2:
+            for k, v in vals:
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    for d in divisors:
+                        if abs(v / d - db_vo2) < 0.06:
+                            print(f"      >>> MULIG VO2MAX: {n}.{k} = {v} (÷ {d} ≈ {db_vo2})")
 
     rec = [f for n, f in msgs if n == "record"]
     if rec:
