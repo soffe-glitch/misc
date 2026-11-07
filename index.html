@@ -753,10 +753,11 @@ async function loadAll(){
   try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
   syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
   try{ const gs=await get("garmin_misc","?select=data&kind=eq.official_sync_status"); S.gsync=gs[0]&&gs[0].data||null; }catch(e){ S.gsync=null; }
-  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_start,sleep_end,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
+  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_start,sleep_end,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake,kcal_total,kcal_active,kcal_bmr&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
-               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end})); }catch(e){ S.garmin=[]; }
-  try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
+               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr})); }catch(e){ S.garmin=[]; }
+  try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te,calories&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
+  S.gactsKcalToday=(S.gacts||[]).filter(a=>a.log_date===todayISO()).reduce((x,a)=>x+(+a.calories||0),0);
   try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
   bigStart();
   S.settings=settings[0];
@@ -791,6 +792,32 @@ async function loadAll(){
   try{ S.books=await booksGet(); }catch(e){ S.books=[]; }
 }
 
+// ---- Dagsbudget = dagens (skønnede) forbrug − ønsket underskud (settings.daily_deficit, std. 300) ----
+// Forbrug i dag = Garmins hvileforbrug for et helt døgn (snit af seneste 7 dage)
+//   + max(dit normale aktive forbrug [snit 28 dage], dagens aktive forbrug [Garmin-stats / aktiviteter / løbe-km×66])
+//   + korrektion (settings.garmin_kcal_correction, std. −250).
+// Så er budgettet "en almindelig dag" om morgenen og vokser, når du træner.
+function dayBudget(){
+  const s=S.settings||{}, t=todayISO();
+  const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
+  const deficit=(s.daily_deficit==null)?300:+s.daily_deficit;
+  const G=(S.garmin||[]).filter(g=>g.kt!=null);
+  const past=G.filter(g=>g.log_date<t);
+  const bmrs=past.filter(g=>g.kb!=null&&g.kb>1000).slice(-7).map(g=>g.kb);
+  const acts=past.filter(g=>g.ka!=null&&g.log_date>=addDays(t,-28)).map(g=>g.ka);
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const bmrFull=mean(bmrs), typAct=mean(acts);
+  if(bmrFull==null){ const tg=+s.calorie_target||1600; return {ok:false,budget:tg,burn:tg+deficit,deficit,src:"fast dagsmål (ingen Garmin-data)"}; }
+  const gT=G.find(g=>g.log_date===t);
+  const statAct=gT&&gT.ka!=null?gT.ka:0;
+  const actKcal=(S.gactsKcalToday||0);
+  const runKm=(S.workouts||[]).filter(w=>w.log_date===t&&w.kind==="loeb").reduce((a,w)=>a+(+w.distance_km||0),0);
+  const actToday=Math.max(statAct, actKcal>0?actKcal:runKm*66);  // Garmins aktivitets-kcal når de findes, ellers løbe-km×66
+  const usedAct=Math.max(typAct||0, actToday);
+  const burn=Math.round(bmrFull+usedAct+corr);
+  const src=actToday>(typAct||0)?(actToday===actKcal&&actKcal>0?"Garmin-aktiviteter i dag":actToday===statAct?"Garmin i dag":"løbe-km i dag"):"normal dag";
+  return {ok:true,budget:burn-deficit,burn,deficit,corr,bmrFull:Math.round(bmrFull),typAct:Math.round(typAct||0),actToday:Math.round(actToday),src};
+}
 // ---------- Matematikkur math ----------
 function malvaegt(iso,endW){
   const s=S.settings;
@@ -1024,11 +1051,11 @@ function render(){
   // --- I dag tiles ---
   const foraften=weighToday("foraften"),morg=weighToday("morgen");
   const wNow=foraften||morg||(M.length?M[M.length-1]:null);
-  { // kaloriestyret (gram-rationen er droppet 7/11-2026)
-    const eaten=sumDay(S.nutrition,t,"calories_in"), tg=+s.calorie_target||1600, lim=+s.calorie_limit||1900, left=tg-eaten;
+  { // dagsbudget = skønnet forbrug i dag − underskud-mål
+    const B=dayBudget(), eaten=sumDay(S.nutrition,t,"calories_in"), left=B.budget-eaten;
     $("#tRation").innerHTML=(left>=0?Math.round(left):"+"+Math.round(-left))+'<small> kcal</small>';
-    $("#tRation").style.color=left>=0?"":(eaten>lim?"var(--bad)":"var(--warn)");
-    $("#tRationSub").textContent=eaten>0?(left>=0?`spist ${Math.round(eaten)} af ${tg}`:`over dagsmålet · grænse ${lim}`):`dagsmål ${tg} · intet logget`;
+    $("#tRation").style.color=left>=0?"":(eaten>B.burn?"var(--bad)":"var(--warn)");
+    $("#tRationSub").textContent=eaten>0?(left>=0?`spist ${Math.round(eaten)} af ~${B.budget}`:(eaten<=B.burn?`over budget · stadig under forbrug`:`over dit forbrug i dag`)):`budget ~${B.budget} i dag`;
   }
   const kcal=sumDay(S.nutrition,t,"calories_in");
   $("#tKcal").innerHTML=kcal?`${kcal}<small> / ${s.calorie_target}</small>`:'—';
@@ -1463,7 +1490,8 @@ function coachPayload(){
 function dayExtras(t){
   const s=S.settings||{},M=morning(),o={};
   try{ const wN=weighToday("foraften")||weighToday("morgen")||(M.length?M[M.length-1]:null);
-    if(s.calorie_target){ o.kcal_tilbage_i_dag=Math.round((+s.calorie_target)-sumDay(S.nutrition,t,"calories_in")); o.styring="kalorier (dagsmål "+s.calorie_target+", grænse "+(s.calorie_limit||1900)+"); matematikkurens gram-ration er droppet"; } }catch(e){}
+    { const B=dayBudget(); o.kcal_budget_i_dag=B.budget; o.kcal_forbrug_i_dag_skoennet=B.burn; o.kcal_tilbage_i_dag=Math.round(B.budget-sumDay(S.nutrition,t,"calories_in"));
+      o.styring="dagsbudget = skønnet forbrug i dag minus "+B.deficit+" kcal underskud (Garmin, korrigeret); træning hæver budgettet automatisk"; } }catch(e){}
   const pl=S.planned.filter(p=>p.log_date===t).map(p=>p.name||"planlagt pas"); o.planlagt_i_dag_fra_soeren=pl.length?pl:null;
   const sr=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt"); o.skridt_i_dag=sr?sr.steps:null; o.skridt_maal=7000;
   const md=S.meds.find(m=>m.log_date===t)||{}; o.eltroxin_i_dag={morgen:!!md.morning,aften:!!md.evening};
