@@ -107,9 +107,13 @@ export function mapDaily(src: { daily: Any; sleep: Any; hrv: Any; stress: Any; s
     const vals: Any[] = Array.isArray(it.bodyBatteryValuesArray) ? it.bodyBatteryValuesArray : [];
     const end = r.sleep_end ? Date.parse(r.sleep_end) : null;
     if (end && vals.length) {
-      let best: Any = null;
-      for (const v of vals) { if (Array.isArray(v) && num(v[0]) !== null && num(v[li]) !== null && +v[0] <= end) best = v; }
-      if (best) r.bb_wake = num(best[li]);
+      // nærmeste måling til søvnens slutning (Garmin måler kun med nogle minutters/en times mellemrum under søvn)
+      let best: Any = null, bd = Infinity;
+      for (const v of vals) {
+        if (!Array.isArray(v) || num(v[0]) === null || num(v[li]) === null) continue;
+        const dd = Math.abs(+v[0] - end); if (dd < bd) { bd = dd; best = v; }
+      }
+      if (best && bd <= 90 * 60000) r.bb_wake = num(best[li]);
     }
   }
   return Object.values(rows).map((r) => ({ ...r, updated_at: new Date().toISOString() }));
