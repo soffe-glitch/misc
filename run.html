@@ -36,6 +36,9 @@ h1,h2,h3 { font-family:"Fraunces",Georgia,serif; font-weight:500; letter-spacing
 .header h1 span { color:var(--accent); font-size:14px; vertical-align:middle; }
 .header .backlink { flex:none; display:inline-flex; align-items:center; height:36px; padding:0 14px; border-radius:99px; background:var(--card); border:1px solid var(--border); color:var(--muted); font-size:13px; font-weight:600; text-decoration:none; }
 #last-updated { font-size:11px; color:var(--muted); margin-top:3px; }
+.syncbtn { margin-top:8px; border:1px solid var(--border); background:var(--card); color:var(--accent); font:inherit; font-size:12px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; }
+.syncbtn:disabled { opacity:.6; cursor:default; }
+.syncbtn.err { color:var(--orange); }
 .controls { display:flex; }
 .period-sel { display:flex; gap:4px; background:var(--card); border-radius:99px; padding:3px; width:100%; }
 .pbtn { flex:1; padding:7px 0; border:none; background:none; color:var(--muted); border-radius:99px; cursor:pointer; font:inherit; font-size:13px; font-weight:600; }
@@ -319,6 +322,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
     <div>
       <h1><span>&#9679;</span> Run</h1>
       <div id="last-updated"></div>
+      <button type="button" id="sync-btn" class="syncbtn" onclick="syncNow()">&#8635; Hent nyt fra Garmin</button>
     </div>
     <a class="backlink" href="index.html">&larr; Livsstil</a>
   </div>
@@ -587,6 +591,7 @@ async function init() {
     await loadGarmin();
     [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick()]);
     try { if (window.Readiness) await Readiness.load(400); } catch (e) { console.warn("Readiness", e); }
+    await fetchSyncStatus();
     if (typeof GARMIN_DATA !== 'undefined') garminData = GARMIN_DATA;
     updateTimestamp();
     document.getElementById('loader').style.display = 'none';
@@ -603,11 +608,50 @@ async function init() {
   }
 }
 
+let syncStatus = null;
+async function fetchSyncStatus() {
+  try {
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_misc?select=data&kind=eq.official_sync_status', { headers: hdr() });
+    const rows = r.ok ? await r.json() : [];
+    syncStatus = rows[0] && rows[0].data ? rows[0].data : null;
+  } catch (e) { syncStatus = null; }
+}
 function updateTimestamp() {
-  const now = new Date();
-  const time = now.toLocaleTimeString('da-DK', {hour: '2-digit', minute:'2-digit'});
-  const date = now.toLocaleDateString('da-DK', {day: '2-digit', month: 'short'});
-  document.getElementById('last-updated').textContent = `Sidst opdateret: ${date} ${time}` + (window.ICU_DOWN ? ' · intervals.icu svarer ikke, viser Garmin-data' : '');
+  const fmt = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Copenhagen' });
+  const el = document.getElementById('last-updated');
+  const at = syncStatus && syncStatus.at ? new Date(syncStatus.at) : null;
+  if (at && !isNaN(at)) {
+    const ageMin = Math.round((Date.now() - at.getTime()) / 60000);
+    const when = ageMin < 1 ? 'lige nu' : ageMin < 60 ? `for ${ageMin} min. siden` : at.toDateString() === new Date().toDateString() ? 'kl. ' + fmt(at) : at.toLocaleDateString('da-DK', { day: '2-digit', month: 'short' }) + ' kl. ' + fmt(at);
+    const stale = ageMin > 36 * 60;
+    el.innerHTML = `Garmin hentet ${when}` + (stale ? ' <span style="color:var(--orange)">· ældre end 1 døgn – tjek synkroniseringen</span>' : '') + (window.ICU_DOWN ? ' · intervals.icu svarer ikke' : '');
+  } else {
+    el.textContent = 'Sidst opdateret: ' + new Date().toLocaleDateString('da-DK', { day: '2-digit', month: 'short' }) + ' ' + fmt(new Date()) + (window.ICU_DOWN ? ' · intervals.icu svarer ikke, viser Garmin-data' : '');
+  }
+}
+
+// ---- Hent nyt fra Garmin nu (kører serverens sync og genindlæser) ----
+async function syncNow() {
+  const btn = document.getElementById('sync-btn');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.classList.remove('err'); btn.textContent = 'Henter fra Garmin…';
+  try {
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/sync-garmin-official?days=2&maxFit=5', { method: 'POST', headers: { ...hdr(), 'Content-Type': 'application/json' } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) throw new Error(j.note || j.error || ('HTTP ' + r.status));
+    btn.textContent = 'Opdaterer visningen…';
+    Object.keys(lapCache).forEach(k => delete lapCache[k]);
+    await fetchSyncStatus();
+    [activities, wellness] = await Promise.all([fetchActs(), fetchWellness()]);
+    try { if (window.Readiness) await Readiness.load(400); } catch (e) { console.warn('Readiness', e); }
+    updateTimestamp();
+    render();
+    const n = j.mirror && j.mirror.activities_new;
+    btn.textContent = n ? `\u2713 ${n} ny aktivitet` : '\u2713 Opdateret';
+  } catch (e) {
+    btn.classList.add('err'); btn.textContent = 'Kunne ikke hente: ' + String(e.message || e).slice(0, 60);
+  }
+  setTimeout(() => { btn.disabled = false; btn.classList.remove('err'); btn.innerHTML = '&#8635; Hent nyt fra Garmin'; }, 4000);
 }
 
 
