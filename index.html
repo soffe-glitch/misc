@@ -794,6 +794,12 @@ async function loadAll(){
 // ---------- Matematikkur math ----------
 function malvaegt(iso,endW){
   const s=S.settings;
+  // justeret linje (fx rygestop): starter forfra fra (dato, vægt) og slutter stadig på målvægten på slutdatoen
+  if(s.line_adj_date&&s.line_adj_weight!=null&&iso>=s.line_adj_date){
+    const spanDays=Math.max(1,daysBetween(s.line_adj_date,s.kur_end_date));
+    const d=Math.max(0,Math.min(spanDays,daysBetween(s.line_adj_date,iso)));
+    return +s.line_adj_weight-((+s.line_adj_weight-endW)/spanDays)*d;
+  }
   const totalDays=daysBetween(s.kur_start_date,s.kur_end_date)+1;
   let dayNum=daysBetween(s.kur_start_date,iso)+1;
   dayNum=Math.max(1,Math.min(totalDays,dayNum));
