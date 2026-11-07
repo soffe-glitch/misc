@@ -558,6 +558,15 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
           <div class="tile"><div class="k">Dage logget</div><div class="v tnum" id="tKostDays">—</div><div class="sub">seneste 14</div></div>
         </div>
       </div>
+      <div class="card" style="margin-top:14px">
+        <div class="ch"><h3>Energibalance — 14 dage</h3></div>
+        <div id="ebChart"><div class="empty">Kræver både madlog og Garmin-data.</div></div>
+        <div class="legend" id="ebLegend" style="display:none"></div>
+        <div class="grid g2" style="margin-top:12px">
+          <div class="tile"><div class="k">Underskud, seneste 7 dage</div><div class="v tnum" id="tEb7">—</div><div class="sub" id="tEb7Sub">—</div></div>
+          <div class="tile"><div class="k">I dag (foreløbigt)</div><div class="v tnum" id="tEbToday">—</div><div class="sub" id="tEbTodaySub">—</div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -753,9 +762,9 @@ async function loadAll(){
   try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
   syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
   try{ const gs=await get("garmin_misc","?select=data&kind=eq.official_sync_status"); S.gsync=gs[0]&&gs[0].data||null; }catch(e){ S.gsync=null; }
-  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_start,sleep_end,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
+  try{ S.garmin=(await get("garmin_daily","?select=log_date,sleep_start,sleep_end,sleep_secs,sleep_score,hrv_last_night,resting_hr,stress_avg,bb_wake,kcal_total,kcal_active,kcal_bmr,updated_at&order=log_date.asc&log_date=gte."+addDays(todayISO(),-200)))
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
-               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end})); }catch(e){ S.garmin=[]; }
+               rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr,upd:g.updated_at})); }catch(e){ S.garmin=[]; }
   try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
   try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
   bigStart();
@@ -840,6 +849,60 @@ function bindDots(el){
     n.addEventListener("mousemove",e=>showTT(n.getAttribute("data-t"),e.clientX,e.clientY));
     n.addEventListener("mouseleave",hideTT);
   });
+}
+
+// Energibalance: Garmins forbrug (korrigeret med settings.garmin_kcal_correction, std. −250) minus logget indtag.
+// Positiv = underskud. Dage uden madlog vises ikke som underskud. I dag er foreløbig: hvileforbrug for hele døgnet
+// skønnes ud fra de seneste 7 dages snit + dagens aktive kcal indtil seneste Garmin-synk.
+function ebRender(){
+  const el=$("#ebChart"); if(!el) return;
+  const s=S.settings||{}; const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
+  const t=todayISO();
+  const kmap={}; S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
+  const gmap={}; (S.garmin||[]).forEach(g=>{gmap[g.log_date]=g;});
+  const prevB=(S.garmin||[]).filter(g=>g.log_date<t&&g.kb!=null&&g.kb>1000).slice(-7).map(g=>g.kb);
+  const bmrFull=prevB.length?avg(prevB):null;
+  const days=[]; for(let i=13;i>=0;i--) days.push(addDays(t,-i));
+  const pts=days.map(d=>{
+    const g=gmap[d]; const eat=kmap[d]||0; let burn=null, prelim=false;
+    if(g&&g.kt!=null){
+      if(d===t){
+        // Dagens aktive kcal er kun med til seneste synk. Før aftensynk (kl. 20) er tallet for lavt → vis det ikke.
+        const fresh=g.upd&&new Date(g.upd).getHours()>=20;
+        if(fresh){ prelim=true; burn=(bmrFull!=null&&g.ka!=null)?bmrFull+g.ka:g.kt; }
+      } else burn=g.kt;
+    }
+    if(burn==null||eat<=0) return {d,v:null,eat,burn:burn==null?null:burn+corr,prelim,miss:eat<=0,nog:burn==null};
+    const adj=burn+corr; return {d,v:Math.round(adj-eat),eat,burn:Math.round(adj),prelim,low:eat<900};
+  });
+  const have=pts.filter(p=>p.v!=null);
+  if(!have.length){ return; }
+  const w=340,h=150,mL=6,mR=6,mT=10,mB=10; const mx=Math.max(400,...have.map(p=>Math.abs(p.v)))*1.12;
+  const z=mT+(h-mT-mB)/2; const sc=v=>(v/mx)*((h-mT-mB)/2); const bw=(w-mL-mR)/pts.length; let g="";
+  pts.forEach((p,i)=>{
+    const x=mL+i*bw+bw*0.15, bwi=bw*0.7;
+    if(p.v==null){
+      const why=p.miss?"ikke logget":"ingen Garmin-data";
+      g+=`<circle cx="${(x+bwi/2).toFixed(1)}" cy="${z}" r="2.4" fill="var(--muted,#999)" opacity=".6" data-t="${daLabel(p.d)}: ${why}"/>`; return;
+    }
+    const hgt=Math.abs(sc(p.v)), y=p.v>=0?z-hgt:z;
+    const col=p.v>=0?"var(--accent)":"var(--bad)"; const op=p.low?0.35:(p.prelim?0.6:1);
+    const lbl=`${daLabel(p.d)}${p.prelim?" (foreløbigt)":""}: ${p.v>=0?"underskud":"overskud"} ${fmt(Math.abs(p.v),0)} kcal · spist ${fmt(p.eat,0)} · forbrug ~${fmt(p.burn,0)}${p.low?" · under 900 kcal logget – måske ikke hele dagen":""}`;
+    g+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bwi.toFixed(1)}" height="${Math.max(1,hgt).toFixed(1)}" rx="2.5" fill="${col}" opacity="${op}"${p.prelim?' stroke="'+col+'" stroke-dasharray="3 2"':''} data-t="${lbl}"/>`;
+  });
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}<line x1="${mL}" x2="${w-mR}" y1="${z}" y2="${z}" stroke="var(--accent-ink)" stroke-width="1"/></svg>`;
+  bindDots(el);
+  const lg=$("#ebLegend"); lg.style.display="";
+  lg.innerHTML=`<span style="--x:var(--accent)">underskud (op)</span><span style="--x:var(--bad)">overskud (ned)</span><span style="--x:var(--muted,#999)">prik = ikke logget</span><span style="--x:var(--accent-ink)">Garmin korrigeret ${corr>0?"+":""}${corr} kcal/dag · lyse søjler = under 900 kcal logget</span>`;
+  const last7=pts.filter(p=>p.d<t).slice(-7).filter(p=>p.v!=null);
+  if(last7.length){ const sum=last7.reduce((a,p)=>a+p.v,0);
+    $("#tEb7").innerHTML=`${sum>=0?"":"−"}${fmt(Math.abs(sum),0)}<small> kcal</small>`;
+    $("#tEb7").style.color=sum>=0?"":"var(--bad)";
+    $("#tEb7Sub").textContent=`${sum>=0?"≈ "+fmt(sum/7700,2)+" kg fedt":"overskud ≈ "+fmt(Math.abs(sum)/7700,2)+" kg"} · ${last7.length} af 7 dage logget`; }
+  const td=pts[pts.length-1];
+  if(td.v!=null){ $("#tEbToday").innerHTML=`${td.v>=0?"":"−"}${fmt(Math.abs(td.v),0)}<small> kcal</small>`; $("#tEbToday").style.color=td.v>=0?"":"var(--bad)";
+    $("#tEbTodaySub").textContent=`spist ${fmt(td.eat,0)} · forbrug ~${fmt(td.burn,0)}`; }
+  else { $("#tEbToday").textContent="—"; $("#tEbToday").style.color=""; $("#tEbTodaySub").textContent=td.nog?"Garmin opdaterer dagen kl. 20":"log mad for i dag"; }
 }
 
 // Vægt over tid — HELE historikken (livsstil er ikke afgrænset til kuren)
@@ -1134,6 +1197,8 @@ function render(){
     const kl=$("#kostLegend");const nOver=kdays.filter(d=>kmap[d]>+s.calorie_target).length;
     kl.style.display="";kl.innerHTML=`<span style="--x:var(--accent)">under mål</span><span style="--x:var(--kost)">over mål (${nOver} af ${kdays.length} dage)</span><span style="--x:var(--accent-ink)">stiplet = ${s.calorie_target} kcal</span>`;
     $("#tAvgKcal").textContent=Math.round(avg(kdays.map(d=>kmap[d])));$("#tKostDays").textContent=kdays.length;}
+
+  ebRender();
 
   // --- arbejde 7d ---
   const wmap={};S.daily.forEach(d=>{if(d.work_load!=null)wmap[d.log_date]=d.work_load;});
