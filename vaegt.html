@@ -409,14 +409,14 @@ function weightChart(){
   return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Vægtudvikling">
     <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
     ${grid}${xticks}
-    <path d="${lineGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity="${adj?.2:.55}"/>
+    ${(+s.goal_weight<+s.kur_basis_weight-0.05)?`<path d="${lineGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity="${adj?.2:.55}"/>`:""}
     <path d="${lineReal}" stroke="var(--accent-ink)" stroke-width="1.5" stroke-dasharray="6 4" fill="none" opacity="${adj?.28:.8}"/>
-    ${adj?`<path d="${adjGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity=".55"/>
-    <path d="${adjReal}" stroke="var(--accent-ink)" stroke-width="2" stroke-dasharray="6 4" fill="none" opacity=".9"/>
+    ${adj&&(+s.goal_weight<+s.kur_basis_weight-0.05)?`<path d="${adjGoal}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 5" fill="none" opacity=".55"/>`:""}
+    ${adj?`<path d="${adjReal}" stroke="var(--accent-ink)" stroke-width="2" stroke-dasharray="6 4" fill="none" opacity=".9"/>
     <circle cx="${X(adj.t)}" cy="${Y(adj.w)}" r="4" fill="var(--surface)" stroke="var(--accent-ink)" stroke-width="2"/>
     <text x="${X(adj.t)}" y="${Y(adj.w)-9}" text-anchor="middle" class="axis-t" fill="var(--accent-ink)">justeret</text>`:""}
     <text x="${X(x1)}" y="${Y(s.kur_basis_weight)+13}" text-anchor="end" class="axis-t" fill="var(--accent-ink)">63,5</text>
-    <text x="${X(x1)}" y="${Y(s.goal_weight)+13}" text-anchor="end" class="axis-t">62</text>
+    ${(+s.goal_weight<+s.kur_basis_weight-0.05)?`<text x="${X(x1)}" y="${Y(s.goal_weight)+13}" text-anchor="end" class="axis-t">${num(s.goal_weight,1)}</text>`:""}
     ${M.length?`<path d="${area}" fill="url(#wg)"/><path d="${dPath}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" opacity=".45"/>`:""}
     ${trendPath?`<path d="${trendPath}" fill="none" stroke="var(--accent-ink)" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>`:""}
     ${dots}
@@ -578,8 +578,8 @@ function render(){
       <div class="delta" style="color:${st.lost>=0?'var(--good)':'var(--bad)'}">${st.lost>=0?'↓ '+kg(st.lost)+' tabt':'↑ '+kg(-st.lost)}</div>
       <div class="progress-wrap">
         <div class="progress-head"><span>${num(s.start_weight,1)} start</span><span>63,5</span></div>
-        <div class="bar"><i style="width:${st.pct}%"></i><span class="goalmark" style="left:${goalPct}%" title="mål 62"></span></div>
-        <div class="progress-head" style="margin-top:6px"><span>${num(st.pct,0)}% af vejen</span><span>mål 62</span></div>
+        <div class="bar"><i style="width:${st.pct}%"></i>${(+s.goal_weight<+s.kur_basis_weight-0.05)?`<span class="goalmark" style="left:${goalPct}%" title="mål ${num(s.goal_weight,1)}"></span>`:""}</div>
+        <div class="progress-head" style="margin-top:6px"><span>${num(st.pct,0)}% af vejen</span><span>${s.next_phase_goal?"næste fase: "+num(s.next_phase_goal,0)+" kg i det nye år":""}</span></div>
       </div>
     </div>
     <div class="hero-action">
@@ -604,7 +604,7 @@ function render(){
   </section>
   <section class="stats stats4">
     <div class="tile"><div class="k">Tabt i alt</div><div class="v tnum">${num(st.lost,1)}<small> kg</small></div><div class="sub">siden start</div></div>
-    <div class="tile"><div class="k">Til 63,5</div><div class="v tnum">${num(Math.max(0,st.cur-s.kur_basis_weight),1)}<small> kg</small></div><div class="sub">til 62: ${num(Math.max(0,st.cur-s.goal_weight),1)} kg</div></div>
+    <div class="tile"><div class="k">Til 63,5</div><div class="v tnum">${num(Math.max(0,st.cur-s.kur_basis_weight),1)}<small> kg</small></div><div class="sub">${s.next_phase_goal?"derefter "+num(s.next_phase_goal,0)+" kg i det nye år":""}</div></div>
     <div class="tile"><div class="k">Dage til 18/12</div><div class="v tnum">${st.daysLeft}</div><div class="sub">af ${s.kur_days} kurdage</div></div>
     <div class="tile"><div class="k">Tempo</div><div class="v tnum" style="font-size:20px">${rate}</div><div class="sub">${rateSub}</div></div>
   </section>
@@ -617,7 +617,6 @@ function render(){
         <span style="color:var(--accent-ink)"><i style="background:var(--accent-ink);height:4px"></i>7-dages trend</span>
         <span style="color:var(--accent)"><i style="background:var(--accent);opacity:.55"></i>morgenvægt</span>
         <span style="color:var(--accent-ink)"><i class="dash" style="color:var(--accent-ink)"></i>målvægt 63,5</span>
-        <span><i class="dash" style="color:var(--muted)"></i>målvægt 62</span>
       </div>
       <div class="plan">${planHtml(st)}</div>
     </div>
