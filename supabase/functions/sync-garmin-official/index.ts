@@ -5,7 +5,10 @@
 // - Nøglen ligger i private_config (key = garmin_personal_api_key). Den byttes til et 24-timers token ved hver kørsel.
 // - Aktiviteter: oversigt fra API'en + original FIT-fil pr. aktivitet (laps, løbeteknik, pulszoner, VO2max).
 // - Adgang: kun ejeren (login-token) eller det planlagte job (x-cron-secret), som de øvrige funktioner.
-// Parametre: ?days=3 (1-60) &fit=1 (0 = spring FIT over) &maxFit=6 &debug=1 (kun feltnavne, ingen værdier)
+// - Spejling: friske dagstal og NYE aktiviteter skrives også til garmin_daily / garmin_activities (dem dashboardet læser), så
+//   data er der kort efter et løb eller en nats søvn. Eksisterende aktiviteter røres ikke (ignore-duplicates); raw/splits/træningsstatus
+//   fra det uofficielle bibliotek ændres aldrig.
+// Parametre: ?days=3 (1-60) &fit=1 (0 = spring FIT over) &maxFit=6 &mirror=1 (0 = ingen spejling) &debug=1 (kun feltnavne, ingen værdier)
 import { Decoder, Stream } from "npm:@garmin/fitsdk@21.221.0";
 import { unzipSync } from "npm:fflate@0.8.3";
 
@@ -174,6 +177,9 @@ export function summarizeFit(bytes: Uint8Array): Record<string, Any> {
     avgRespirationRate: r1(s.enhancedAvgRespirationRate ?? s.avgRespirationRate, 1),
     recordCount: (messages.recordMesgs || []).length, hasRRIntervals: (messages.hrvMesgs || []).length > 0, rrCount: (messages.hrvMesgs || []).length,
   };
+  let cs = 0, ct = 0;
+  for (const l of laps) if (l.averageRunCadence != null && l.duration) { cs += l.averageRunCadence * l.duration; ct += l.duration; }
+  (session as Any).avgCadenceSpm = ct ? r1(cs / ct, 1) : null;   // tidsvægtet gennemsnit af lap-kadencen (pr. minut)
   const tz = (messages.timeInZoneMesgs || []).find((z: Any) => z.referenceMesg === "session") || null;
   const hrZones = tz ? { seconds: tz.timeInHrZone ?? null, boundaries: tz.hrZoneHighBoundary ?? null, maxHR: num(tz.maxHeartRate), restingHR: num(tz.restingHeartRate), thresholdHR: num(tz.thresholdHeartRate) } : null;
   // VO2max ligger i en ukendt (udokumenteret) besked: 140, felt 7 (enhed: 65536/3,5 pr. ml/kg/min). Verificeret mod garmin_raw.max_metrics.
@@ -199,6 +205,7 @@ Deno.serve(async (req) => {
   const doFit = url.searchParams.get("fit") !== "0";
   const maxFit = Math.min(30, Math.max(0, +(url.searchParams.get("maxFit") || 6)));
   const debug = url.searchParams.get("debug") === "1";
+  const mirror = url.searchParams.get("mirror") !== "0";
   const t0 = Date.now(), report: Record<string, Any> = { ok: true, days, endpoints: {} };
 
   // token
@@ -272,8 +279,55 @@ Deno.serve(async (req) => {
         await fetch(`${SB}/rest/v1/garmin_off_activities?activity_id=eq.${id}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(patch) });
       }
     }
+    // ---------- spejling til de tabeller dashboardet læser ----------
+    report.mirror = { daily: 0, activities_new: 0 };
+    if (mirror) {
+      const DCOLS = ["sleep_start", "sleep_end", "sleep_secs", "deep_secs", "light_secs", "rem_secs", "awake_secs", "sleep_score", "hrv_last_night", "hrv_status", "resting_hr", "steps", "stress_avg", "stress_max", "bb_high", "bb_low", "bb_charged", "bb_drained"];   // bb_wake er en genereret kolonne → sættes via set_bb_wake()
+      for (const d of daily) {
+        // kun værdier vi faktisk har (aldrig null over eksisterende), og én række ad gangen så PostgREST ikke nulstiller kolonner
+        const o: Record<string, Any> = { log_date: d.log_date, updated_at: new Date().toISOString() };
+        for (const c of DCOLS) if (d[c] !== null && d[c] !== undefined) o[c] = d[c];
+        if (Object.keys(o).length <= 2) continue;
+        const r = await fetch(`${SB}/rest/v1/garmin_daily?on_conflict=log_date`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify([o]) });
+        if (!r.ok) throw new Error(`garmin_daily: ${r.status} ${(await r.text()).slice(0, 160)}`);
+        report.mirror.daily++;
+        if (d.bb_wake !== null && d.bb_wake !== undefined) {
+          const rb = await fetch(`${SB}/rest/v1/rpc/set_bb_wake`, { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ p_date: d.log_date, p_val: d.bb_wake }) });
+          if (!rb.ok) throw new Error(`set_bb_wake: ${rb.status} ${(await rb.text()).slice(0, 160)}`);
+        }
+      }
+      if (acts.length) {
+        const ids = acts.map((a) => a.activity_id).join(",");
+        const rr = await fetch(`${SB}/rest/v1/garmin_off_activities?select=activity_id,start_local,log_date,type,name,distance_m,duration_s,moving_s,avg_hr,max_hr,calories,avg_speed,elevation_gain,training_load,aerobic_te,anaerobic_te,vo2max,laps,session,has_fit,fit_error,raw&activity_id=in.(${ids})`, { headers: H });
+        const offs: Any[] = await rr.json();
+        const rows = offs.filter((o) => o.has_fit || o.fit_error).map((o) => {
+          const raw: Record<string, Any> = { ...(o.raw || {}) };
+          const s2 = o.session || {};
+          // dynamics i samme felter som det uofficielle biblioteks raw, så siderne kan læse dem uændret
+          if (s2.avgStanceTime != null) raw.avgGroundContactTime = s2.avgStanceTime;
+          if (s2.avgVerticalOscillationCm != null) raw.avgVerticalOscillation = s2.avgVerticalOscillationCm;
+          if (s2.avgVerticalRatio != null) raw.avgVerticalRatio = s2.avgVerticalRatio;
+          if (s2.avgStepLengthCm != null) raw.avgStrideLength = s2.avgStepLengthCm;
+          if (s2.avgCadenceSpm != null) raw.averageRunningCadenceInStepsPerMinute = s2.avgCadenceSpm;
+          if (o.vo2max != null) raw.vO2MaxValue = o.vo2max;
+          return {
+            activity_id: o.activity_id, start_local: o.start_local, log_date: o.log_date, type: o.type, name: o.name,
+            distance_m: o.distance_m, duration_s: o.duration_s, moving_s: o.moving_s, avg_hr: o.avg_hr, max_hr: o.max_hr, calories: o.calories,
+            avg_speed: o.avg_speed, elevation_gain: o.elevation_gain, vo2max: o.vo2max, training_load: o.training_load,
+            aerobic_te: o.aerobic_te, anaerobic_te: o.anaerobic_te, raw, splits: o.laps && o.laps.length ? { lapDTOs: o.laps, source: "official" } : null,
+            updated_at: new Date().toISOString(),
+          };
+        });
+        if (rows.length) {
+          // ignore-duplicates: findes aktiviteten allerede (fx fra det uofficielle bibliotek), røres den ikke
+          const r = await fetch(`${SB}/rest/v1/garmin_activities?on_conflict=activity_id`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" }, body: JSON.stringify(rows) });
+          if (!r.ok) throw new Error(`garmin_activities: ${r.status} ${(await r.text()).slice(0, 160)}`);
+          report.mirror.activities_new = (await r.json()).length;
+        }
+      }
+    }
     // statuslinje til dashboardet ("Garmin sidst hentet")
-    await upsert("garmin_misc", "kind", [{ kind: "official_sync_status", data: { ok: true, at: new Date().toISOString(), range: [start, end], daily_rows: report.daily_rows, activity_rows: report.activity_rows, fit: report.fit }, updated_at: new Date().toISOString() }]);
+    await upsert("garmin_misc", "kind", [{ kind: "official_sync_status", data: { ok: true, at: new Date().toISOString(), range: [start, end], daily_rows: report.daily_rows, activity_rows: report.activity_rows, fit: report.fit, mirror: report.mirror }, updated_at: new Date().toISOString() }]);
   } catch (e) {
     return json({ ...report, ok: false, error: String((e as Error).message).slice(0, 300) }, 500);
   }

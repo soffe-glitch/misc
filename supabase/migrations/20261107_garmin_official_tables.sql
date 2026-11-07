@@ -42,3 +42,17 @@ select a.activity_id, a.log_date,
   a.vo2max u_vo2, o.vo2max o_vo2, o.vo2max_raw,
   jsonb_array_length(coalesce(a.splits->'lapDTOs','[]'::jsonb)) u_laps, jsonb_array_length(coalesce(o.laps,'[]'::jsonb)) o_laps
 from public.garmin_activities a join public.garmin_off_activities o using (activity_id);
+
+-- garmin_daily.bb_wake er en genereret kolonne (raw.stats.bodyBatteryAtWakeTime). Funktionen fletter kun den ene værdi ind i raw.
+create or replace function public.set_bb_wake(p_date date, p_val numeric) returns void
+language sql security definer set search_path = public as $$
+  update public.garmin_daily
+     set raw = jsonb_set(coalesce(raw, '{}'::jsonb), '{stats}', coalesce(raw->'stats', '{}'::jsonb) || jsonb_build_object('bodyBatteryAtWakeTime', p_val)),
+         updated_at = now()
+   where log_date = p_date;
+$$;
+revoke all on function public.set_bb_wake(date, numeric) from public, anon, authenticated;
+grant execute on function public.set_bb_wake(date, numeric) to service_role;
+
+-- Planlagt job (hver halve time kl. 05-21 UTC ≈ 06-22 dansk vintertid):
+-- select cron.schedule('sync-garmin-official', '*/30 5-21 * * *', $job$ select net.http_post(url := 'https://<projekt>.supabase.co/functions/v1/sync-garmin-official?days=3&maxFit=10', headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',(select value from public.private_config where key='cron_secret')), timeout_milliseconds := 60000); $job$);
