@@ -77,6 +77,7 @@ export function mapDaily(src: { daily: Any; sleep: Any; hrv: Any; stress: Any; s
     r.stress_avg = int(it.stress?.avgLevel); r.stress_max = int(it.stress?.maxLevel);
     r.bb_high = int(it.bodyBattery?.maxValue); r.bb_low = int(it.bodyBattery?.minValue);
     r.bb_charged = int(it.bodyBattery?.chargedValue); r.bb_drained = int(it.bodyBattery?.drainedValue);
+    r.kcal_total = num(it.calories?.burnedTotal); r.kcal_active = num(it.calories?.burnedActive); r.kcal_bmr = num(it.calories?.burnedResting);
     r.raw.daily = it;
   }
   for (const it of arr(src.sleep)) {
@@ -282,7 +283,7 @@ Deno.serve(async (req) => {
     // ---------- spejling til de tabeller dashboardet læser ----------
     report.mirror = { daily: 0, activities_new: 0 };
     if (mirror) {
-      const DCOLS = ["sleep_start", "sleep_end", "sleep_secs", "deep_secs", "light_secs", "rem_secs", "awake_secs", "sleep_score", "hrv_last_night", "hrv_status", "resting_hr", "steps", "stress_avg", "stress_max", "bb_high", "bb_low", "bb_charged", "bb_drained"];   // bb_wake er en genereret kolonne → sættes via set_bb_wake()
+      const DCOLS = ["sleep_start", "sleep_end", "sleep_secs", "deep_secs", "light_secs", "rem_secs", "awake_secs", "sleep_score", "hrv_last_night", "hrv_status", "resting_hr", "steps", "stress_avg", "stress_max", "bb_high", "bb_low", "bb_charged", "bb_drained"];   // bb_wake og kcal_* er genererede kolonner → sættes via set_bb_wake()/set_stats()
       for (const d of daily) {
         // kun værdier vi faktisk har (aldrig null over eksisterende), og én række ad gangen så PostgREST ikke nulstiller kolonner
         const o: Record<string, Any> = { log_date: d.log_date, updated_at: new Date().toISOString() };
@@ -291,6 +292,13 @@ Deno.serve(async (req) => {
         const r = await fetch(`${SB}/rest/v1/garmin_daily?on_conflict=log_date`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify([o]) });
         if (!r.ok) throw new Error(`garmin_daily: ${r.status} ${(await r.text()).slice(0, 160)}`);
         report.mirror.daily++;
+        if (d.kcal_total != null) {
+          const st: Record<string, Any> = { totalKilocalories: d.kcal_total };
+          if (d.kcal_active != null) st.activeKilocalories = d.kcal_active;
+          if (d.kcal_bmr != null) st.bmrKilocalories = d.kcal_bmr;
+          const rk = await fetch(`${SB}/rest/v1/rpc/set_stats`, { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ p_date: d.log_date, p_stats: st }) });
+          if (!rk.ok) throw new Error(`set_stats: ${rk.status} ${(await rk.text()).slice(0, 160)}`);
+        }
         if (d.bb_wake !== null && d.bb_wake !== undefined) {
           const rb = await fetch(`${SB}/rest/v1/rpc/set_bb_wake`, { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ p_date: d.log_date, p_val: d.bb_wake }) });
           if (!rb.ok) throw new Error(`set_bb_wake: ${rb.status} ${(await rb.text()).slice(0, 160)}`);
