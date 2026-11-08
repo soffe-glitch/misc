@@ -49,6 +49,7 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 header h1{font-size:34px;line-height:1}
 header .sub{color:var(--muted);font-size:13.5px;margin-top:6px}
 .btn{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .btn:focus-visible,.q button:focus-visible,.seg button:focus-visible,.item .name:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -105,6 +106,17 @@ section.cat h2 small{font-family:"Hanken Grotesk",sans-serif;font-size:13px;colo
 .soon li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--border);font-size:15px}
 .soon li:first-child{border-top:0}
 .age.a0{background:var(--accent-soft);color:var(--accent-ink)}
+.rcpt{background:var(--surface);border:1px solid var(--amber);border-radius:18px;padding:14px 16px;margin-bottom:22px}
+.rcpt h2{font-size:20px}
+.rcpt .hint{color:var(--muted);font-size:13.5px;margin:2px 0 8px}
+.rl{border-top:1px solid var(--border);padding:10px 0;display:grid;gap:8px}
+.rl:first-of-type{border-top:0}
+.rl .top{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.rl .top small{font-weight:400;color:var(--faint)}
+.rl .ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rl select,.rl input{width:auto;flex:1;min-width:140px;font-size:15px;padding:7px 10px}
+.rl input.fac{flex:0 0 74px;min-width:0}
+.rl .lbl{font-size:12.5px;color:var(--muted)}
 .empty-cat{padding:16px 14px;color:var(--muted);font-size:14px}
 
 .add{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;display:grid;gap:10px;grid-template-columns:1fr 1fr}
@@ -140,6 +152,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
   <div id="err"></div>
   <div class="list" id="list"></div>
   <div id="soon"></div>
+  <div id="rcpt"></div>
   <nav class="tabs" id="tabs" aria-label="Kategorier"></nav>
   <div id="cats"></div>
   <form class="add" id="addForm" autocomplete="off">
@@ -198,7 +211,7 @@ const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMo
 const fmtD=iso=>{const [y,m,d]=iso.split("-");return (+d)+"/"+(+m)+(y!==String(new Date().getFullYear())?"-"+y.slice(2):"");};
 const daysSince=iso=>Math.round((new Date(todayISO())-new Date(iso))/864e5);
 
-let items=[], filter="alle";
+let items=[], filter="alle", lines=[];
 // dage til udløb; madvarer advarer 3 dage før, alt andet 30 dage før
 const daysTo=iso=>Math.round((new Date(iso)-new Date(todayISO()))/864e5);
 const warnDays=i=>i.category==="mad"?3:30;
@@ -268,6 +281,7 @@ function render(){
   }).join("");
   $("#cats").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>act_(b.dataset.act,+b.dataset.id,b.dataset.v));
   $("#cats").querySelectorAll(".name").forEach(b=>b.onclick=()=>openEdit(+b.dataset.id));
+  renderRcpt();
   const n=act.filter(i=>i.category!=="fryser").length, f=act.filter(i=>i.category==="fryser"&&+i.qty>0).length;
   $("#sub").textContent=n+" varer i lageret, "+f+" ting i fryseren";
 }
@@ -287,6 +301,60 @@ function row(i){
     ? `<div class="seg" role="group" aria-label="Status for ${esc(i.name)}">${[[2,"Har"],[1,"Snart"],[0,"Tom"]].map(([v,t])=>`<button class="s${v}" aria-pressed="${+i.qty===v}" data-act="set" data-id="${i.id}" data-v="${v}">${t}</button>`).join("")}</div>`
     : `<div class="q"><button aria-label="Én mindre ${esc(i.name)}" data-act="dec" data-id="${i.id}">−</button><output class="tnum">${+i.qty}${i.unit?`<small>${esc(i.unit)}</small>`:""}</output><button aria-label="Én mere ${esc(i.name)}" data-act="inc" data-id="${i.id}">+</button></div>`;
   return `<div class="${cls.join(" ")}"><button class="name" data-id="${i.id}"><span>${esc(i.name)}</span>${meta.length?`<small>${meta.join(" · ")}</small>`:""}</button>${ctrl}</div>`;
+}
+
+// ---- kvitteringslinjer, der ikke er genkendt endnu ----
+const titleCase=s=>s.toLowerCase().replace(/(^|[\s/-])(\S)/g,(m,a,b)=>a+b.toUpperCase());
+function renderRcpt(){
+  const el=$("#rcpt");
+  if(!lines.length){el.innerHTML="";return;}
+  const opts=CATS.map(c=>{const its=items.filter(i=>i.active&&i.category===c.k).sort((a,b)=>a.name.localeCompare(b.name,"da"));
+    return its.length?`<optgroup label="${c.t}">${its.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join("")}</optgroup>`:"";}).join("");
+  el.innerHTML=`<div class="rcpt"><h2>Fra kvitteringer</h2><div class="hint">Hvilken vare er det? Svaret huskes, så næste gang sker det automatisk.</div>${
+    lines.map(l=>`<div class="rl" data-id="${l.id}">
+      <div class="top"><span>${esc(l.receipt_name)}</span><small>${+l.qty} stk${l.price!=null?" · "+(+l.price).toFixed(2).replace(".",",")+" kr":""}${l.bought_at?" · "+fmtD(l.bought_at.slice(0,10)):""}</small></div>
+      <div class="ctl"><select class="pick"><option value="">Vælg vare…</option><option value="new">＋ Ny vare</option><option value="ignore">Ignorér altid</option>${opts}</select>
+        <span class="lbl facw" hidden>antal pr. stk</span><input class="fac facw" type="number" inputmode="decimal" min="1" step="1" value="1" hidden aria-label="Antal pr. stk på kvitteringen"></div>
+      <div class="ctl neww" hidden><input class="nn" value="${esc(titleCase(l.receipt_name))}" aria-label="Navn på ny vare"><select class="nc">${catOptions("mad")}</select></div>
+      <div class="ctl"><button class="btn primary sv" type="button" disabled>Gem</button></div>
+    </div>`).join("")}</div>`;
+  el.querySelectorAll(".rl").forEach(r=>{
+    const pick=r.querySelector(".pick"), sv=r.querySelector(".sv");
+    pick.onchange=()=>{const v=pick.value; sv.disabled=!v;
+      r.querySelector(".neww").hidden=v!=="new";
+      r.querySelectorAll(".facw").forEach(x=>x.hidden=!(v&&v!=="new"&&v!=="ignore"));};
+    sv.onclick=()=>saveLine(+r.dataset.id,r);
+  });
+}
+async function upsertAlias(row){
+  await api("lager_alias",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(row)});
+}
+async function saveLine(id,r){
+  const l=lines.find(x=>x.id===id), v=r.querySelector(".pick").value;
+  try{
+    if(v==="ignore"){
+      await upsertAlias({receipt_name:l.receipt_name,ignore:true,lager_id:null});
+      await api("kvittering_linjer?id=eq."+id,{method:"PATCH",body:JSON.stringify({status:"ignored"})});
+      toast(l.receipt_name+" ignoreres fremover");
+    } else {
+      let item, factor=1;
+      if(v==="new"){
+        const cat=r.querySelector(".nc").value, st=!!CAT[cat].state;
+        const body={name:r.querySelector(".nn").value.trim()||titleCase(l.receipt_name),category:cat,qty:st?2:+l.qty,min_qty:st?2:CAT[cat].freezer?0:1};
+        [item]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(item);
+      } else {
+        item=items.find(i=>i.id===+v); factor=Math.max(1,+r.querySelector(".fac").value||1);
+        const patch={updated_at:new Date().toISOString(),active:true};
+        if(useState(item)) patch.qty=2; else patch.qty=+item.qty+(+l.qty)*factor;
+        if(+item.qty===0) patch.expires=null;
+        const [u]=await api("lager?id=eq."+item.id,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(item,u);
+      }
+      await upsertAlias({receipt_name:l.receipt_name,lager_id:item.id,factor,ignore:false});
+      await api("kvittering_linjer?id=eq."+id,{method:"PATCH",body:JSON.stringify({status:"applied",lager_id:item.id})});
+      toast(item.name+" er opdateret");
+    }
+    lines=lines.filter(x=>x.id!==id); render(); $("#err").innerHTML="";
+  }catch(e){showErr(e);}
 }
 
 async function act_(kind,id,v){
@@ -364,7 +432,7 @@ $("#addForm").onsubmit=async e=>{
 };
 
 (async()=>{
-  try{ items=await api("lager?select=*&order=name"); render(); }
+  try{ [items,lines]=await Promise.all([api("lager?select=*&order=name"),api("kvittering_linjer?status=eq.pending&order=bought_at")]); render(); }
   catch(e){ $("#sub").textContent=""; showErr(e); }
 })();
 </script>
