@@ -147,7 +147,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <label class="f wide">Navn<input id="aName" required placeholder="fx Havregryn"></label>
     <label class="f">Kategori<select id="aCat"></select></label>
     <label class="f" id="aQtyWrap">Antal<input id="aQty" type="number" inputmode="decimal" min="0" step="1" value="1"></label>
-    <label class="f" id="aUnitWrap" hidden>Enhed<input id="aUnit" placeholder="stk, portioner, poser"></label>
+    <label class="f" id="aUnitWrap">Enhed (valgfri)<input id="aUnit" placeholder="stk, ds, poser"></label>
     <label class="f" id="aExpWrap">Udløber<input id="aExp" type="date"></label>
     <label class="f" id="aDateWrap" hidden>Indfrosset<input id="aDate" type="date"></label>
     <div class="row"><button class="btn primary" type="submit">Tilføj</button></div>
@@ -219,7 +219,8 @@ function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");
 function showErr(e){$("#err").innerHTML=`<div class="err">Kunne ikke gemme eller hente: ${esc(e.message||e)}. Tjek forbindelsen og prøv igen.</div>`;}
 
 const isLow=i=>+i.qty<+i.min_qty;
-const label=i=>CAT[i.category]?.state?(+i.qty>=2?"har":+i.qty===1?"snart tom":"tom"):null;
+const useState=i=>!!(CAT[i.category]?.state&&!i.unit);
+const label=i=>useState(i)?(+i.qty>=2?"har":+i.qty===1?"snart tom":"tom"):null;
 
 // hvor længe holder en vare? gennemsnit mellem de datoer den er løbet tør
 function lifespan(dates){
@@ -280,9 +281,9 @@ function row(i){
   }
   if(i.expires&&+i.qty>0) meta.push(expBadge(i));
   if(!c.freezer&&+i.qty===0&&i.empty_dates?.length) meta.push("tom siden "+fmtD([...i.empty_dates].sort().pop()));
-  const ls=lifespan(i.empty_dates); if(ls&&!c.state) meta.push(ls);
+  const ls=lifespan(i.empty_dates); if(ls&&!useState(i)) meta.push(ls);
   if(i.note) meta.push(esc(i.note));
-  const ctrl=c.state
+  const ctrl=useState(i)
     ? `<div class="seg" role="group" aria-label="Status for ${esc(i.name)}">${[[2,"Har"],[1,"Snart"],[0,"Tom"]].map(([v,t])=>`<button class="s${v}" aria-pressed="${+i.qty===v}" data-act="set" data-id="${i.id}" data-v="${v}">${t}</button>`).join("")}</div>`
     : `<div class="q"><button aria-label="Én mindre ${esc(i.name)}" data-act="dec" data-id="${i.id}">−</button><output class="tnum">${+i.qty}${i.unit?`<small>${esc(i.unit)}</small>`:""}</output><button aria-label="Én mere ${esc(i.name)}" data-act="inc" data-id="${i.id}">+</button></div>`;
   return `<div class="${cls.join(" ")}"><button class="name" data-id="${i.id}"><span>${esc(i.name)}</span>${meta.length?`<small>${meta.join(" · ")}</small>`:""}</button>${ctrl}</div>`;
@@ -317,9 +318,10 @@ function openEdit(id){
   $("#dlg").showModal();
 }
 function toggleEditFields(cat){
-  const c=CAT[cat];
-  $("#eMinWrap").hidden=!!(c.state||c.freezer); $("#eDateWrap").hidden=!c.freezer; $("#eUnitWrap").hidden=!!c.state;
+  const c=CAT[cat], hasUnit=!!$("#eUnit").value.trim();
+  $("#eMinWrap").hidden=!!((c.state&&!hasUnit)||c.freezer); $("#eDateWrap").hidden=!c.freezer; $("#eUnitWrap").hidden=false;
 }
+$("#eUnit").oninput=()=>toggleEditFields($("#eCat").value);
 $("#eCat").onchange=e=>toggleEditFields(e.target.value);
 $("#eCancel").onclick=()=>$("#dlg").close();
 $("#editForm").onsubmit=async e=>{
@@ -327,8 +329,9 @@ $("#editForm").onsubmit=async e=>{
   const i=items.find(x=>x.id===editId); const cat=$("#eCat").value, c=CAT[cat];
   const patch={name:$("#eName").value.trim(),category:cat,unit:$("#eUnit").value.trim()||null,note:$("#eNote").value.trim()||null,
     frozen_date:c.freezer?($("#eDate").value||null):null,expires:$("#eExp").value||null,updated_at:new Date().toISOString()};
-  if(c.state){patch.min_qty=2; if(!CAT[i.category].state) patch.qty=+i.qty>0?2:0;}
-  else if(!c.freezer) patch.min_qty=Math.max(0,+$("#eMin").value||0);
+  const willState=c.state&&!patch.unit, wasState=useState(i);
+  if(willState){patch.min_qty=2; if(!wasState) patch.qty=+i.qty>0?2:0;}
+  else if(!c.freezer){patch.min_qty=Math.max(0,+$("#eMin").value||0); if(wasState) patch.qty=+i.qty>0?1:0;}
   try{ const [r]=await api("lager?id=eq."+editId,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(i,r); $("#dlg").close(); render(); toast("Gemt"); }
   catch(err){ showErr(err); }
 };
@@ -342,16 +345,18 @@ $("#eDel").onclick=async()=>{
 $("#aCat").innerHTML=catOptions("mad");
 function toggleAdd(){
   const c=CAT[$("#aCat").value];
-  $("#aQtyWrap").hidden=!!c.state; $("#aUnitWrap").hidden=!c.freezer; $("#aDateWrap").hidden=!c.freezer;
+  const hasUnit=!!$("#aUnit").value.trim();
+  $("#aQtyWrap").hidden=!!(c.state&&!hasUnit); $("#aUnitWrap").hidden=false; $("#aDateWrap").hidden=!c.freezer;
   if(c.freezer&&!$("#aDate").value) $("#aDate").value=todayISO();
 }
-$("#aCat").onchange=toggleAdd; toggleAdd();
+$("#aCat").onchange=toggleAdd; $("#aUnit").oninput=toggleAdd; toggleAdd();
 $("#addForm").onsubmit=async e=>{
   e.preventDefault();
   const cat=$("#aCat").value, c=CAT[cat];
   const body={name:$("#aName").value.trim(),category:cat,
-    qty:c.state?2:Math.max(0,+$("#aQty").value||0), min_qty:c.state?2:c.freezer?0:1,
-    unit:c.freezer?($("#aUnit").value.trim()||null):null, frozen_date:c.freezer?($("#aDate").value||todayISO()):null, expires:$("#aExp").value||null};
+    unit:$("#aUnit").value.trim()||null};
+  const st=c.state&&!body.unit;
+  Object.assign(body,{qty:st?2:Math.max(0,+$("#aQty").value||0), min_qty:st?2:c.freezer?0:1, frozen_date:c.freezer?($("#aDate").value||todayISO()):null, expires:$("#aExp").value||null});
   if(!body.name) return;
   try{ const [r]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(r); $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value="";
     filter=cat; render(); toast(body.name+" er tilføjet"); document.getElementById("c-"+cat)?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"}); }
