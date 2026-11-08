@@ -99,6 +99,12 @@ section.cat h2 small{font-family:"Hanken Grotesk",sans-serif;font-size:13px;colo
 .age{font-size:12px;font-weight:600;border-radius:999px;padding:1px 7px;margin-left:6px}
 .age.a1{background:var(--amber-soft);color:var(--amber)}
 .age.a2{background:var(--bad-soft);color:var(--bad)}
+.soon{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px 16px;margin-bottom:22px}
+.soon h2{font-size:20px;margin-bottom:6px}
+.soon ul{list-style:none;margin:0;padding:0}
+.soon li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--border);font-size:15px}
+.soon li:first-child{border-top:0}
+.age.a0{background:var(--accent-soft);color:var(--accent-ink)}
 .empty-cat{padding:16px 14px;color:var(--muted);font-size:14px}
 
 .add{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;display:grid;gap:10px;grid-template-columns:1fr 1fr}
@@ -133,6 +139,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
   </header>
   <div id="err"></div>
   <div class="list" id="list"></div>
+  <div id="soon"></div>
   <nav class="tabs" id="tabs" aria-label="Kategorier"></nav>
   <div id="cats"></div>
   <form class="add" id="addForm" autocomplete="off">
@@ -141,6 +148,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <label class="f">Kategori<select id="aCat"></select></label>
     <label class="f" id="aQtyWrap">Antal<input id="aQty" type="number" inputmode="decimal" min="0" step="1" value="1"></label>
     <label class="f" id="aUnitWrap" hidden>Enhed<input id="aUnit" placeholder="stk, portioner, poser"></label>
+    <label class="f" id="aExpWrap">Udløber<input id="aExp" type="date"></label>
     <label class="f" id="aDateWrap" hidden>Indfrosset<input id="aDate" type="date"></label>
     <div class="row"><button class="btn primary" type="submit">Tilføj</button></div>
   </form>
@@ -153,6 +161,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <label class="f">Kategori<select id="eCat"></select></label>
     <label class="f" id="eMinWrap">På listen under<input id="eMin" type="number" inputmode="decimal" min="0" step="1"></label>
     <label class="f" id="eUnitWrap">Enhed<input id="eUnit" placeholder="stk"></label>
+    <label class="f" id="eExpWrap">Udløber<input id="eExp" type="date"></label>
     <label class="f" id="eDateWrap">Indfrosset<input id="eDate" type="date"></label>
     <label class="f wide">Note<input id="eNote" placeholder="fx mærke eller hvor den købes"></label>
     <div class="hist" id="eHist"></div>
@@ -190,6 +199,16 @@ const fmtD=iso=>{const [y,m,d]=iso.split("-");return (+d)+"/"+(+m)+(y!==String(n
 const daysSince=iso=>Math.round((new Date(todayISO())-new Date(iso))/864e5);
 
 let items=[], filter="alle";
+// dage til udløb; madvarer advarer 3 dage før, alt andet 30 dage før
+const daysTo=iso=>Math.round((new Date(iso)-new Date(todayISO()))/864e5);
+const warnDays=i=>i.category==="mad"?3:30;
+function expBadge(i){
+  if(!i.expires||+i.qty===0) return "";
+  const d=daysTo(i.expires);
+  const txt=d<0?"udløbet "+fmtD(i.expires):d===0?"udløber i dag":d===1?"udløber i morgen":d<=warnDays(i)?"udløber om "+d+" dage":"udløber "+fmtD(i.expires);
+  const cls=d<0?"a2":d<=warnDays(i)?"a1":"";
+  return cls?`<span class="age ${cls}">${txt}</span>`:txt;
+}
 
 async function api(path,opts={}){
   const r=await fetch(REST+path,{...opts,headers:{...HEAD,Prefer:"return=representation",...(opts.headers||{})}});
@@ -226,6 +245,9 @@ function render(){
     $("#copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast("Listen er kopieret");}catch(e){toast("Kunne ikke kopiere");}};
     $("#shareBtn").onclick=async()=>{ if(navigator.share){try{await navigator.share({title:"Indkøb",text:txt});}catch(e){}} else $("#copyBtn").click(); };
   }
+  // brug snart: udløbet eller inden for advarselsgrænsen
+  const soon=act.filter(i=>i.expires&&+i.qty>0&&daysTo(i.expires)<=warnDays(i)).sort((a,b)=>a.expires.localeCompare(b.expires));
+  $("#soon").innerHTML=soon.length?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}</ul></div>`:"";
   // faner
   const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&k!=="fryser").length;
   $("#tabs").innerHTML=[`<button data-f="alle" aria-pressed="${filter==="alle"}">Alle</button>`]
@@ -256,6 +278,7 @@ function row(i){
     const d=daysSince(i.frozen_date), m=d/30;
     meta.push("frosset "+fmtD(i.frozen_date)+(m>=6?`<span class="age a2">${Math.floor(m)} mdr.</span>`:m>=3?`<span class="age a1">${Math.floor(m)} mdr.</span>`:""));
   }
+  if(i.expires&&+i.qty>0) meta.push(expBadge(i));
   if(!c.freezer&&+i.qty===0&&i.empty_dates?.length) meta.push("tom siden "+fmtD([...i.empty_dates].sort().pop()));
   const ls=lifespan(i.empty_dates); if(ls&&!c.state) meta.push(ls);
   if(i.note) meta.push(esc(i.note));
@@ -273,6 +296,7 @@ async function act_(kind,id,v){
   const patch={qty:q,updated_at:new Date().toISOString()};
   // registrér datoen, når noget løber tør (ikke for fryseren, hvor 0 bare betyder spist)
   if(q===0&&+i.qty>0&&i.category!=="fryser") patch.empty_dates=[...(i.empty_dates||[]),todayISO()];
+  if(q===0) patch.expires=null;  // ny pakke får ny dato
   const prev={...i}; Object.assign(i,patch); render();
   try{ await api("lager?id=eq."+id,{method:"PATCH",body:JSON.stringify(patch)}); $("#err").innerHTML=""; }
   catch(e){ Object.assign(i,prev); render(); showErr(e); }
@@ -286,7 +310,7 @@ function openEdit(id){
   const i=items.find(x=>x.id===id); if(!i) return; editId=id;
   const c=CAT[i.category];
   $("#eTitle").textContent=i.name; $("#eName").value=i.name; $("#eCat").innerHTML=catOptions(i.category);
-  $("#eMin").value=+i.min_qty; $("#eUnit").value=i.unit||""; $("#eDate").value=i.frozen_date||""; $("#eNote").value=i.note||"";
+  $("#eMin").value=+i.min_qty; $("#eUnit").value=i.unit||""; $("#eDate").value=i.frozen_date||""; $("#eNote").value=i.note||""; $("#eExp").value=i.expires||"";
   toggleEditFields(i.category);
   const ds=[...(i.empty_dates||[])].sort();
   $("#eHist").innerHTML=ds.length?`Løbet tør: ${ds.map(fmtD).join(", ")}${lifespan(ds)?" — "+lifespan(ds):""}`:"Ingen historik endnu. Datoen gemmes automatisk, når varen rammer 0.";
@@ -302,7 +326,7 @@ $("#editForm").onsubmit=async e=>{
   e.preventDefault();
   const i=items.find(x=>x.id===editId); const cat=$("#eCat").value, c=CAT[cat];
   const patch={name:$("#eName").value.trim(),category:cat,unit:$("#eUnit").value.trim()||null,note:$("#eNote").value.trim()||null,
-    frozen_date:c.freezer?($("#eDate").value||null):null,updated_at:new Date().toISOString()};
+    frozen_date:c.freezer?($("#eDate").value||null):null,expires:$("#eExp").value||null,updated_at:new Date().toISOString()};
   if(c.state){patch.min_qty=2; if(!CAT[i.category].state) patch.qty=+i.qty>0?2:0;}
   else if(!c.freezer) patch.min_qty=Math.max(0,+$("#eMin").value||0);
   try{ const [r]=await api("lager?id=eq."+editId,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(i,r); $("#dlg").close(); render(); toast("Gemt"); }
@@ -327,9 +351,9 @@ $("#addForm").onsubmit=async e=>{
   const cat=$("#aCat").value, c=CAT[cat];
   const body={name:$("#aName").value.trim(),category:cat,
     qty:c.state?2:Math.max(0,+$("#aQty").value||0), min_qty:c.state?2:c.freezer?0:1,
-    unit:c.freezer?($("#aUnit").value.trim()||null):null, frozen_date:c.freezer?($("#aDate").value||todayISO()):null};
+    unit:c.freezer?($("#aUnit").value.trim()||null):null, frozen_date:c.freezer?($("#aDate").value||todayISO()):null, expires:$("#aExp").value||null};
   if(!body.name) return;
-  try{ const [r]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(r); $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value="";
+  try{ const [r]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(r); $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value="";
     filter=cat; render(); toast(body.name+" er tilføjet"); document.getElementById("c-"+cat)?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"}); }
   catch(err){ showErr(err); }
 };
