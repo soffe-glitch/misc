@@ -59,11 +59,16 @@ header .sub{color:var(--muted);font-size:13.5px;margin-top:6px}
 :root[data-theme="dark"] .list{background:#173126}
 .list h2{font-size:24px;color:#F4F1E8}
 .list .cnt{font-size:13.5px;color:#B5C7BD;margin-top:2px}
-.list ul{list-style:none;margin:12px 0 14px;padding:0;columns:2;column-gap:18px}
+.list ul{list-style:none;margin:12px 0 14px;padding:0}
 .list li{break-inside:avoid;padding:4px 0;font-size:15px;display:flex;gap:8px;align-items:baseline}
 .list li i{width:7px;height:7px;border-radius:50%;flex:none;background:#E5A857;transform:translateY(-1px)}
 .list li.zero i{background:#F08A78}
 .list li small{color:#B5C7BD}
+.list li .nm{flex:1;min-width:0}
+.list li button.sk{font:inherit;font-size:12.5px;font-weight:600;background:transparent;color:#B5C7BD;border:1px solid rgba(244,241,232,.25);border-radius:999px;padding:2px 9px;cursor:pointer;flex:none}
+.list .hidden-note{font-size:13px;color:#B5C7BD;margin:-6px 0 12px}
+.list .hidden-note button{font:inherit;font-size:13px;color:#F4F1E8;background:none;border:0;text-decoration:underline;padding:0;cursor:pointer}
+.list ul.skipped li{opacity:.6}
 .list .acts{display:flex;gap:8px;flex-wrap:wrap}
 .list .btn{background:transparent;color:#F4F1E8;border-color:rgba(244,241,232,.35)}
 .list .btn.primary{background:#F4F1E8;color:#1E5543;border-color:#F4F1E8}
@@ -211,7 +216,8 @@ const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMo
 const fmtD=iso=>{const [y,m,d]=iso.split("-");return (+d)+"/"+(+m)+(y!==String(new Date().getFullYear())?"-"+y.slice(2):"");};
 const daysSince=iso=>Math.round((new Date(todayISO())-new Date(iso))/864e5);
 
-let items=[], filter="alle", lines=[];
+let items=[], filter="alle", lines=[], showSkipped=false;
+const snoozed=i=>i.snooze_until&&i.snooze_until>=todayISO();
 // dage til udløb; madvarer advarer 3 dage før, alt andet 30 dage før
 const daysTo=iso=>Math.round((new Date(iso)-new Date(todayISO()))/864e5);
 const warnDays=i=>i.category==="mad"?3:30;
@@ -247,13 +253,19 @@ function lifespan(dates){
 function render(){
   const act=items.filter(i=>i.active);
   // indkøbsliste
-  const low=act.filter(isLow).filter(i=>i.category!=="fryser").sort((a,b)=>(+a.qty)-(+b.qty)||a.name.localeCompare(b.name,"da"));
+  const lowAll=act.filter(isLow).filter(i=>i.category!=="fryser").sort((a,b)=>(+a.qty)-(+b.qty)||a.name.localeCompare(b.name,"da"));
+  const low=lowAll.filter(i=>!snoozed(i)), skipped=lowAll.filter(snoozed);
   const L=$("#list");
-  L.classList.toggle("empty",!low.length);
+  L.classList.toggle("empty",!low.length&&!skipped.length);
   L.innerHTML=`<h2>Indkøbsliste</h2>
     <div class="cnt">${low.length?low.length+(low.length===1?" vare mangler eller er ved at slippe op":" varer mangler eller er ved at slippe op"):"Intet mangler lige nu."}</div>
-    <ul>${low.map(i=>`<li class="${+i.qty===0?"zero":""}"><i></i><span>${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span></li>`).join("")}</ul>
+    <ul>${low.map(i=>`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
+    ${skipped.length?`<div class="hidden-note">${skipped.length} sprunget over denne gang · <button id="togSk">${showSkipped?"Skjul":"Vis"}</button></div>`:""}
+    ${skipped.length&&showSkipped?`<ul class="skipped">${skipped.map(i=>`<li><i></i><span class="nm">${esc(i.name)} <small>til ${fmtD(i.snooze_until)}</small></span><button class="sk" data-unskip="${i.id}">På listen igen</button></li>`).join("")}</ul>`:""}
     ${low.length?`<div class="acts"><button class="btn primary" id="shareBtn">Del listen</button><button class="btn" id="copyBtn">Kopiér</button></div>`:""}`;
+  L.querySelectorAll("[data-skip]").forEach(b=>b.onclick=()=>skipItem(+b.dataset.skip,true));
+  L.querySelectorAll("[data-unskip]").forEach(b=>b.onclick=()=>skipItem(+b.dataset.unskip,false));
+  const tg=$("#togSk"); if(tg) tg.onclick=()=>{showSkipped=!showSkipped;render();};
   if(low.length){
     const txt=low.map(i=>i.name).join("\n");
     $("#copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast("Listen er kopieret");}catch(e){toast("Kunne ikke kopiere");}};
@@ -357,6 +369,16 @@ async function saveLine(id,r){
   }catch(e){showErr(e);}
 }
 
+// "Ikke nu": væk fra indkøbslisten i 14 dage, eller til varen bliver fyldt op igen
+async function skipItem(id,on){
+  const i=items.find(x=>x.id===id); if(!i) return;
+  const d=new Date(); d.setDate(d.getDate()+14);
+  const until=on?d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"):null;
+  const prev=i.snooze_until; i.snooze_until=until; render();
+  try{ await api("lager?id=eq."+id,{method:"PATCH",body:JSON.stringify({snooze_until:until})}); if(on) toast(i.name+" springes over i 14 dage"); }
+  catch(e){ i.snooze_until=prev; render(); showErr(e); }
+}
+
 async function act_(kind,id,v){
   const i=items.find(x=>x.id===id); if(!i) return;
   let q=+i.qty;
@@ -366,6 +388,7 @@ async function act_(kind,id,v){
   // registrér datoen, når noget løber tør (ikke for fryseren, hvor 0 bare betyder spist)
   if(q===0&&+i.qty>0&&i.category!=="fryser") patch.empty_dates=[...(i.empty_dates||[]),todayISO()];
   if(q===0) patch.expires=null;  // ny pakke får ny dato
+  if(q>+i.qty) patch.snooze_until=null;  // fyldt op igen: "ikke nu" gælder ikke længere
   const prev={...i}; Object.assign(i,patch); render();
   try{ await api("lager?id=eq."+id,{method:"PATCH",body:JSON.stringify(patch)}); $("#err").innerHTML=""; }
   catch(e){ Object.assign(i,prev); render(); showErr(e); }
