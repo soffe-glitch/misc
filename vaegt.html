@@ -518,6 +518,57 @@ function dayBudget(){
   const src=actToday>(typAct||0)?(actToday===actKcal&&actKcal>0?"Garmin-aktiviteter i dag":actToday===statAct?"Garmin i dag":"løbe-km i dag"):"rolig dag";
   return {ok:true,budget:burn-deficit,burn,deficit,corr,bmrFull:Math.round(bmrFull),typAct:Math.round(typAct||0),actToday:Math.round(actToday),src};
 }
+// ---- Kalibrering: passer underskuddet med det, vægten faktisk viser? ----
+// Vindue: de seneste 28 dage, men tidligst fra linje-justeringen (rygestop ændrer forbrændingen).
+// Forventet tab = snit-underskud på loggede dage × antal dage / 7700. Faktisk tab = hældning af en lineær
+// regression på morgenvejningerne (robust over for enkeltdages væskeudsving). Forskellen pr. dag er det,
+// Garmin-korrektionen skal flyttes med. Forslag vises først efter 21 dage og ved mindst 70 % loggede dage.
+const KCAL_PER_KG=7700, CAL_MIN_DAYS=21, CAL_MIN_COVER=0.7;
+function calib(){
+  const s=S.settings||{}, t=todayISO();
+  const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
+  let start=addDays(t,-28); if(s.line_adj_date&&s.line_adj_date>start) start=s.line_adj_date;
+  const days=Math.max(0,daysBetween(start,t));            // fulde dage i vinduet (i dag tæller ikke med)
+  const kmap={}; S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
+  const gmap={}; (S.garmin||[]).forEach(g=>{gmap[g.log_date]=g;});
+  const defs=[]; for(let i=0;i<days;i++){ const d=addDays(start,i), g=gmap[d], e=kmap[d]||0;
+    if(g&&g.kt!=null&&g.kb!=null&&g.kb>1000&&e>=900) defs.push(g.kt+corr-e); }
+  const W=S.weighins.filter(w=>w.moment==="morgen"&&w.log_date>=start&&w.log_date<=t);
+  const out={start,days,logged:defs.length,cover:days?defs.length/days:0,corr,ready:false};
+  if(days<CAL_MIN_DAYS||out.cover<CAL_MIN_COVER||W.length<10) return out;
+  // lineær regression: kg pr. dag
+  const xs=W.map(w=>daysBetween(start,w.log_date)), ys=W.map(w=>+w.weight_kg);
+  const mx=xs.reduce((a,b)=>a+b,0)/xs.length, my=ys.reduce((a,b)=>a+b,0)/ys.length;
+  let num_=0,den=0; xs.forEach((x,i)=>{num_+=(x-mx)*(ys[i]-my);den+=(x-mx)**2;});
+  const slope=den?num_/den:0;                              // negativ = tab
+  const expDef=defs.reduce((a,b)=>a+b,0)/defs.length;      // kcal/dag ifølge dashboardet
+  const realDef=-slope*KCAL_PER_KG;                        // kcal/dag ifølge vægten
+  const gap=Math.round(expDef-realDef);                    // + = Garmin overvurderer forbrændingen
+  const step=Math.max(-150,Math.min(150,gap));             // flyt højst 150 kcal ad gangen
+  const sugg=Math.round((corr-step)/10)*10;
+  Object.assign(out,{ready:true,expKg:expDef*days/KCAL_PER_KG,realKg:-slope*days,expDef:Math.round(expDef),realDef:Math.round(realDef),gap,sugg,change:Math.abs(gap)>=75});
+  return out;
+}
+function calibCard(){
+  const c=calib();
+  const head=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div style="font-weight:600;margin-bottom:4px">Kalibrering af Garmin-korrektionen</div>`;
+  if(!c.ready){
+    const need=Math.max(0,CAL_MIN_DAYS-c.days);
+    return head+`<div style="color:var(--muted);font-size:13.5px">Samler data siden ${fmtD(c.start)}: ${c.days} dage, heraf ${c.logged} med madlog og Garmin.${need?` Klar om ca. ${need} dage`:" Der mangler flere dage med madlog (mindst 70 %)."} – så sammenligner jeg det beregnede underskud med det, vægten faktisk viser.</div></div>`;
+  }
+  const verdict=!c.change?`Det passer godt – korrektionen på ${c.corr} kcal/dag rammer inden for ±75 kcal. Ingen ændring nødvendig.`
+    :c.gap>0?`Du taber mindre, end underskuddet lover. Garmin overvurderer sandsynligvis din forbrænding med ca. ${c.gap} kcal/dag.`
+    :`Du taber mere, end underskuddet lover. Garmin undervurderer sandsynligvis din forbrænding med ca. ${-c.gap} kcal/dag.`;
+  return head+`<div style="font-size:13.5px;line-height:1.55">Seneste ${c.days} dage (${c.logged} logget): forventet tab <b>${num(c.expKg,1)} kg</b> (${c.expDef} kcal/dag) · faktisk tab efter trend <b>${num(c.realKg,1)} kg</b> (${c.realDef} kcal/dag).<br>${verdict}</div>`+
+    (c.change?`<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" id="calibDo" type="button">Brug ${c.sugg} kcal/dag</button><span style="color:var(--muted);font-size:12.5px">nu ${c.corr} · flyttes højst 150 ad gangen</span></div>`:"")+`</div>`;
+}
+function wireCalib(){
+  const b=$("#calibDo"); if(!b) return;
+  b.onclick=async()=>{ const c=calib(); if(!c.ready||!c.change) return;
+    if(!confirm(`Ændr Garmin-korrektionen fra ${c.corr} til ${c.sugg} kcal/dag?\n\nDet ændrer dagsbudgettet og energibalancen fra nu af.`)) return;
+    try{ await saveAdj({garmin_kcal_correction:c.sugg}); render(); }catch(err){ alert("Kunne ikke gemme: "+err.message); } };
+}
+
 // ---- Energibalance: Garmins forbrug (korrigeret med settings.garmin_kcal_correction, std. −250) minus logget indtag ----
 // Positiv = underskud. Dage uden madlog tæller ikke som underskud. I dag vises først efter Garmin-synk kl. 20.
 function ebData(){
@@ -723,6 +774,7 @@ function render(){
       <span>Garmin korrigeret ${(S.settings&&S.settings.garmin_kcal_correction!=null)?S.settings.garmin_kcal_correction:-250} kcal/dag · lyse søjler = under 900 kcal logget</span>
     </div>
     ${ebStats()}
+    ${calibCard()}
   </div></section>
 
   <section class="cards"><div class="card">
@@ -734,6 +786,7 @@ function render(){
   wireAdj();
   bindEb($("#kchart"));
   bindEb($("#ebchart"));
+  wireCalib();
   bindSync();
   renderLog();
 }
