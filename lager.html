@@ -275,7 +275,7 @@ function render(){
   const soon=act.filter(i=>i.expires&&+i.qty>0&&daysTo(i.expires)<=warnDays(i)).sort((a,b)=>a.expires.localeCompare(b.expires));
   $("#soon").innerHTML=soon.length?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}</ul></div>`:"";
   // faner
-  const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&k!=="fryser").length;
+  const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&!snoozed(i)&&k!=="fryser").length;
   $("#tabs").innerHTML=[`<button data-f="alle" aria-pressed="${filter==="alle"}">Alle</button>`]
     .concat(CATS.map(c=>`<button data-f="${c.k}" aria-pressed="${filter===c.k}">${c.t}${lowBy(c.k)?`<b>${lowBy(c.k)}</b>`:""}</button>`)).join("");
   $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.f;render();});
@@ -299,7 +299,7 @@ function render(){
 }
 
 function row(i){
-  const c=CAT[i.category]; const cls=["item"]; if(isLow(i)&&!c.freezer) cls.push(+i.qty===0?"out":"low");
+  const c=CAT[i.category]; const cls=["item"]; if(isLow(i)&&!c.freezer&&!snoozed(i)) cls.push(+i.qty===0?"out":"low");
   const meta=[];
   if(c.freezer&&i.frozen_date){
     const d=daysSince(i.frozen_date), m=d/30;
@@ -311,7 +311,7 @@ function row(i){
   if(i.note) meta.push(esc(i.note));
   const ctrl=useState(i)
     ? `<div class="seg" role="group" aria-label="Status for ${esc(i.name)}">${[[2,"Har"],[1,"Snart"],[0,"Tom"]].map(([v,t])=>`<button class="s${v}" aria-pressed="${+i.qty===v}" data-act="set" data-id="${i.id}" data-v="${v}">${t}</button>`).join("")}</div>`
-    : `<div class="q"><button aria-label="Én mindre ${esc(i.name)}" data-act="dec" data-id="${i.id}">−</button><output class="tnum">${+i.qty}${i.unit?`<small>${esc(i.unit)}</small>`:""}</output><button aria-label="Én mere ${esc(i.name)}" data-act="inc" data-id="${i.id}">+</button></div>`;
+    : `<div class="q"><button aria-label="Én mindre ${esc(i.name)}" data-act="dec" data-id="${i.id}">−</button><output class="tnum">${(+i.qty).toLocaleString("da-DK",{maximumFractionDigits:2})}${i.unit?`<small>${esc(i.unit)}</small>`:""}</output><button aria-label="Én mere ${esc(i.name)}" data-act="inc" data-id="${i.id}">+</button></div>`;
   return `<div class="${cls.join(" ")}"><button class="name" data-id="${i.id}"><span>${esc(i.name)}</span>${meta.length?`<small>${meta.join(" · ")}</small>`:""}</button>${ctrl}</div>`;
 }
 
