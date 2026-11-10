@@ -455,6 +455,8 @@ function dayBars(map, target, unit, colOK, colOver, id){
 }
 // ---- Kalorie-søjler mod DAGENS budget (korrigeret Garmin-forbrug − underskud), ikke et fast tal ----
 // grøn = ramte underskud-målet · amber = under målet men stadig i underskud · rød = reelt overskud
+// Tolerance: Garmin og madlog er begge usikre med langt mere end 50 kcal, så en dag inden for 50 kcal af målet tæller som ramt.
+const KCAL_TOL=50;
 function kcalTargets(){
   const s=S.settings||{}, t=todayISO();
   const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
@@ -479,7 +481,7 @@ function kcalBars(map){
   for(let g=0;g<=yMax;g+=500){const y=Y(g);gl+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-5}" y="${y+3}" text-anchor="end" class="axis-t">${g}</text>`;}
   rows.forEach((r,i)=>{
     const x=mL+i*bw+bw*0.16,bwi=bw*0.68,y=Y(r.v);
-    const st=r.v<=r.budget?"ok":(r.burn!=null&&r.v<=r.burn?"mid":"over");
+    const st=r.v<=r.budget+KCAL_TOL?"ok":(r.burn!=null&&r.v<=r.burn?"mid":"over");
     const col=st==="ok"?"var(--accent)":st==="mid"?"var(--amber)":"var(--bad)";
     const bal=r.burn!=null?r.burn-r.v:null;
     const tip=`<b>${fmtD(r.d)}${r.d===t?" (i dag, foreløbigt)":""}</b><br>spist ${num(r.v,0)} · budget ~${num(r.budget,0)}`+
@@ -676,7 +678,7 @@ function render(){
   const ebPts=ebData().pts.filter(p=>p.d<t&&p.d>=addDays(t,-7)&&p.v!=null);
   const avg7=ebPts.length?Math.round(ebPts.reduce((a,p)=>a+p.v,0)/ebPts.length):null;
   const dfc7=(s.daily_deficit==null)?300:+s.daily_deficit;
-  const avgCol=avg7==null?"":avg7>=dfc7?"var(--accent)":avg7>=0?"var(--warn)":"var(--bad)";
+  const avgCol=avg7==null?"":avg7>=dfc7-KCAL_TOL?"var(--accent)":avg7>=0?"var(--warn)":"var(--bad)";
   const goalPct=((s.start_weight-s.goal_weight)/(s.start_weight-s.kur_basis_weight))*100;
   const planTag=st.vsPlan>=0?`<span class="dot" style="background:var(--good)"></span> ${gram(st.vsPlan*1000)} foran linjen`:`<span class="dot" style="background:var(--warn)"></span> ${gram(-st.vsPlan*1000)} bagud`;
   $("#statusLine").innerHTML=`${planTag} · morgenvægt ${kg(st.cur)} (${fmtD(st.latest.log_date)})`;
@@ -747,7 +749,7 @@ function render(){
       <div class="ch"><h2>Kalorier</h2><span class="hint">daglige totaler, seneste 3 uger</span></div>
       <div><div class="cap">mod dagens budget (forbrug − ${num(B.deficit,0)})</div><div id="kchart">${kcalBars(kMap)}</div>
       <div class="legend" style="margin-top:8px">
-        <span style="color:var(--accent)"><i style="background:var(--accent);height:8px"></i>ramte målet</span>
+        <span style="color:var(--accent)"><i style="background:var(--accent);height:8px"></i>ramte målet (±50)</span>
         <span style="color:var(--amber)"><i style="background:var(--amber);height:8px"></i>underskud, under mål</span>
         <span style="color:var(--bad)"><i style="background:var(--bad);height:8px"></i>overskud</span>
         <span><i style="background:var(--accent-ink);height:2px"></i>dagens budget</span>
