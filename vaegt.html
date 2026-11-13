@@ -373,7 +373,19 @@ function wireAdj(){
 }
 
 const tt=$("#tooltip");
-function showTT(html,x,y){tt.innerHTML=html;tt.style.opacity=1;tt.style.left=(x+14)+"px";tt.style.top=(y+14)+"px";}
+// Tooltip holdes inden for skærmen: vend til venstre/op, hvis den ellers går ud over kanten (vigtigt på mobil).
+function showTT(html,x,y){
+  tt.innerHTML=html; tt.style.opacity=1;
+  const W=window.innerWidth, H=window.innerHeight, m=8, r=tt.getBoundingClientRect();
+  let l=x+14, t=y+14;
+  if(l+r.width>W-m) l=x-14-r.width;
+  if(l<m) l=Math.max(m,Math.min(W-m-r.width,x-r.width/2));
+  if(t+r.height>H-m) t=y-14-r.height;
+  if(t<m) t=m;
+  tt.style.left=l+"px"; tt.style.top=t+"px";
+}
+// på touch: tryk uden for en søjle skjuler boksen
+document.addEventListener("touchstart",e=>{ if(!e.target.closest||!e.target.closest(".ebar,.dbar")) hideTT(); },{passive:true});
 function hideTT(){tt.style.opacity=0;}
 
 // ---- weight chart ----
