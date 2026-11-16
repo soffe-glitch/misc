@@ -128,6 +128,9 @@ section.cat h2 small{font-family:"Hanken Grotesk",sans-serif;font-size:13px;colo
 .add h2{grid-column:1/-1;font-size:19px}
 label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
 label.f.wide{grid-column:1/-1}
+label.chk{grid-column:1/-1;display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;line-height:1.35}
+label.chk input{width:20px;height:20px;padding:0;margin:1px 0 0;flex:none;accent-color:var(--accent,#2f6f4f)}
+label.chk small{font-weight:400;color:var(--muted)}
 input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:9px 11px;width:100%}
 .add .row{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end}
 
@@ -168,6 +171,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <label class="f" id="aUnitWrap">Enhed (valgfri)<input id="aUnit" placeholder="stk, ds, poser"></label>
     <label class="f" id="aExpWrap">Udløber<input id="aExp" type="date"></label>
     <label class="f" id="aDateWrap" hidden>Indfrosset<input id="aDate" type="date"></label>
+    <label class="chk wide"><input type="checkbox" id="aFast"><span>Fast vare<br><small>Skal altid være på lager. Ellers et engangskøb.</small></span></label>
     <div class="row"><button class="btn primary" type="submit">Tilføj</button></div>
   </form>
 </div>
@@ -177,6 +181,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <h2 id="eTitle">Vare</h2>
     <label class="f wide">Navn<input id="eName" required></label>
     <label class="f">Kategori<select id="eCat"></select></label>
+    <label class="chk wide"><input type="checkbox" id="eFast"><span>Fast vare<br><small>Kommer på indkøbslisten, når den slipper op. Ellers er den et engangskøb, der forsvinder, når den er brugt op.</small></span></label>
     <label class="f" id="eMinWrap">På listen under<input id="eMin" type="number" inputmode="decimal" min="0" step="1"></label>
     <label class="f" id="eUnitWrap">Enhed<input id="eUnit" placeholder="stk"></label>
     <label class="f" id="eExpWrap">Udløber<input id="eExp" type="date"></label>
@@ -237,7 +242,8 @@ async function api(path,opts={}){
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("on"),1800);}
 function showErr(e){$("#err").innerHTML=`<div class="err">Kunne ikke gemme eller hente: ${esc(e.message||e)}. Tjek forbindelsen og prøv igen.</div>`;}
 
-const isLow=i=>+i.qty<+i.min_qty;
+// kun faste varer kommer på indkøbslisten; engangskøb forsvinder, når de er brugt op
+const isLow=i=>!!i.fast&&+i.qty<+i.min_qty;
 const useState=i=>!!(CAT[i.category]?.state&&!i.unit);
 const label=i=>useState(i)?(+i.qty>=2?"har":+i.qty===1?"snart tom":"tom"):null;
 
@@ -253,7 +259,7 @@ function lifespan(dates){
 function render(){
   const act=items.filter(i=>i.active);
   // indkøbsliste
-  const lowAll=act.filter(isLow).filter(i=>i.category!=="fryser").sort((a,b)=>(+a.qty)-(+b.qty)||a.name.localeCompare(b.name,"da"));
+  const lowAll=act.filter(isLow).sort((a,b)=>(+a.qty)-(+b.qty)||a.name.localeCompare(b.name,"da"));
   const low=lowAll.filter(i=>!snoozed(i)), skipped=lowAll.filter(snoozed);
   const L=$("#list");
   L.classList.toggle("empty",!low.length&&!skipped.length);
@@ -275,7 +281,7 @@ function render(){
   const soon=act.filter(i=>i.expires&&+i.qty>0&&daysTo(i.expires)<=warnDays(i)).sort((a,b)=>a.expires.localeCompare(b.expires));
   $("#soon").innerHTML=soon.length?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}</ul></div>`:"";
   // faner
-  const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&!snoozed(i)&&k!=="fryser").length;
+  const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&!snoozed(i)).length;
   $("#tabs").innerHTML=[`<button data-f="alle" aria-pressed="${filter==="alle"}">Alle</button>`]
     .concat(CATS.map(c=>`<button data-f="${c.k}" aria-pressed="${filter===c.k}">${c.t}${lowBy(c.k)?`<b>${lowBy(c.k)}</b>`:""}</button>`)).join("");
   $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.f;render();});
@@ -285,7 +291,7 @@ function render(){
     let rows=act.filter(i=>i.category===c.k);
     if(c.freezer) rows.sort((a,b)=>(a.frozen_date||"9999").localeCompare(b.frozen_date||"9999"));
     else rows.sort((a,b)=>a.name.localeCompare(b.name,"da"));
-    if(c.freezer) rows=rows.filter(i=>+i.qty>0);
+    if(c.freezer) rows=rows.filter(i=>+i.qty>0||i.fast);
     const sub=c.freezer?(rows.length?"ældste først":""):(rows.length?rows.length+(rows.length===1?" vare":" varer"):"");
     return `<section class="cat" id="c-${c.k}"><h2>${c.t}<small>${sub}</small></h2><div class="items">${
       rows.length?rows.map(row).join(""):`<div class="empty-cat">${c.freezer?"Fryseren er tom. Tilføj det, du lægger i den, nederst på siden.":"Ingen varer endnu. Tilføj dem nederst på siden."}</div>`
@@ -299,14 +305,15 @@ function render(){
 }
 
 function row(i){
-  const c=CAT[i.category]; const cls=["item"]; if(isLow(i)&&!c.freezer&&!snoozed(i)) cls.push(+i.qty===0?"out":"low");
+  const c=CAT[i.category]; const cls=["item"]; if(isLow(i)&&!snoozed(i)) cls.push(+i.qty===0?"out":"low");
   const meta=[];
   if(c.freezer&&i.frozen_date){
     const d=daysSince(i.frozen_date), m=d/30;
     meta.push("frosset "+fmtD(i.frozen_date)+(m>=6?`<span class="age a2">${Math.floor(m)} mdr.</span>`:m>=3?`<span class="age a1">${Math.floor(m)} mdr.</span>`:""));
   }
   if(i.expires&&+i.qty>0) meta.push(expBadge(i));
-  if(!c.freezer&&+i.qty===0&&i.empty_dates?.length) meta.push("tom siden "+fmtD([...i.empty_dates].sort().pop()));
+  if(i.fast) meta.push("fast vare");
+  if(+i.qty===0&&i.empty_dates?.length) meta.push("tom siden "+fmtD([...i.empty_dates].sort().pop()));
   const ls=lifespan(i.empty_dates); if(ls&&!useState(i)) meta.push(ls);
   if(i.note) meta.push(esc(i.note));
   const ctrl=useState(i)
@@ -320,8 +327,8 @@ const titleCase=s=>s.toLowerCase().replace(/(^|[\s/-])(\S)/g,(m,a,b)=>a+b.toUppe
 function renderRcpt(){
   const el=$("#rcpt");
   if(!lines.length){el.innerHTML="";return;}
-  const opts=CATS.map(c=>{const its=items.filter(i=>i.active&&i.category===c.k).sort((a,b)=>a.name.localeCompare(b.name,"da"));
-    return its.length?`<optgroup label="${c.t}">${its.map(i=>`<option value="${i.id}">${esc(i.name)}</option>`).join("")}</optgroup>`:"";}).join("");
+  const opts=CATS.map(c=>{const its=items.filter(i=>i.category===c.k).sort((a,b)=>a.name.localeCompare(b.name,"da"));
+    return its.length?`<optgroup label="${c.t}">${its.map(i=>`<option value="${i.id}">${esc(i.name)}${i.active?"":" (brugt op)"}</option>`).join("")}</optgroup>`:"";}).join("");
   el.innerHTML=`<div class="rcpt"><h2>Fra kvitteringer</h2><div class="hint">Hvilken vare er det? Svaret huskes, så næste gang sker det automatisk.</div>${
     lines.map(l=>`<div class="rl" data-id="${l.id}">
       <div class="top"><span>${esc(l.receipt_name)}</span><small>${+l.qty} stk${l.price!=null?" · "+(+l.price).toFixed(2).replace(".",",")+" kr":""}${l.bought_at?" · "+fmtD(l.bought_at.slice(0,10)):""}</small></div>
@@ -352,12 +359,12 @@ async function saveLine(id,r){
       let item, factor=1;
       if(v==="new"){
         const cat=r.querySelector(".nc").value, st=!!CAT[cat].state;
-        const body={name:r.querySelector(".nn").value.trim()||titleCase(l.receipt_name),category:cat,qty:st?2:+l.qty,min_qty:st?2:CAT[cat].freezer?0:1};
+        const body={name:r.querySelector(".nn").value.trim()||titleCase(l.receipt_name),category:cat,qty:st?2:+l.qty,min_qty:0,fast:false};
         [item]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(item);
       } else {
         item=items.find(i=>i.id===+v); factor=Math.max(1,+r.querySelector(".fac").value||1);
         const patch={updated_at:new Date().toISOString(),active:true};
-        if(useState(item)) patch.qty=2; else patch.qty=+item.qty+(+l.qty)*factor;
+        if(useState(item)) patch.qty=2; else patch.qty=(item.active?+item.qty:0)+(+l.qty)*factor;
         if(+item.qty===0) patch.expires=null;
         const [u]=await api("lager?id=eq."+item.id,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(item,u);
       }
@@ -389,10 +396,11 @@ async function act_(kind,id,v){
   if(q===0&&+i.qty>0&&i.category!=="fryser") patch.empty_dates=[...(i.empty_dates||[]),todayISO()];
   if(q===0) patch.expires=null;  // ny pakke får ny dato
   if(q>+i.qty) patch.snooze_until=null;  // fyldt op igen: "ikke nu" gælder ikke længere
+  const gone=q===0&&!i.fast; if(gone) patch.active=false;  // engangskøb: brugt op = væk fra lageret
   const prev={...i}; Object.assign(i,patch); render();
   try{ await api("lager?id=eq."+id,{method:"PATCH",body:JSON.stringify(patch)}); $("#err").innerHTML=""; }
   catch(e){ Object.assign(i,prev); render(); showErr(e); }
-  if(i.category==="fryser"&&q===0) toast(i.name+" er taget op");
+  if(gone) toast(i.name+" er brugt op og fjernet"); else if(i.category==="fryser"&&q===0) toast(i.name+" er taget op");
 }
 
 function catOptions(sel){return CATS.map(c=>`<option value="${c.k}"${c.k===sel?" selected":""}>${c.t}</option>`).join("");}
@@ -402,7 +410,7 @@ function openEdit(id){
   const i=items.find(x=>x.id===id); if(!i) return; editId=id;
   const c=CAT[i.category];
   $("#eTitle").textContent=i.name; $("#eName").value=i.name; $("#eCat").innerHTML=catOptions(i.category);
-  $("#eMin").value=+i.min_qty; $("#eUnit").value=i.unit||""; $("#eDate").value=i.frozen_date||""; $("#eNote").value=i.note||""; $("#eExp").value=i.expires||"";
+  $("#eMin").value=+i.min_qty||1; $("#eFast").checked=!!i.fast; $("#eUnit").value=i.unit||""; $("#eDate").value=i.frozen_date||""; $("#eNote").value=i.note||""; $("#eExp").value=i.expires||"";
   toggleEditFields(i.category);
   const ds=[...(i.empty_dates||[])].sort();
   $("#eHist").innerHTML=ds.length?`Løbet tør: ${ds.map(fmtD).join(", ")}${lifespan(ds)?" — "+lifespan(ds):""}`:"Ingen historik endnu. Datoen gemmes automatisk, når varen rammer 0.";
@@ -410,19 +418,20 @@ function openEdit(id){
 }
 function toggleEditFields(cat){
   const c=CAT[cat], hasUnit=!!$("#eUnit").value.trim();
-  $("#eMinWrap").hidden=!!((c.state&&!hasUnit)||c.freezer); $("#eDateWrap").hidden=!c.freezer; $("#eUnitWrap").hidden=false;
+  $("#eMinWrap").hidden=!$("#eFast").checked||!!(c.state&&!hasUnit); $("#eDateWrap").hidden=!c.freezer; $("#eUnitWrap").hidden=false;
 }
 $("#eUnit").oninput=()=>toggleEditFields($("#eCat").value);
 $("#eCat").onchange=e=>toggleEditFields(e.target.value);
+$("#eFast").onchange=()=>toggleEditFields($("#eCat").value);
 $("#eCancel").onclick=()=>$("#dlg").close();
 $("#editForm").onsubmit=async e=>{
   e.preventDefault();
   const i=items.find(x=>x.id===editId); const cat=$("#eCat").value, c=CAT[cat];
   const patch={name:$("#eName").value.trim(),category:cat,unit:$("#eUnit").value.trim()||null,note:$("#eNote").value.trim()||null,
-    frozen_date:c.freezer?($("#eDate").value||null):null,expires:$("#eExp").value||null,updated_at:new Date().toISOString()};
+    frozen_date:c.freezer?($("#eDate").value||null):null,expires:$("#eExp").value||null,fast:$("#eFast").checked,updated_at:new Date().toISOString()};
   const willState=c.state&&!patch.unit, wasState=useState(i);
   if(willState){patch.min_qty=2; if(!wasState) patch.qty=+i.qty>0?2:0;}
-  else if(!c.freezer){patch.min_qty=Math.max(0,+$("#eMin").value||0); if(wasState) patch.qty=+i.qty>0?1:0;}
+  else {patch.min_qty=patch.fast?Math.max(1,+$("#eMin").value||1):0; if(wasState) patch.qty=+i.qty>0?1:0;}
   try{ const [r]=await api("lager?id=eq."+editId,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(i,r); $("#dlg").close(); render(); toast("Gemt"); }
   catch(err){ showErr(err); }
 };
@@ -447,9 +456,25 @@ $("#addForm").onsubmit=async e=>{
   const body={name:$("#aName").value.trim(),category:cat,
     unit:$("#aUnit").value.trim()||null};
   const st=c.state&&!body.unit;
-  Object.assign(body,{qty:st?2:Math.max(0,+$("#aQty").value||0), min_qty:st?2:c.freezer?0:1, frozen_date:c.freezer?($("#aDate").value||todayISO()):null, expires:$("#aExp").value||null});
+  const fast=$("#aFast").checked;
+  Object.assign(body,{fast, qty:st?2:Math.max(0,+$("#aQty").value||0), min_qty:st?2:fast?1:0, frozen_date:c.freezer?($("#aDate").value||todayISO()):null, expires:$("#aExp").value||null});
   if(!body.name) return;
-  try{ const [r]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(r); $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value="";
+  // findes varen allerede (også en brugt-op vare)? så fyld den op i stedet for at lave en dublet
+  const key=body.name.toLocaleLowerCase("da");
+  const ex=items.filter(i=>i.name.toLocaleLowerCase("da")===key).sort((a,b)=>(b.active-a.active))[0];
+  if(ex){
+    if(ex.active&&!confirm(ex.name+" findes allerede i lageret. Vil du fylde den op i stedet?")) return;
+    const patch={active:true,snooze_until:null,updated_at:new Date().toISOString()};
+    if(useState(ex)) patch.qty=2; else patch.qty=(ex.active?+ex.qty:0)+Math.max(1,+$("#aQty").value||1);
+    if(+ex.qty===0||!ex.active) patch.expires=$("#aExp").value||null;
+    if(fast&&!ex.fast){patch.fast=true; patch.min_qty=useState(ex)?2:1;}
+    try{ const [u]=await api("lager?id=eq."+ex.id,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(ex,u);
+      $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value=""; $("#aFast").checked=false;
+      filter=ex.category; render(); toast(ex.name+" er fyldt op"); }
+    catch(err){ showErr(err); }
+    return;
+  }
+  try{ const [r]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(r); $("#aFast").checked=false; $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value="";
     filter=cat; render(); toast(body.name+" er tilføjet"); document.getElementById("c-"+cat)?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"}); }
   catch(err){ showErr(err); }
 };
