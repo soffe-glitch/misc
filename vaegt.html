@@ -223,7 +223,6 @@ const SUPABASE_URL="https://kphfvznawqcslkubdsyy.supabase.co";
 const SUPABASE_KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv";
 const REST=SUPABASE_URL+"/rest/v1/";
 const FN_URL=SUPABASE_URL+"/functions/v1/sync-intervals";
-const FN_WEIGH=SUPABASE_URL+"/functions/v1/sync-withings";
 const HEAD={apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"Content-Type":"application/json"};
 let syncStatus="man–søn"; let bgSynced=false;
 
@@ -815,11 +814,10 @@ async function reloadData(){
   S.weighins=wg.map(w=>({...w,weight_kg:+w.weight_kg}));
 }
 async function runSync(days){
-  // henter både træning (intervals) og vægt (withings) — den ene må gerne fejle
+  // henter træning (intervals); vægt kommer fra Garmin-synken på Mac'en
   const opt={headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}};
   await Promise.allSettled([
-    fetch(FN_URL+"?days="+days,opt).then(r=>r.json()),
-    fetch(FN_WEIGH+"?days="+days,opt).then(r=>r.json())
+    fetch(FN_URL+"?days="+days,opt).then(r=>r.json())
   ]);
 }
 const nowHM=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes());};
