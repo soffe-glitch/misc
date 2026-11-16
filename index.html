@@ -307,6 +307,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span><span id="todayLabel">I dag</span></div>
   <div class="statusrow" id="statusRow"></div>
   <div class="card devcard" id="devCard" style="display:none"></div>
+  <div class="card devcard" id="auraCard" style="display:none"></div>
   <div class="dash"><div class="blk">
   <div class="grid lead">
     <div class="coach" id="coach">
@@ -376,9 +377,9 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="ch"><h3>Dagens log</h3><span class="hint">én pr. dag</span></div>
       <div class="field"><label>Dagsform</label>
         <div class="seg" id="dayTypeSeg" data-val="">
-          <button type="button" data-v="overskud">▲ Overskud</button>
-          <button type="button" data-v="blandet">– Blandet</button>
-          <button type="button" data-v="sofa">▼ Sofa</button>
+          <button type="button" data-v="overskud">▲ God dag</button>
+          <button type="button" data-v="blandet">● Neutral</button>
+          <button type="button" data-v="sofa">▼ Tung dag</button>
         </div>
       </div>
       <div class="field"><label>Mennesker i dag <span class="hint">(tryk, gemmes med det samme)</span></label>
@@ -458,9 +459,9 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <div class="card">
       <div class="ch"><h3>Energi & humør — 14 dage</h3></div>
       <div id="energiChart"><div class="empty">Log dit humør, så tegnes kurven her.</div></div>
-      <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">overskud → sofa</span></div>
+      <div class="ch" style="margin:16px 0 6px"><h3>Dagsform</h3><span class="hint">god → tung</span></div>
       <div class="formstrip" id="formstrip"></div>
-      <div class="legend"><span style="--x:var(--krop)">overskud</span><span style="--x:var(--faint)">blandet</span><span style="--x:var(--rest)">sofadag</span></div>
+      <div class="legend"><span style="--x:var(--krop)">god dag</span><span style="--x:var(--faint)">neutral</span><span style="--x:var(--rest)">tung dag</span></div>
       <div class="ch" style="margin:16px 0 6px"><h3>Praktisk aktivitet — 21 dage</h3><span class="hint">ting gjort/dag</span></div>
       <div id="praktiskSpark"></div>
     </div>
@@ -634,6 +635,11 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
       <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
       <button type="button" data-v="5">5</button>
+    </div>
+  </div>
+  <div class="field"><label>Aura</label>
+    <div class="seg" id="mAuraSeg" data-val="">
+      <button type="button" data-v="med">Med aura</button><button type="button" data-v="uden">Uden aura</button><button type="button" data-v="ved_ikke">Ved ikke</button>
     </div>
   </div>
   <div class="field"><label>Mistænkt udløser</label>
@@ -1191,8 +1197,8 @@ function render(){
   // --- dagsform strip (14) ---
   const dmap={};S.daily.forEach(d=>{if(d.day_type)dmap[d.log_date]=d.day_type;});
   const last14=[];for(let i=13;i>=0;i--)last14.push(addDays(t,-i));
-  const col={overskud:"var(--krop)",blandet:"var(--faint)",sofa:"var(--rest)"},lab={overskud:"▲",blandet:"–",sofa:"▼"};
-  $("#formstrip").innerHTML=last14.map(d=>{const v=dmap[d];return `<span class="fp" style="background:${v?col[v]:'var(--surface-3)'}" title="${daLabel(d)}${v?': '+v:''}">${v?lab[v]:""}</span>`;}).join("");
+  const col={overskud:"var(--krop)",blandet:"var(--faint)",sofa:"var(--rest)"},lab={overskud:"▲",blandet:"●",sofa:"▼"},nm={overskud:"god dag",blandet:"neutral",sofa:"tung dag"};
+  $("#formstrip").innerHTML=last14.map(d=>{const v=dmap[d];return `<span class="fp" style="background:${v?col[v]:'var(--surface-3)'}" title="${daLabel(d)}${v?': '+nm[v]:''}">${v?lab[v]:""}</span>`;}).join("");
 
   // --- weight + tiles ---
   if(M.length)weightChart();
@@ -1273,7 +1279,7 @@ function render(){
   const rs=rsRaw.map((p,i)=>{let s=0,n=0;for(let j=Math.max(0,i-6);j<=i;j++){s+=rsRaw[j].v;n++;}return {d:p.d,v:Math.round(s/n)};});
   if(rs.some(p=>p.v>0)){spark("readChart",rs,"var(--energi)","var(--energi-soft)");
     const mx=Math.max(...rs.map(p=>p.v));const av=avg(rs.map(p=>p.v));
-    $("#readNote").innerHTML=mx>av*1.8?`Intensiv læse-periode (~${mx} sider/dag i snit på det højeste) — hold øje om den følger sofadage og lav energi (<b>flugt?</b>).`:`~${Math.round(av)} sider/dag i snit · 3 mdr.`;}
+    $("#readNote").innerHTML=mx>av*1.8?`Intensiv læse-periode (~${mx} sider/dag i snit på det højeste) — hold øje om den følger tunge dage og lav energi (<b>flugt?</b>).`:`~${Math.round(av)} sider/dag i snit · 3 mdr.`;}
   else $("#readChart").innerHTML='<div class="empty">Ingen læsedata i vinduet.</div>';
 
   // --- coach + insights ---
@@ -1656,8 +1662,33 @@ function bigPatternForCoach(t){
   return {emne:f.title,fund:txt,
     note:"Baggrund fra 2,5 års egne data. Nævn det KUN hvis det hjælper med at forklare dagens tal – højst én kort sætning, aldrig som regel eller opsang, og ikke hvis det ikke passer til i dag. Det er sammenhæng i data, ikke bevis for årsag."};
 }
+// migræne uden aura-svar: både anfald logget i appen og hovedpine-dage fra Garmins Women's Health-log
+function auraOpen(){
+  const have={}; (S.migraines||[]).forEach(m=>have[m.log_date]=m);
+  const out=(S.migraines||[]).filter(m=>!m.aura).map(m=>({log_date:m.log_date,id:m.id}));
+  (S.cycle||[]).forEach(c=>{ if((c.symptoms||[]).includes("HEADACHE")&&!have[c.log_date]) out.push({log_date:c.log_date,id:null}); });
+  return out.sort((a,b)=>a.log_date<b.log_date?1:-1);
+}
+function renderAura(){
+  const el=$("#auraCard"); if(!el) return; const open=auraOpen();
+  if(!open.length){ el.style.display="none"; el.innerHTML=""; return; }
+  const v=open[0], df=new Intl.DateTimeFormat("da-DK",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(parseD(v.log_date));
+  el.style.display="";
+  el.innerHTML=`<div class="ch"><h3>Migræne ${df}</h3><span class="hint">${v.id?"logget i appen":"hovedpine logget i Garmin"}${open.length>1?" · "+(open.length-1)+" mere":""}</span></div>
+    <div class="field" style="margin:0"><label>Var det med eller uden aura?</label>
+      <div class="seg" id="auraSeg"><button type="button" data-v="med">Med aura</button><button type="button" data-v="uden">Uden aura</button><button type="button" data-v="ved_ikke">Ved ikke</button></div>
+      <div class="note" id="noteAura"></div></div>`;
+  el.querySelectorAll("#auraSeg button").forEach(b=>b.onclick=async()=>{
+    try{
+      if(v.id){ const r=await fetch(REST+"events?id=eq."+v.id,{method:"PATCH",headers:{...HEAD,Prefer:"return=representation"},body:JSON.stringify({aura:b.dataset.v})});
+        if(!r.ok) throw new Error(r.status+" "+(await r.text())); const row=(await r.json())[0]; S.events=S.events.map(e=>e.id===row.id?row:e); }
+      else { const row=(await insert("events",{log_date:v.log_date,kind:"migraene",aura:b.dataset.v,note:"fra Garmin-log"}))[0]; S.events.push(row); }
+      rebuildEventViews(); renderAura();
+    }catch(e){ setNote("#noteAura","Fejl: "+e.message,"err"); }
+  });
+}
 function paintDayExtras(){
-  renderDeviation();
+  renderDeviation(); renderAura();
   const d=S.daily.find(x=>x.log_date===todayISO())||{};
   paintLife();
   const mark=(id,val)=>{const el=$("#"+id); if(el) el.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val));};
@@ -1885,7 +1916,7 @@ function findPatterns(){
   // udfald
   const Y={
     energi:{data:energy,bin:false,up:"højere energi",down:"lavere energi",f:v=>fmt(v,1)+"/5 i energi"},
-    sofa:{data:sofa,bin:true,up:"flere sofadage",down:"færre sofadage",f:v=>pct(v)+" sofadage"},
+    sofa:{data:sofa,bin:true,up:"flere tunge dage",down:"færre tunge dage",f:v=>pct(v)+" tunge dage"},
     loeb:{data:ran,bin:true,up:"oftere løb",down:"sjældnere løb",f:v=>pct(v)+" løbedage"},
     soevn:{data:sleep,bin:false,up:"længere søvn",down:"kortere søvn",f:v=>hhmm(v)+" søvn"},
     hrv:{data:hrv,bin:false,up:"højere HRV",down:"lavere HRV",f:v=>Math.round(v)+" ms HRV"},
@@ -1926,7 +1957,7 @@ function findPatterns(){
 function insights(){
   const rows=[],{top,days}=findPatterns();
   top.forEach(o=>rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:o.t,p:o.p}));
-  if(!top.length) rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:"Ingen tydelige sammenhænge endnu.",p:`Jeg sammenligner dage med fx kort søvn, alkohol, hård arbejdsdag og mange skridt med din energi, dine sofadage, løb og vægt. Lige nu har jeg ${days.soevn} dage med søvn, ${days.log} med dagslog og ${days.energi} med energi-check-in — jeg skal bruge mindst 7 dage i hver gruppe, før noget vises.`});
+  if(!top.length) rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:"Ingen tydelige sammenhænge endnu.",p:`Jeg sammenligner dage med fx kort søvn, alkohol, hård arbejdsdag og mange skridt med din energi, dine tunge dage, løb og vægt. Lige nu har jeg ${days.soevn} dage med søvn, ${days.log} med dagslog og ${days.energi} med energi-check-in — jeg skal bruge mindst 7 dage i hver gruppe, før noget vises.`});
   const Ball=S.body.filter(b=>b.fat_pct!=null), B=Ball.filter(b=>b.source===(Ball[Ball.length-1]||{}).source);
   if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden ${B[0].log_date} (${B[0].source==="garmin"?"Garmin":"Withings"}). Se overlejringen i Krop-sektionen før du dømmer et vægt-plateau.`});}
   $("#insights").innerHTML=rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--${r.bg});color:var(--${r.col})">${r.ic}</div><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("")+
@@ -2122,11 +2153,11 @@ async function saveNap(min){
   }catch(e){ setNote("#noteNap","Fejl: "+e.message,"err"); seg.querySelectorAll("button").forEach(b=>b.disabled=false); }
 }
 async function saveMigraine(){
-  const intv=segVal("mIntSeg"),tr=segVal("mTrigSeg"),note=$("#mNote").value.trim();
+  const intv=segVal("mIntSeg"),tr=segVal("mTrigSeg"),au=segVal("mAuraSeg"),note=$("#mNote").value.trim();
   const btn=$("#mSave");btn.disabled=true;setNote("#noteM","Gemmer…");
-  try{const row=(await insert("events",{log_date:todayISO(),kind:"migraene",intensity:intv?+intv:null,trigger:tr,note:note||null}))[0];
+  try{const row=(await insert("events",{log_date:todayISO(),kind:"migraene",intensity:intv?+intv:null,trigger:tr,aura:au,note:note||null}))[0];
     S.events.push(row);rebuildEventViews();setNote("#noteM","Logget ✓","ok");
-    setTimeout(()=>{$("#mDialog").classList.remove("open");segReset("mIntSeg");segReset("mTrigSeg");$("#mNote").value="";setNote("#noteM","");render();},600);
+    setTimeout(()=>{$("#mDialog").classList.remove("open");segReset("mIntSeg");segReset("mTrigSeg");segReset("mAuraSeg");$("#mNote").value="";setNote("#noteM","");render();},600);
   }catch(e){setNote("#noteM","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
 async function saveEvent(){
@@ -2183,7 +2214,7 @@ setInterval(paintGarminStatus,60000);
   $("#themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}try{syncFrameTheme()}catch(e){}};})();
 
 // ---------- wire up ----------
-["moodSeg","dayTypeSeg","mIntSeg","mTrigSeg","eKindSeg"].forEach(seg);
+["moodSeg","dayTypeSeg","mIntSeg","mTrigSeg","mAuraSeg","eKindSeg"].forEach(seg);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
 
