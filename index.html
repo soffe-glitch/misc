@@ -381,6 +381,21 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
           <button type="button" data-v="sofa">▼ Sofa</button>
         </div>
       </div>
+      <div class="field"><label>Mennesker i dag <span class="hint">(tryk, gemmes med det samme)</span></label>
+        <div class="seg" id="peopleSeg">
+          <button type="button" data-v="faa">Få</button><button type="button" data-v="nogle">Nogle</button><button type="button" data-v="mange">Mange</button>
+        </div>
+      </div>
+      <div class="field"><label>Fik du nok tid alene?</label>
+        <div class="seg" id="aloneSeg">
+          <button type="button" data-v="ja">Ja</button><button type="button" data-v="nej">Nej</button>
+        </div>
+      </div>
+      <div class="field"><label>Dagen krævede … end jeg havde</label>
+        <div class="seg" id="demandSeg">
+          <button type="button" data-v="mindre">Mindre</button><button type="button" data-v="passende">Passende</button><button type="button" data-v="mere">Mere</button>
+        </div>
+      </div>
       <div class="field"><label>Fra Garmin <span class="hint">(Lifestyle Logging · udfyldes i Garmin Connect)</span></label>
         <div id="lifeBox" class="lifechips"><span>Ingen svar hentet endnu</span></div>
       </div>
@@ -753,6 +768,7 @@ async function loadAll(){
   try{ S.events=await get("events","?select=*&order=log_date.asc,created_at.asc"); }catch(e){ S.events=[]; }
   rebuildEventViews();
   try{ S.life=await get("garmin_lifestyle","?select=log_date,name,status,amount,details&log_date=gte."+addDays(todayISO(),-200)); }catch(e){ S.life=[]; }
+  try{ S.cycle=await get("garmin_cycle_log","?select=log_date,discharge,flow,symptoms&order=log_date.asc"); }catch(e){ S.cycle=[]; }
   try{ S.dev=await get("deviations","?select=*&order=log_date.asc"); }catch(e){ S.dev=[]; }
   try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
   syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
@@ -1603,6 +1619,11 @@ function dayExtras(t){
   try{
     const hy=hypoTests().filter(r=>r.status==="tydelig"||r.status==="antydning").map(r=>({spoergsmaal:r.q,styrke:r.status,[r.expLabel]:r.m1,[r.ctlLabel]:r.m2,dage:[r.n1,r.n2]}));
     if(hy.length) o.egne_hypoteser_antydninger=hy;
+    const PE={faa:"få",nogle:"nogle",mange:"mange"}, dq=x=>x&&(x.people||x.alone_enough!=null||x.day_demand)?{mennesker:PE[x.people]||null,nok_alenetid:x.alone_enough==null?null:(x.alone_enough?"ja":"nej"),dagen_kraevede:x.day_demand?x.day_demand+" end jeg havde":null}:null;
+    const dqT=dq(S.daily.find(d=>d.log_date===t)), dqY=dq(S.daily.find(d=>d.log_date===addDays(t,-1)));
+    if(dqT) o.dagens_svar=dqT; if(dqY) o.gaarsdagens_svar=dqY;
+    const sp=(S.cycle||[]).filter(c=>c.log_date>=addDays(t,-10)).map(c=>({dato:c.log_date,log:[...(c.discharge||[]),c.flow].filter(Boolean).join(", ").toLowerCase()}));
+    if(sp.length) o.cyklus_log_seneste_10_dage=sp;
     const dv=(S.dev||[]).slice(-5).map(x=>({nat_til:x.log_date,retning:x.direction,egen_forklaring:(x.causes||[]).join(", ")+(x.note?" – "+x.note:"")}));
     if(dv.length) o.egne_forklaringer_paa_afvigende_naetter=dv;
   }catch(e){}
@@ -1639,13 +1660,15 @@ function paintDayExtras(){
   renderDeviation();
   const d=S.daily.find(x=>x.log_date===todayISO())||{};
   paintLife();
+  const mark=(id,val)=>{const el=$("#"+id); if(el) el.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val));};
+  mark("peopleSeg",d.people||null); mark("aloneSeg",d.alone_enough==null?null:(d.alone_enough?"ja":"nej")); mark("demandSeg",d.day_demand||null);
   const gs=$("#gaveSeg"); if(gs){ const set=new Set(d.gave_energy||[]); gs.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",set.has(b.dataset.v))); }
 }
 async function saveDayField(patch){
   const t=todayISO();
   try{ const row=(await upsert("daily_log",{log_date:t,...patch,updated_at:new Date().toISOString()},"log_date"))[0];
     const i=S.daily.findIndex(x=>x.log_date===t); if(i>=0)S.daily[i]=row; else S.daily.push(row);
-    paintDayExtras();
+    mergeLife(); paintDayExtras();
   }catch(e){ setNote("#noteDaily","Fejl: "+e.message,"err"); }
 }
 function smokePayload(t){
@@ -1924,7 +1947,9 @@ function hypoTests(){
   const e1=v=>fmt(v,1)+"/5";
   const tests=[
     {id:"kaffe",q:"Sover du kortere natten efter kaffe efter kl. 14?",rows:logged,exp:d=>d.late_coffee===true,out:d=>{const g=gar[addDays(d.log_date,1)];return g&&g.sleep_h!=null?g.sleep_h:null;},f:hhmm,what:"søvn",expLabel:"med sen kaffe",ctlLabel:"uden"},
-    {id:"komm",q:"Er energien lavere dagen efter høj kommunikation (4-5)?",rows:D.filter(d=>d.comm_load!=null),exp:d=>d.comm_load>=4,out:d=>mv(eAll,addDays(d.log_date,1)),f:e1,what:"energi dagen efter",expLabel:"efter høj",ctlLabel:"efter lav"},
+    {id:"mennesker",q:"Er energien lavere dagen efter mange mennesker?",rows:D.filter(d=>d.people),exp:d=>d.people==="mange",out:d=>mv(eAll,addDays(d.log_date,1)),f:e1,what:"energi dagen efter",expLabel:"efter mange",ctlLabel:"efter få/nogle"},
+    {id:"alene",q:"Er energien lavere dagen efter for lidt tid alene?",rows:D.filter(d=>d.alone_enough!=null),exp:d=>d.alone_enough===false,out:d=>mv(eAll,addDays(d.log_date,1)),f:e1,what:"energi dagen efter",expLabel:"efter for lidt",ctlLabel:"efter nok"},
+    {id:"kraevede",q:"Er energien lavere dagen efter, at dagen krævede mere, end du havde?",rows:D.filter(d=>d.day_demand),exp:d=>d.day_demand==="mere",out:d=>mv(eAll,addDays(d.log_date,1)),f:e1,what:"energi dagen efter",expLabel:"efter 'mere'",ctlLabel:"efter mindre/passende"},
     {id:"ude",q:"Er eftermiddags-energien højere på dage med tid ude?",rows:logged,exp:d=>(d.gave_energy||[]).includes("ude"),out:d=>mv(eLater,d.log_date),f:e1,what:"eftermiddags-energi",expLabel:"med ude",ctlLabel:"uden"},
     {id:"social",q:"Er eftermiddags-energien højere på dage med noget socialt?",rows:logged,exp:d=>(d.gave_energy||[]).includes("social"),out:d=>mv(eLater,d.log_date),f:e1,what:"eftermiddags-energi",expLabel:"med social",ctlLabel:"uden"},
     {id:"loeb",q:"Er eftermiddags-energien højere efter et løb på mindst 3 km?",rows:Object.keys(eLater).filter(inW).map(d=>({log_date:d})),exp:d=>(km[d.log_date]||0)>=3,out:d=>mv(eLater,d.log_date),f:e1,what:"eftermiddags-energi",expLabel:"løbedage",ctlLabel:"øvrige"},
@@ -2162,6 +2187,10 @@ setInterval(paintGarminStatus,60000);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
 
+const dayNow=()=>S.daily.find(x=>x.log_date===todayISO())||{};
+$("#peopleSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>saveDayField({people:dayNow().people===b.dataset.v?null:b.dataset.v}));
+$("#aloneSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{const v=b.dataset.v==="ja";saveDayField({alone_enough:dayNow().alone_enough===v?null:v});});
+$("#demandSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>saveDayField({day_demand:dayNow().day_demand===b.dataset.v?null:b.dataset.v}));
 $("#gaveSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{
   const d=S.daily.find(x=>x.log_date===todayISO())||{}, set=new Set(d.gave_energy||[]);
   if(set.has(b.dataset.v)) set.delete(b.dataset.v); else set.add(b.dataset.v);
