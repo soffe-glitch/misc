@@ -76,6 +76,12 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .moremenu>summary{list-style:none} .moremenu>summary::-webkit-details-marker{display:none}
 .moremenu .pop{position:absolute; right:0; top:46px; z-index:60; display:flex; flex-direction:column; gap:6px; padding:10px; min-width:190px; background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.14)}
 .moremenu .pop .btn{width:100%; justify-content:flex-start}
+.nrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)}
+.nrow:first-of-type{border-top:0}
+.nrow label{flex:1;min-width:0;display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:14px;line-height:1.3}
+.nrow label small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.nrow input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--accent)}
+.nrow input[type=time]{flex:none;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:6px 8px;font:inherit;font-size:14px}
 .devcard{margin:0 0 14px; border-left:4px solid var(--accent)}
 .devcard.lav{border-left-color:var(--warn)} .devcard.hoej{border-left-color:var(--good)}
 .devcard .nums{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 10px}
@@ -289,6 +295,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
         <div class="pop">
           <button class="btn" id="themeBtn" title="Skift tema">◐ Skift tema</button>
           <button class="btn" id="lockBtn" title="Face ID-lås på denne enhed" style="display:none">🔓</button>
+          <button class="btn" id="notifBtn" title="Notifikationer på denne enhed">🔔 Notifikationer</button>
           <button class="btn" id="pwBtn" title="Skift adgangskode">🔑 Skift adgangskode</button>
           <button class="btn" id="logoutBtn" title="Log ud af denne enhed">Log ud</button>
         </div>
@@ -627,6 +634,12 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
 </div>
 
 <!-- migræne-dialog -->
+<div class="dialog" id="nDialog"><div class="box">
+  <h3>Notifikationer</h3>
+  <div id="nBody" style="margin-top:10px"><p class="hint">Henter…</p></div>
+  <div class="note" id="noteN"></div>
+  <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" type="button" id="nClose">Luk</button></div>
+</div></div>
 <div class="dialog" id="mDialog"><div class="box">
   <h3>Migræne-anfald</h3>
   <p class="hint" style="margin-bottom:6px">Vi logger først — forvarsel tændes først når der er nok data til en reel sammenhæng.</p>
@@ -2394,6 +2407,64 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(
 })();
 </script>
 <script>
+// ---- notifikationer (web push) ----
+(function(){
+  const $=s=>document.querySelector(s), SBU="https://kphfvznawqcslkubdsyy.supabase.co", FN=SBU+"/functions/v1/push-send", RT=SBU+"/rest/v1/push_subscriptions";
+  const KEY="sb_publishable_7WZMOKUchp-1zkET6-blSA_cVhrj_Lv", HD={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
+  const KINDS=[["brief","Morgenbrief","07:30","din brief er klar"],["stakud","Noget stak ud","08:30","kun når en nat afviger tydeligt"],["energi","Energi-check","12:30","kun hvis du ikke har svaret"],
+    ["aften","Aftenspørgsmål","20:30","kun hvis de tre svar mangler"],["praktisk","Opgaver med tidspunkt",null,"10 min før, fra Praktisk"]];
+  const b64u=s=>{const p="=".repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0));};
+  const note=(m,cls)=>{const n=$("#noteN");n.textContent=m||"";n.className="note"+(cls?" "+cls:"");};
+  let sub=null,row=null;
+  const defPrefs=()=>Object.fromEntries(KINDS.map(([k,,t])=>[k,t?{on:true,at:t}:{on:true}]));
+  async function load(){
+    const el=$("#nBody"); note("");
+    const ok="serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+    if(!ok){
+      const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+      el.innerHTML=`<p class="hint" style="line-height:1.5">${ios?"På iPhone virker notifikationer kun, når appen ligger på hjemmeskærmen. Åbn siden i Safari, tryk Del og vælg <b>Føj til hjemmeskærm</b>. Åbn så appen fra ikonet og kom tilbage hertil.":"Denne browser understøtter ikke notifikationer."}</p>`; return;
+    }
+    try{ const reg=await navigator.serviceWorker.ready; sub=await reg.pushManager.getSubscription(); }catch(e){ sub=null; }
+    row=null;
+    if(sub){ try{ const r=await fetch(RT+"?select=*&endpoint=eq."+encodeURIComponent(sub.endpoint),{headers:HD}); row=(await r.json())[0]||null; if(!row) row=await save(sub,defPrefs()); }catch(e){} }
+    if(!sub||!row){
+      el.innerHTML=`<p class="hint" style="line-height:1.5">Få en besked om morgenbriefen, energi-check, aftenspørgsmål, afvigende nætter og opgaver med tidspunkt. Du vælger selv hvilke bagefter.</p>
+        <button class="pbtn" id="nOn" style="width:100%;margin-top:10px;background:var(--accent)">Slå notifikationer til på denne enhed</button>`;
+      $("#nOn").onclick=enable; return;
+    }
+    const P={...defPrefs(),...(row.prefs||{})};
+    el.innerHTML=KINDS.map(([k,l,t,h])=>{const p={...(t?{on:true,at:t}:{on:true}),...(P[k]||{})};
+      return `<div class="nrow"><label><input type="checkbox" data-nk="${k}" ${p.on?"checked":""}><span>${l}<small>${h}</small></span></label>${t?`<input type="time" data-nt="${k}" value="${p.at||t}" aria-label="Tidspunkt for ${l}">`:""}</div>`;}).join("")
+      +`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn" type="button" id="nTest">Send en test</button><button class="btn" type="button" id="nOff" style="color:var(--bad)">Slå fra på denne enhed</button></div>`;
+    el.querySelectorAll("[data-nk],[data-nt]").forEach(i=>i.onchange=savePrefs);
+    $("#nTest").onclick=async()=>{ note("Sender…"); try{ const r=await fetch(FN+"?test=1",{method:"POST",headers:HD}); const j=await r.json(); note(j.ok&&j.sent?"Sendt. Den bør dukke op om et øjeblik.":"Kunne ikke sende"+(j.error?": "+j.error:"."),j.ok&&j.sent?"ok":"err"); }catch(e){ note("Fejl: "+e.message,"err"); } };
+    $("#nOff").onclick=async()=>{ try{ await fetch(RT+"?id=eq."+row.id,{method:"DELETE",headers:HD}); await sub.unsubscribe(); }catch(e){} load(); };
+  }
+  async function save(s,prefs){
+    const j=s.toJSON();
+    const r=await fetch(RT+"?on_conflict=endpoint",{method:"POST",headers:{...HD,Prefer:"resolution=merge-duplicates,return=representation"},
+      body:JSON.stringify({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,device:navigator.userAgent.slice(0,140),prefs})});
+    if(!r.ok) throw new Error(r.status+" "+(await r.text())); return (await r.json())[0];
+  }
+  async function enable(){
+    note("Et øjeblik…");
+    try{
+      const perm=await Notification.requestPermission();
+      if(perm!=="granted"){ note("Du har sagt nej til notifikationer. Slå dem til for appen i telefonens Indstillinger og prøv igen.","err"); return; }
+      const k=await (await fetch(FN+"?pubkey=1")).json(); if(!k.ok) throw new Error(k.error||"ingen nøgle");
+      const reg=await navigator.serviceWorker.ready;
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(k.key)});
+      row=await save(sub,defPrefs()); note("Slået til ✓","ok"); load();
+    }catch(e){ note("Kunne ikke slå til: "+e.message,"err"); }
+  }
+  async function savePrefs(){
+    const prefs={}; KINDS.forEach(([k,,t])=>{ const c=document.querySelector(`[data-nk="${k}"]`), ti=document.querySelector(`[data-nt="${k}"]`); prefs[k]=t?{on:!!c.checked,at:(ti&&ti.value)||t}:{on:!!c.checked}; });
+    try{ const r=await fetch(RT+"?id=eq."+row.id,{method:"PATCH",headers:{...HD,Prefer:"return=minimal"},body:JSON.stringify({prefs})}); if(!r.ok) throw new Error(r.status); row.prefs=prefs; note("Gemt ✓","ok"); }
+    catch(e){ note("Kunne ikke gemme: "+e.message,"err"); }
+  }
+  document.getElementById("notifBtn").onclick=()=>{ document.getElementById("moreMenu").open=false; $("#nDialog").classList.add("open"); load(); };
+  document.getElementById("nClose").onclick=()=>$("#nDialog").classList.remove("open");
+})();
 document.addEventListener("click",e=>{const m=document.getElementById("moreMenu");if(m&&m.open&&!m.contains(e.target))m.open=false;});
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
 </script>
