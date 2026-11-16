@@ -211,6 +211,7 @@ html, body { overflow-x:hidden; overflow-x:clip; max-width:100%; }
 .vs24row { margin-top:12px; }
 .vs24row .top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; font-size:14px; flex-wrap:wrap; }
 .vs24row .top small { color:var(--muted); font-size:12.5px; }
+.vs24prog { font-size:13px; color:var(--muted); margin-top:3px; }
 .vs24bar { height:8px; border-radius:99px; background:var(--card2); overflow:hidden; margin-top:6px; }
 .vs24bar i { display:block; height:100%; border-radius:99px; background:#E5A857; }
 .vs24bar i.won { background:#22c55e; }
@@ -416,9 +417,11 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
 
   <!-- UDVIKLING -->
   <div class="page" id="p-trend">
-    <div class="card ins" style="margin-bottom:12px">
+    <div class="card ins nofold" style="margin-bottom:12px">
       <div class="ins-k">2024</div><h3>Har jeg slået 2024-mig?</h3>
       <div id="vs24-body" class="ins-t"></div>
+      <div class="ch tall" style="margin-top:10px"><canvas id="cVs24"></canvas></div>
+      <div class="ra-sum" style="margin-top:8px">De to opbygninger er lagt oven på hinanden fra første uge: 2024 fra 11. marts, den nuværende fra første løb efter din seneste pause. Stiplet er 2024-dig, grøn er dig nu. Prognosen forlænger din fremgang de seneste 8 uger og er et skøn, ikke et løfte.</div>
     </div>
 
     <div class="card ins" style="margin-bottom:12px">
@@ -624,7 +627,7 @@ async function fetchGarminActs() {
 // ---- Init ----
 // graferne under de fem spørgsmål er foldet sammen, så siden er kort; teksten med svaret står altid fremme
 function foldInsightCharts() {
-  document.querySelectorAll('#p-trend .card.ins').forEach(card => {
+  document.querySelectorAll('#p-trend .card.ins:not(.nofold)').forEach(card => {
     const ch = card.querySelector(':scope > .ch'); if (!ch || card.querySelector('.insmore')) return;
     const det = document.createElement('details'); det.className = 'insmore';
     const sum = document.createElement('summary'); sum.textContent = 'Vis graf'; det.appendChild(sum);
@@ -1526,40 +1529,94 @@ function ownPatterns(easy) {
   return h;
 }
 
-// Dig mod dit bedste 2024: kondital, ugemængde, længste tur og tempo på rolige ture.
-// 2024-tallet er årets top (for tempo: bedste måned), "nu" er de seneste 4-8 uger.
+// "Har jeg slået 2024-mig?" – spøgelseskurve: de to opbygninger lagt oven på hinanden, uge for uge fra start,
+// plus en prognose for, hvornår du passerer 2024-toppen med din nuværende fremgang.
+const VS24_START = '2024-03-11';   // første uge med Garmin-data i 2024-opbygningen
+let vs24Metric = 'vo2';
+function vs24Build() {
+  const R = runs(activities).slice().sort((x, y) => x.start_date_local.localeCompare(y.start_date_local));
+  const km = a => (a.distance || 0) / 1000, T = a => new Date(a.start_date_local.substring(0, 10) + 'T12:00:00').getTime();
+  // nuværende opbygning starter efter den seneste pause på 14 dage eller mere (inden for det sidste år)
+  let start = null;
+  for (let i = R.length - 1; i > 0; i--) { if (Date.now() - T(R[i]) > 365 * DAY) break; if (T(R[i]) - T(R[i - 1]) >= 14 * DAY) { start = R[i].start_date_local.substring(0, 10); break; } }
+  if (!start) return null;
+  const lim = getZ2Range().high + 5, easy = a => a.average_heartrate && a.average_heartrate <= lim && km(a) >= 3 && pace(a);
+  const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const series = (iso, weeks) => {
+    const t0 = new Date(iso + 'T00:00:00').getTime(), wOf = a => Math.floor((T(a) - t0) / (7 * DAY));
+    const inB = R.filter(a => wOf(a) >= 0 && wOf(a) < weeks), wkKm = Array(weeks).fill(0);
+    inB.forEach(a => wkKm[wOf(a)] += km(a));
+    const out = { km: [], vo2: [], long: [], pace: [] }; let v = null, lg = 0;
+    const before = R.filter(a => T(a) < t0 && a.vo2max).pop(); if (before) v = +before.vo2max;
+    for (let w = 0; w < weeks; w++) {
+      const sl = wkKm.slice(Math.max(0, w - 3), w + 1); out.km.push(+(sl.reduce((x, y) => x + y, 0) / sl.length).toFixed(1));
+      inB.filter(a => wOf(a) === w).forEach(a => { if (a.vo2max) v = +a.vo2max; lg = Math.max(lg, km(a)); });
+      out.vo2.push(v); out.long.push(+lg.toFixed(1));
+      const e = inB.filter(a => wOf(a) <= w && wOf(a) > w - 4 && easy(a)); out.pace.push(e.length >= 3 ? med(e.map(pace)) : null);
+    }
+    return out;
+  };
+  const curW = Math.floor((Date.now() - new Date(start + 'T00:00:00').getTime()) / (7 * DAY));   // igangværende uge (0 = første)
+  const end24 = Math.floor((new Date('2024-12-15T00:00:00') - new Date(VS24_START + 'T00:00:00')) / (7 * DAY));
+  return { start, curW, now: series(start, curW + 1), ghost: series(VS24_START, end24) };
+}
+const VS24_M = {
+  vo2:  { k: 'Kondital', unit: '', dec: 0, better: 1, fmt: v => fmtD(v, 0) },
+  km:   { k: 'Km om ugen', unit: ' km', dec: 0, better: 1, fmt: v => fmtD(v, 0) + ' km' },
+  long: { k: 'Længste tur', unit: ' km', dec: 1, better: 1, fmt: v => fmtD(v) + ' km' },
+  pace: { k: 'Tempo, rolige ture', unit: '', dec: 0, better: -1, fmt: v => fmtPace(v) + '/km' }
+};
+function vs24Stat(key, B) {
+  const m = VS24_M[key], N = B.now[key], G = B.ghost[key], c = B.curW;
+  // seneste hele uge bruges for km (den igangværende uge er ikke færdig)
+  const ci = key === 'km' && c > 0 ? c - 1 : c;
+  const last = arr => { for (let i = Math.min(ci, arr.length - 1); i >= 0; i--) if (arr[i] != null) return { v: arr[i], i }; return null; };
+  const n = last(N); if (!n) return null;
+  const gSame = G[Math.min(ci, G.length - 1)], gv = G.filter(x => x != null);
+  const peak = m.better > 0 ? Math.max(...gv) : Math.min(...gv), peakW = G.indexOf(peak);
+  const beat = (a, b) => m.better > 0 ? a >= b : a <= b;
+  // hvornår nåede 2024-dig det niveau, du har nu?
+  let gw = -1; for (let i = 0; i < G.length; i++) if (G[i] != null && beat(G[i], n.v)) { gw = i; break; }
+  const lead = gw < 0 ? null : gw - ci;                    // + = du er foran
+  // prognose: lineær trend over de seneste op til 8 uger
+  const pts = []; for (let i = Math.max(0, ci - 7); i <= ci; i++) if (N[i] != null) pts.push([i, N[i]]);
+  let eta = null, slope = null;
+  if (pts.length >= 4) {
+    const mx = pts.reduce((s, p) => s + p[0], 0) / pts.length, my = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+    const den = pts.reduce((s, p) => s + (p[0] - mx) ** 2, 0); slope = den ? pts.reduce((s, p) => s + (p[0] - mx) * (p[1] - my), 0) / den : 0;
+    const need = (peak - n.v) / slope;
+    if (beat(n.v, peak)) eta = 0; else if (slope * m.better > 0 && isFinite(need) && need > 0) eta = need;
+  }
+  return { m, now: n.v, same: gSame, peak, peakW, lead, eta, slope, won: beat(n.v, peak), ci };
+}
 function renderVs2024() {
   const el = document.getElementById('vs24-body'); if (!el) return;
-  const R = runs(activities), yr = a => (a.start_date_local || '').substring(0, 4), km = a => (a.distance || 0) / 1000;
-  const R24 = R.filter(a => yr(a) === '2024'); if (R24.length < 20) { el.textContent = 'Jeg har ikke nok løb fra 2024 til at sammenligne.'; return; }
-  const age = a => (Date.now() - new Date(a.start_date_local).getTime()) / DAY, med = arr => { const v = arr.slice().sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
-  const rows = [];
-  // kondital
-  const v24 = Math.max(0, ...R24.filter(a => a.vo2max).map(a => +a.vo2max)), vNow = (R.filter(a => a.vo2max).sort((x, y) => x.start_date_local.localeCompare(y.start_date_local)).pop() || {}).vo2max;
-  if (v24 && vNow) rows.push({ k: 'Kondital (VO2max)', then: fmtD(v24, 0), now: fmtD(+vNow, 0), pct: +vNow / v24, left: v24 - +vNow > 0 ? fmtD(v24 - +vNow) + ' point' : null });
-  // ugemængde: bedste 4-ugers snit i 2024 mod seneste 4 hele uger
-  const wk = {}; R.forEach(a => { const k = weekKey(a); wk[k] = (wk[k] || 0) + km(a); });
-  const keys24 = Object.keys(wk).filter(k => k.startsWith('2024')).sort(); let best4 = 0;
-  for (let i = 0; i + 3 < keys24.length; i++) best4 = Math.max(best4, (wk[keys24[i]] + wk[keys24[i + 1]] + wk[keys24[i + 2]] + wk[keys24[i + 3]]) / 4);
-  const cur = weekKey({ start_date_local: new Date().toISOString().substring(0, 10) }); let t = new Date(cur + 'T12:00:00'), sum = 0;
-  for (let i = 0; i < 4; i++) { t = new Date(t.getTime() - 7 * DAY); sum += wk[t.toISOString().substring(0, 10)] || 0; }
-  const now4 = sum / 4;
-  if (best4) rows.push({ k: 'Km om ugen (4 uger i træk)', then: fmtD(best4, 0) + ' km', now: fmtD(now4, 0) + ' km', pct: now4 / best4, left: best4 - now4 > 0 ? fmtD(best4 - now4, 0) + ' km/uge' : null });
-  // længste tur
-  const l24 = Math.max(0, ...R24.map(km)), lNow = Math.max(0, ...R.filter(a => age(a) <= 60).map(km));
-  if (l24) rows.push({ k: 'Længste tur', then: fmtD(l24) + ' km', now: fmtD(lNow) + ' km', pct: lNow / l24, left: l24 - lNow > 0 ? fmtD(l24 - lNow) + ' km' : null });
-  // tempo på rolige ture (lav puls, mindst 3 km): bedste måned i 2024 mod de seneste 30-60 dage
-  const lim = getZ2Range().high + 5, easy = a => a.average_heartrate && a.average_heartrate <= lim && km(a) >= 3 && pace(a);
-  const byM = {}; R24.filter(easy).forEach(a => { const mm = a.start_date_local.substring(0, 7); (byM[mm] = byM[mm] || []).push(pace(a)); });
-  const p24 = Math.min(...Object.values(byM).filter(v => v.length >= 4).map(med));
-  let recent = R.filter(a => age(a) <= 30 && easy(a)); if (recent.length < 4) recent = R.filter(a => age(a) <= 60 && easy(a));
-  const pNow = recent.length >= 3 ? med(recent.map(pace)) : null;
-  if (isFinite(p24) && pNow) rows.push({ k: 'Tempo på rolige ture', then: fmtPace(p24) + '/km', now: fmtPace(pNow) + '/km', pct: p24 / pNow, left: pNow - p24 > 0 ? Math.round((pNow - p24) * 60) + ' sek./km' : null });
-  if (!rows.length) { el.textContent = 'Jeg mangler data til at sammenligne med 2024.'; return; }
-  const won = rows.filter(r => r.pct >= 1).length;
-  const head = won === rows.length ? `<b class="good">Ja – du har slået 2024-dig på alle ${rows.length} mål.</b>` : won ? `Du har slået 2024-dig på <b class="good">${won} af ${rows.length}</b> mål.` : `Ikke endnu – men du kan se, hvor langt der er på hvert mål.`;
-  el.innerHTML = head + rows.map(r => `<div class="vs24row"><div class="top"><span><b>${r.k}</b></span><small>${r.now} nu · ${r.then} i 2024${r.pct >= 1 ? ' · <b class="good">slået ✓</b>' : r.left ? ' · mangler ' + r.left : ''}</small></div><div class="vs24bar"><i class="${r.pct >= 1 ? 'won' : ''}" style="width:${Math.max(4, Math.min(100, Math.round(r.pct * 100)))}%"></i></div></div>`).join('')
-    + `<div class="ra-sum" style="margin-top:10px">2024-tallene er årets top (tempo: din bedste måned). "Nu" er dine seneste 4–8 uger.</div>`;
+  const B = vs24Build();
+  if (!B || B.ghost.km.filter(x => x > 0).length < 10) { el.innerHTML = 'Jeg har ikke nok løb fra 2024 til at lægge de to forløb oven på hinanden.'; mkEmpty('cVs24', ''); return; }
+  const S = {}; Object.keys(VS24_M).forEach(k => S[k] = vs24Stat(k, B));
+  const keys = Object.keys(S).filter(k => S[k]);
+  const d = s => new Date(s + 'T12:00:00').toLocaleDateString('da-DK', { day: 'numeric', month: 'long' });
+  const wk = n => Math.abs(n) === 1 ? '1 uge' : Math.abs(n) + ' uger';
+  const when = e => { const dt = new Date(Date.now() + e * 7 * DAY); return dt.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' }); };
+  const won = keys.filter(k => S[k].won).length, ahead = keys.filter(k => S[k].lead != null && S[k].lead > 0).length, behind = keys.filter(k => S[k].lead != null && S[k].lead < 0).length;
+  const head = `Du er i <b>uge ${B.curW + 1}</b> af opbygningen, som begyndte ${d(B.start)}. Sammenlignet med 2024-dig i samme uge er du <b class="good">foran på ${ahead}</b> og <b class="${behind ? 'bad' : 'good'}">bagud på ${behind}</b> af ${keys.length} mål${won ? ` – og har allerede slået 2024-toppen på ${won}` : ''}.`;
+  const row = k => { const s = S[k], m = s.m;
+    const cmp = s.lead == null ? `<b class="good">over alt, 2024-dig nåede</b>` : s.lead > 0 ? `<b class="good">${wk(s.lead)} foran</b>` : s.lead < 0 ? `<b class="bad">${wk(s.lead)} bagud</b>` : 'på niveau';
+    const prog = s.won ? `<b class="good">2024-toppen er slået ✓</b>` : s.eta == null ? `ingen fremgang de seneste uger, så ingen prognose` : s.eta > 60 ? `over et år med nuværende fart` : `passerer 2024-toppen (${m.fmt(s.peak)}) omkring <b>${when(s.eta)}</b>`;
+    return `<div class="vs24row"><div class="top"><span><b>${m.k}</b> · ${m.fmt(s.now)}</span><small>2024-dig i samme uge: ${s.same != null ? m.fmt(s.same) : '–'} · ${cmp}</small></div><div class="vs24prog">${prog}</div></div>`; };
+  el.innerHTML = head + keys.map(row).join('')
+    + `<div class="segctl" id="vs24Seg" style="margin-top:14px">${keys.map(k => `<button type="button" class="${k === vs24Metric ? 'on' : ''}" data-k="${k}">${VS24_M[k].k}</button>`).join('')}</div>`;
+  el.querySelectorAll('#vs24Seg button').forEach(b => b.onclick = () => { vs24Metric = b.dataset.k; renderVs2024(); });
+  if (!S[vs24Metric]) vs24Metric = keys[0];
+  const m = VS24_M[vs24Metric], G = B.ghost[vs24Metric], N = B.now[vs24Metric].slice();
+  if (vs24Metric === 'km' && N.length > 1) N[N.length - 1] = null;      // igangværende uge er ikke færdig
+  const labels = G.map((_, i) => i + 1);
+  mkChart('cVs24', { type: 'line', data: { labels, datasets: [
+    { label: '2024-dig', data: G, borderColor: 'rgba(152,168,159,.75)', borderDash: [5, 4], pointRadius: 0, tension: .3, spanGaps: true },
+    { label: 'Dig nu', data: N, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', borderWidth: 3, pointRadius: 2, tension: .3, spanGaps: true }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8b8fa3', boxWidth: 14 } }, tooltip: { callbacks: { title: c => 'Uge ' + c[0].label + ' af opbygningen', label: c => ` ${c.dataset.label}: ${c.raw == null ? '–' : m.fmt(c.raw)}` } } },
+      scales: { x: { ticks: { color: '#8b8fa3', maxTicksLimit: 8 }, grid: { display: false }, title: { display: true, text: 'uge i opbygningen', color: '#8b8fa3' } },
+        y: { reverse: m.better < 0, ticks: { color: '#8b8fa3', callback: v => vs24Metric === 'pace' ? fmtPace(v) : v }, grid: { color: 'rgba(42,46,61,.5)' } } } } });
 }
 function renderVolume() {
   const el = document.getElementById('ins-vol-text');
