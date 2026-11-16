@@ -2331,8 +2331,10 @@ frame.addEventListener("load",()=>{ // vægt-dashboardet henter data async → m
 const pframe=$("#praktiskFrame");let pTimer=null;
 pframe.addEventListener("load",()=>{ // Praktisk henter data async → mål højden et par gange efter load
   syncFrameTheme(pframe);
-  let n=0;clearInterval(pTimer);pTimer=setInterval(()=>{sizeFrame(pframe);if(++n>12)clearInterval(pTimer);},400);
 });
+// Praktisk melder selv sin højde, så der kun er én scroll (den ydre side)
+pframe.setAttribute("scrolling","no");
+window.addEventListener("message",e=>{ if(e.origin===location.origin&&e.data&&e.data.praktiskHeight) pframe.style.height=Math.ceil(e.data.praktiskHeight)+"px"; });
 function showTab(t){
   $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");$("#viewPraktisk").hidden=(t!=="praktisk");
   $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
