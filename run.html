@@ -203,15 +203,24 @@ img,svg,canvas { max-width:100%; }
 #coach-overview .insight h3 { color:#9DB8AA; font-family:"Hanken Grotesk",sans-serif; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
 #coach-overview .insight .finding { font-family:"Fraunces",Georgia,serif; font-weight:400; font-size:24px; line-height:1.25; color:#F1F4EC; margin:10px 0; }
 #coach-overview .insight p { color:#B5C7BD; position:relative; }
-.statstrip { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x proximity; padding:2px 2px 6px; margin:0 -14px 8px; padding-left:14px; padding-right:14px; scrollbar-width:none; scroll-padding-left:14px; }
+.statstrip { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; padding:2px 0 6px; margin:0 0 8px; }
+html, body { overflow-x:hidden; overflow-x:clip; max-width:100%; }
+.apptabs { display:flex; gap:4px; margin:10px 0 2px; background:var(--card2); border-radius:99px; padding:4px; width:fit-content; max-width:100%; }
+.apptabs a { color:var(--muted); font-weight:600; font-size:14px; padding:8px 15px; border-radius:99px; text-decoration:none; white-space:nowrap; }
+.apptabs a.on { background:var(--card); color:var(--text, #F1F4EC); }
+.insmore { margin-top:8px; }
+.insmore > summary { cursor:pointer; font-size:13px; font-weight:600; color:var(--muted); list-style:none; padding:6px 0; }
+.insmore > summary::-webkit-details-marker { display:none; }
+.insmore > summary::before { content:'▸ '; }
+.insmore[open] > summary::before { content:'▾ '; }
 .statstrip::-webkit-scrollbar { display:none; }
-.statstrip > .card { flex:0 0 138px; scroll-snap-align:start; padding:14px; box-shadow:none; }
+.statstrip > .card { padding:14px; box-shadow:none; min-width:0; }
 .statstrip > .card .val { font-size:26px; }
 .statstrip > .card .sub { display:none; }
 .chartcard .ch-head, .card > h3.hasinfo { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .chartcard .ch-head { flex-wrap:wrap; margin-bottom:14px; }
 .chartcard .ch-head h3 { margin:0; }
-.segctl { display:flex; gap:4px; background:var(--card2); padding:3px; border-radius:99px; overflow-x:auto; max-width:100%; scrollbar-width:none; }
+.segctl { display:flex; flex-wrap:wrap; gap:4px; background:var(--card2); padding:3px; border-radius:18px; max-width:100%; }
 .segctl::-webkit-scrollbar { display:none; }
 .segctl button { flex:none; border:0; background:none; color:var(--muted); font:inherit; font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:99px; cursor:pointer; white-space:nowrap; }
 .segctl button.on { background:var(--accent); color:var(--on-accent); }
@@ -336,8 +345,13 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       <div id="last-updated"></div>
       <button type="button" id="sync-btn" class="syncbtn" onclick="syncNow()">&#8635; Hent nyt fra Garmin</button>
     </div>
-    <a class="backlink" href="index.html">&larr; Livsstil</a>
   </div>
+  <nav class="apptabs" aria-label="Faner">
+    <a href="index.html" onclick="try{localStorage.setItem('liv-tab','liv')}catch(e){}">Livsstil</a>
+    <a href="index.html" onclick="try{localStorage.setItem('liv-tab','vaegt')}catch(e){}">V&aelig;gttab</a>
+    <a href="index.html" onclick="try{localStorage.setItem('liv-tab','praktisk')}catch(e){}">Praktisk</a>
+    <a class="on" aria-current="page">Run</a>
+  </nav>
   <div class="controls">
     <div class="period-sel">
       <button class="pbtn" data-m="1">1M</button>
@@ -352,7 +366,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
 <div class="main" id="app">
   <div class="loading" id="loader">
     <div class="spinner"></div>
-    <p style="color:var(--muted)">Henter data fra Intervals.icu...</p>
+    <p style="color:var(--muted)">Henter dine løb…</p>
   </div>
 
   <!-- OVERBLIK -->
@@ -538,6 +552,7 @@ const ATHLETE = 'i225063';
 const KEY = ''; // fjernet: live-kald går nu gennem Supabase icu-proxy
 const BASE = 'https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/icu-proxy';
 let activities = [], wellness = [], events = [], months = 3, charts = {}, sickDays = [];
+let weighRows = [];
 // Garmin data will be injected below
 let garminData = null;
 
@@ -596,12 +611,23 @@ async function fetchGarminActs() {
 }
 
 // ---- Init ----
+// graferne under de fem spørgsmål er foldet sammen, så siden er kort; teksten med svaret står altid fremme
+function foldInsightCharts() {
+  document.querySelectorAll('#p-trend .card.ins').forEach(card => {
+    const ch = card.querySelector(':scope > .ch'); if (!ch || card.querySelector('.insmore')) return;
+    const det = document.createElement('details'); det.className = 'insmore';
+    const sum = document.createElement('summary'); sum.textContent = 'Vis graf'; det.appendChild(sum);
+    card.insertBefore(det, ch); det.appendChild(ch);
+    const after = det.nextElementSibling; if (after && after.classList.contains('ra-sum')) det.appendChild(after);
+    det.addEventListener('toggle', () => { sum.textContent = det.open ? 'Skjul graf' : 'Vis graf'; if (det.open) setTimeout(() => window.dispatchEvent(new Event('resize')), 50); });
+  });
+}
 async function init() {
-  setupTabs();
+  setupTabs(); foldInsightCharts();
   setupPeriod();
   try {
     await loadGarmin();
-    [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick()]);
+    [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick(), fetchOwn()]);
     try { if (window.Readiness) await Readiness.load(400); } catch (e) { console.warn("Readiness", e); }
     await fetchSyncStatus();
     if (typeof GARMIN_DATA !== 'undefined') garminData = GARMIN_DATA;
@@ -702,13 +728,7 @@ function setupPeriod() {
 
 // ---- API ----
 async function fetchActs() {
-  // intervals.icu er kun et ekstra lag nu: er den nede, kører siden videre på garmin_activities
-  let live = [];
-  try {
-    const r = await fetch(`${BASE}/athlete/${ATHLETE}/activities?oldest=2015-01-01&newest=2027-01-01`, { headers: hdr() });
-    if (r.ok) live = (await r.json()).filter(a => ['Run','VirtualRun','TrailRun','Walk','Hike'].includes(a.type));
-    else window.ICU_DOWN = r.status;
-  } catch (e) { window.ICU_DOWN = 'netværk'; }
+  const live = [];   // løb hentes ikke længere fra intervals.icu – Garmin er eneste kilde
   // Flet tre lag pr. dato: Garmin-blob (gammel), garmin_activities (frisk), Intervals (live). Højeste lag vinder.
   // Lag (laveste først): gammel Garmin-blob (2017-) < garmin_activities (2024-, helt til i dag) < intervals live.
   const day = a => (a.start_date_local || '').substring(0,10);
@@ -732,15 +752,19 @@ async function fetchActs() {
 }
 
 // sygedage ligger i samme Supabase-projekt som livsstil-dashboardet (markeres dér)
+// morgenvægt fra din egen vægttabel (Garmin-vægten)
+async function fetchOwn() {
+  try { const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/weighins?select=log_date,weight_kg&moment=eq.morgen&order=log_date.asc&limit=5000', { headers: hdr() }); weighRows = r.ok ? await r.json() : []; } catch (e) { weighRows = []; }
+}
 async function fetchSick() {
   try {
-    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/sick_days?select=log_date&order=log_date.asc', { headers: hdr() });
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/events?select=log_date&kind=eq.sygdom&order=log_date.asc', { headers: hdr() });
     if (!r.ok) return [];
     return (await r.json()).map(x => x.log_date);
   } catch(e) { return []; }
 }
 
-// Wellness: garmin_daily er primær kilde; intervals.icu fylder kun ældre/manglende felter (fx CTL/ATL, vægt)
+// Wellness: garmin_daily er eneste kilde. Fra intervals.icu hentes kun programmet (fetchEvents).
 async function fetchGarminDaily() {
   try {
     const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/garmin_daily?select=log_date,sleep_secs,sleep_score,hrv_last_night,resting_hr,bb_wake,bb_high,steps,stress_avg,vo2max,training_readiness&order=log_date.asc&limit=5000', { headers: hdr() });
@@ -750,11 +774,7 @@ async function fetchGarminDaily() {
 }
 async function fetchWellness() {
   const newest = new Date().toISOString().substring(0,10);
-  let icu = [];
-  try {
-    const r = await fetch(`${BASE}/athlete/${ATHLETE}/wellness?oldest=2020-01-01&newest=${newest}`, { headers: hdr() });
-    if (r.ok) icu = await r.json(); else window.ICU_DOWN = r.status;
-  } catch (e) { window.ICU_DOWN = 'netværk'; }
+  const icu = [];   // wellness hentes ikke længere fra intervals.icu – garmin_daily er eneste kilde
   const map = {};
   icu.forEach(w => { if (w && w.id) map[w.id] = w; });
   const n = v => (v == null || v === '' ? null : +v);
@@ -1445,7 +1465,6 @@ function renderSleepLink() {
   if (none.length) h += `<br><br><span style="color:var(--muted)">Ingen målbar forskel: ${none.map(r => r.f.k.toLowerCase()).join(', ')}.</span>`;
   el.innerHTML = h;
 }
-
 function renderVolume() {
   const el = document.getElementById('ins-vol-text');
   const r = runs(activities), cur = weekKey({ start_date_local: new Date().toISOString().substring(0, 10) });
@@ -1503,7 +1522,10 @@ function renderWellness(w) {
   }
 
   // Weight chart
-  const wW = w.filter(x=>x.weight).sort((a,b)=>a.id.localeCompare(b.id));
+  // vægten kommer fra din egen vægttabel (Garmin-vægten); Intervals er kun reserve
+  const wFrom = w.length ? w.map(x=>x.id).sort()[0] : '0000';
+  const wOwn = weighRows.filter(r=>r.log_date>=wFrom).map(r=>({id:r.log_date,weight:+r.weight_kg}));
+  const wW = wOwn.length ? wOwn : w.filter(x=>x.weight).sort((a,b)=>a.id.localeCompare(b.id));
   if (wW.length) {
     mkChart('cWeight', { type:'line', data:{ labels:wW.map(x=>x.id), datasets:[{ data:wW.map(x=>x.weight), borderColor:'rgba(245,158,11,.8)', backgroundColor:'rgba(245,158,11,.1)', fill:true, tension:.3, pointRadius:2 }] }, options:opts({y:{title:{display:true,text:'kg'}}}) });
   }

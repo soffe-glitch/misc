@@ -24,7 +24,7 @@
       get("readiness_input", "?select=*&log_date=gte." + since + "&order=log_date.asc"),
       get("garmin_activities", "?select=log_date,training_load,anaerobic_te&log_date=gte." + since).catch(function () { return []; }),
       get("daily_log", "?select=log_date,alcohol_units,day_score,tags&log_date=gte." + since).catch(function () { return []; }),
-      get("sick_days", "?select=log_date&log_date=gte." + since).catch(function () { return []; })
+      get("events", "?select=log_date&kind=eq.sygdom&log_date=gte." + since).catch(function () { return []; })
     ]);
     D.days = {}; D.acts = {}; D.logs = {}; D.sick = new Set();
     res[0].forEach(function (r) {
