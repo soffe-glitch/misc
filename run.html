@@ -208,6 +208,12 @@ html, body { overflow-x:hidden; overflow-x:clip; max-width:100%; }
 .apptabs { display:flex; gap:4px; margin:10px 0 2px; background:var(--card2); border-radius:99px; padding:4px; width:fit-content; max-width:100%; }
 .apptabs a { color:var(--muted); font-weight:600; font-size:14px; padding:8px 15px; border-radius:99px; text-decoration:none; white-space:nowrap; }
 .apptabs a.on { background:var(--card); color:var(--text, #F1F4EC); }
+.vs24row { margin-top:12px; }
+.vs24row .top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; font-size:14px; flex-wrap:wrap; }
+.vs24row .top small { color:var(--muted); font-size:12.5px; }
+.vs24bar { height:8px; border-radius:99px; background:var(--card2); overflow:hidden; margin-top:6px; }
+.vs24bar i { display:block; height:100%; border-radius:99px; background:#E5A857; }
+.vs24bar i.won { background:#22c55e; }
 .insmore { margin-top:8px; }
 .insmore > summary { cursor:pointer; font-size:13px; font-weight:600; color:var(--muted); list-style:none; padding:6px 0; }
 .insmore > summary::-webkit-details-marker { display:none; }
@@ -411,6 +417,11 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
   <!-- UDVIKLING -->
   <div class="page" id="p-trend">
     <div class="card ins" style="margin-bottom:12px">
+      <div class="ins-k">2024</div><h3>Har jeg slået 2024-mig?</h3>
+      <div id="vs24-body" class="ins-t"></div>
+    </div>
+
+    <div class="card ins" style="margin-bottom:12px">
       <div class="ins-k">Fart</div><h3>Bliver jeg hurtigere?</h3>
       <div id="faster-text" class="ins-t"></div>
       <div class="ch"><canvas id="cFaster"></canvas></div>
@@ -552,7 +563,7 @@ const ATHLETE = 'i225063';
 const KEY = ''; // fjernet: live-kald går nu gennem Supabase icu-proxy
 const BASE = 'https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/icu-proxy';
 let activities = [], wellness = [], events = [], months = 3, charts = {}, sickDays = [];
-let weighRows = [];
+let weighRows = [], lifeRows = [], dailyRows = [];
 // Garmin data will be injected below
 let garminData = null;
 
@@ -752,9 +763,27 @@ async function fetchActs() {
 }
 
 // sygedage ligger i samme Supabase-projekt som livsstil-dashboardet (markeres dér)
-// morgenvægt fra din egen vægttabel (Garmin-vægten)
+// egne data fra databasen: morgenvægt (Garmin-vægten), Garmin Lifestyle Logging og aftensvarene i Dagens log
 async function fetchOwn() {
-  try { const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/weighins?select=log_date,weight_kg&moment=eq.morgen&order=log_date.asc&limit=5000', { headers: hdr() }); weighRows = r.ok ? await r.json() : []; } catch (e) { weighRows = []; }
+  const get = async p => { try { const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/' + p, { headers: hdr() }); return r.ok ? await r.json() : []; } catch (e) { return []; } };
+  [weighRows, lifeRows, dailyRows] = await Promise.all([
+    get('weighins?select=log_date,weight_kg&moment=eq.morgen&order=log_date.asc&limit=5000'),
+    get('garmin_lifestyle?select=log_date,name,status,amount&name=in.(Alcohol,Late%20Caffeine,Heavy%20Meals,Late%20Meals)&limit=5000'),
+    get('daily_log?select=log_date,people,alone_enough,day_demand&limit=2000')]);
+}
+// dine egne svar om dagen FØR et løb – bruges af coachen i analysen af den enkelte tur
+function dayBefore(iso) {
+  const x = new Date(iso + 'T12:00:00'); x.setDate(x.getDate() - 1); const p = x.toISOString().substring(0, 10);
+  const L = {}; (lifeRows || []).forEach(r => { if (r.log_date === p) L[r.name] = r; });
+  const dl = (dailyRows || []).find(r => r.log_date === p) || {}, o = {};
+  const yn = k => L[k] ? (L[k].status === 'YES' ? 'ja' : 'nej') : null;
+  if (L['Alcohol']) o.alkohol = L['Alcohol'].status === 'YES' ? (L['Alcohol'].amount != null ? +L['Alcohol'].amount + ' genstande' : 'ja') : 'nej';
+  if (yn('Late Caffeine')) o.sen_koffein = yn('Late Caffeine');
+  if (L['Heavy Meals'] || L['Late Meals']) o.tungt_eller_sent_maaltid = (L['Heavy Meals'] && L['Heavy Meals'].status === 'YES') || (L['Late Meals'] && L['Late Meals'].status === 'YES') ? 'ja' : 'nej';
+  if (dl.people) o.mennesker = dl.people === 'faa' ? 'få' : dl.people;
+  if (dl.alone_enough != null) o.nok_alenetid = dl.alone_enough ? 'ja' : 'nej';
+  if (dl.day_demand) o.dagen_kraevede = dl.day_demand + ' end hun havde';
+  return Object.keys(o).length ? o : null;
 }
 async function fetchSick() {
   try {
@@ -1372,6 +1401,7 @@ function renderInsightCards() {
   renderRecovery();
   renderSleepLink();
   renderVolume();
+  try { renderVs2024(); } catch (e) { console.warn('vs2024', e); }
 }
 
 function renderFitness() {
@@ -1463,7 +1493,73 @@ function renderSleepLink() {
   let h = res.length ? `Det der betyder mest for dig: <b>${res[0].f.k.toLowerCase()}</b>.<br><br>` + res.slice(0, 3).map(line).join('<br>')
     : 'Ingen af faktorerne gør en målbar forskel på dine rolige ture. Din form er stabil på tværs af dage.';
   if (none.length) h += `<br><br><span style="color:var(--muted)">Ingen målbar forskel: ${none.map(r => r.f.k.toLowerCase()).join(', ')}.</span>`;
-  el.innerHTML = h;
+  el.innerHTML = h + ownPatterns(easy);
+}
+// dagen før løbet: dine egne svar fra Garmin Lifestyle Logging og Dagens log. Kræver mindst 4 rolige ture i hver gruppe.
+function ownPatterns(easy) {
+  const prev = iso => { const x = new Date(iso + 'T12:00:00'); x.setDate(x.getDate() - 1); return x.toISOString().substring(0, 10); };
+  const life = {}; (lifeRows || []).forEach(r => { (life[r.log_date] = life[r.log_date] || {})[r.name] = r.status; });
+  const dl = {}; (dailyRows || []).forEach(r => dl[r.log_date] = r);
+  const yn = (o, k) => o && o[k] != null ? o[k] === 'YES' : null;
+  const B = [
+    { k: 'alkohol dagen før', get: a => yn(life[prev(d(a))], 'Alcohol') },
+    { k: 'sen koffein dagen før', get: a => yn(life[prev(d(a))], 'Late Caffeine') },
+    { k: 'et tungt eller sent måltid dagen før', get: a => { const o = life[prev(d(a))]; if (!o || (o['Heavy Meals'] == null && o['Late Meals'] == null)) return null; return o['Heavy Meals'] === 'YES' || o['Late Meals'] === 'YES'; } },
+    { k: 'mange mennesker dagen før', get: a => { const r = dl[prev(d(a))]; return r && r.people ? r.people === 'mange' : null; } },
+    { k: 'for lidt alenetid dagen før', get: a => { const r = dl[prev(d(a))]; return r && r.alone_enough != null ? r.alone_enough === false : null; } },
+    { k: 'en dag der krævede mere, end du havde', get: a => { const r = dl[prev(d(a))]; return r && r.day_demand ? r.day_demand === 'mere' : null; } }
+  ];
+  const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v[Math.floor(v.length / 2)]; };
+  const found = [], flat = [], wait = [];
+  B.forEach(f => {
+    const rows = easy.map(a => ({ v: f.get(a), p: pace(a) })).filter(r => r.v != null);
+    const yes = rows.filter(r => r.v), no = rows.filter(r => !r.v);
+    if (yes.length < 4 || no.length < 4) { wait.push(`${f.k} (${yes.length})`); return; }
+    const diff = (med(yes.map(r => r.p)) - med(no.map(r => r.p))) * 60;   // + = langsommere efter "ja"
+    (Math.abs(diff) >= 6 ? found : flat).push({ f, diff, ny: yes.length, nn: no.length });
+  });
+  let h = '<br><br><b>Dagen før løbet</b> (dine egne svar)<br>';
+  if (found.length) h += found.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff)).map(r => `Efter <b>${r.f.k}</b> er dine rolige ture <b class="${r.diff > 0 ? 'bad' : 'good'}">${Math.round(Math.abs(r.diff))} sek./km ${r.diff > 0 ? 'langsommere' : 'hurtigere'}</b> (${r.ny} mod ${r.nn} ture)`).join('<br>');
+  else h += flat.length ? 'Ingen af dine svar gør en målbar forskel endnu.' : 'Der er ikke nok ture med svar endnu til at sige noget.';
+  if (flat.length) h += `<br><span style="color:var(--muted)">Ingen målbar forskel: ${flat.map(r => r.f.k).join(', ')}.</span>`;
+  if (wait.length) h += `<br><span style="color:var(--muted)">Samler stadig data (mindst 4 ture i hver gruppe; tallet er ture efter et ja): ${wait.join(', ')}.</span>`;
+  return h;
+}
+
+// Dig mod dit bedste 2024: kondital, ugemængde, længste tur og tempo på rolige ture.
+// 2024-tallet er årets top (for tempo: bedste måned), "nu" er de seneste 4-8 uger.
+function renderVs2024() {
+  const el = document.getElementById('vs24-body'); if (!el) return;
+  const R = runs(activities), yr = a => (a.start_date_local || '').substring(0, 4), km = a => (a.distance || 0) / 1000;
+  const R24 = R.filter(a => yr(a) === '2024'); if (R24.length < 20) { el.textContent = 'Jeg har ikke nok løb fra 2024 til at sammenligne.'; return; }
+  const age = a => (Date.now() - new Date(a.start_date_local).getTime()) / DAY, med = arr => { const v = arr.slice().sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const rows = [];
+  // kondital
+  const v24 = Math.max(0, ...R24.filter(a => a.vo2max).map(a => +a.vo2max)), vNow = (R.filter(a => a.vo2max).sort((x, y) => x.start_date_local.localeCompare(y.start_date_local)).pop() || {}).vo2max;
+  if (v24 && vNow) rows.push({ k: 'Kondital (VO2max)', then: fmtD(v24, 0), now: fmtD(+vNow, 0), pct: +vNow / v24, left: v24 - +vNow > 0 ? fmtD(v24 - +vNow) + ' point' : null });
+  // ugemængde: bedste 4-ugers snit i 2024 mod seneste 4 hele uger
+  const wk = {}; R.forEach(a => { const k = weekKey(a); wk[k] = (wk[k] || 0) + km(a); });
+  const keys24 = Object.keys(wk).filter(k => k.startsWith('2024')).sort(); let best4 = 0;
+  for (let i = 0; i + 3 < keys24.length; i++) best4 = Math.max(best4, (wk[keys24[i]] + wk[keys24[i + 1]] + wk[keys24[i + 2]] + wk[keys24[i + 3]]) / 4);
+  const cur = weekKey({ start_date_local: new Date().toISOString().substring(0, 10) }); let t = new Date(cur + 'T12:00:00'), sum = 0;
+  for (let i = 0; i < 4; i++) { t = new Date(t.getTime() - 7 * DAY); sum += wk[t.toISOString().substring(0, 10)] || 0; }
+  const now4 = sum / 4;
+  if (best4) rows.push({ k: 'Km om ugen (4 uger i træk)', then: fmtD(best4, 0) + ' km', now: fmtD(now4, 0) + ' km', pct: now4 / best4, left: best4 - now4 > 0 ? fmtD(best4 - now4, 0) + ' km/uge' : null });
+  // længste tur
+  const l24 = Math.max(0, ...R24.map(km)), lNow = Math.max(0, ...R.filter(a => age(a) <= 60).map(km));
+  if (l24) rows.push({ k: 'Længste tur', then: fmtD(l24) + ' km', now: fmtD(lNow) + ' km', pct: lNow / l24, left: l24 - lNow > 0 ? fmtD(l24 - lNow) + ' km' : null });
+  // tempo på rolige ture (lav puls, mindst 3 km): bedste måned i 2024 mod de seneste 30-60 dage
+  const lim = getZ2Range().high + 5, easy = a => a.average_heartrate && a.average_heartrate <= lim && km(a) >= 3 && pace(a);
+  const byM = {}; R24.filter(easy).forEach(a => { const mm = a.start_date_local.substring(0, 7); (byM[mm] = byM[mm] || []).push(pace(a)); });
+  const p24 = Math.min(...Object.values(byM).filter(v => v.length >= 4).map(med));
+  let recent = R.filter(a => age(a) <= 30 && easy(a)); if (recent.length < 4) recent = R.filter(a => age(a) <= 60 && easy(a));
+  const pNow = recent.length >= 3 ? med(recent.map(pace)) : null;
+  if (isFinite(p24) && pNow) rows.push({ k: 'Tempo på rolige ture', then: fmtPace(p24) + '/km', now: fmtPace(pNow) + '/km', pct: p24 / pNow, left: pNow - p24 > 0 ? Math.round((pNow - p24) * 60) + ' sek./km' : null });
+  if (!rows.length) { el.textContent = 'Jeg mangler data til at sammenligne med 2024.'; return; }
+  const won = rows.filter(r => r.pct >= 1).length;
+  const head = won === rows.length ? `<b class="good">Ja – du har slået 2024-dig på alle ${rows.length} mål.</b>` : won ? `Du har slået 2024-dig på <b class="good">${won} af ${rows.length}</b> mål.` : `Ikke endnu – men du kan se, hvor langt der er på hvert mål.`;
+  el.innerHTML = head + rows.map(r => `<div class="vs24row"><div class="top"><span><b>${r.k}</b></span><small>${r.now} nu · ${r.then} i 2024${r.pct >= 1 ? ' · <b class="good">slået ✓</b>' : r.left ? ' · mangler ' + r.left : ''}</small></div><div class="vs24bar"><i class="${r.pct >= 1 ? 'won' : ''}" style="width:${Math.max(4, Math.min(100, Math.round(r.pct * 100)))}%"></i></div></div>`).join('')
+    + `<div class="ra-sum" style="margin-top:10px">2024-tallene er årets top (tempo: din bedste måned). "Nu" er dine seneste 4–8 uger.</div>`;
 }
 function renderVolume() {
   const el = document.getElementById('ins-vol-text');
@@ -1476,10 +1572,15 @@ function renderVolume() {
   const longest = Math.max(0, ...r.filter(a => (Date.now() - new Date(a.start_date_local).getTime()) / DAY <= 28).map(a => (a.distance || 0) / 1000));
   let ch = '';
   if (p4 > 0) { const pc = (a4 - p4) / p4 * 100; ch = Math.abs(pc) < 8 ? ' – nogenlunde som de 4 uger før' : pc > 0 ? ` – <b class="good">op ${Math.round(pc)} %</b> fra de 4 uger før (${fmtD(p4, 0)} km)` : ` – <b class="bad">ned ${Math.round(-pc)} %</b> fra de 4 uger før (${fmtD(p4, 0)} km)`; }
-  el.innerHTML = `Du løber <b>${fmtD(a4, 0)} km om ugen</b> i snit de seneste 4 uger${ch}. Længste tur de seneste 4 uger: <b>${fmtD(longest)} km</b>.`;
-  mkChart('cVol', { type: 'bar', data: { labels: weeks, datasets: [{ data: weeks.map(k => +(m[k] || 0).toFixed(1)), borderRadius: 4, backgroundColor: weeks.map(k => k === cur ? 'rgba(34,197,94,.3)' : 'rgba(34,197,94,.7)') }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { title: c => 'Uge fra ' + weeks[c[0].dataIndex], label: c => ` ${c.raw} km${weeks[c.dataIndex] === cur ? ' (i gang)' : ''}` } } },
-      scales: { x: { ticks: { color: '#8b8fa3', maxTicksLimit: 6, callback: (v, i) => weeks[i].substring(5) }, grid: { display: false } }, y: { ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'km', color: '#8b8fa3' } } } } });
+  // korte vaneture (under 3 km) mod rigtige ture
+  const SHORT = 3, mS = {}, mL = {}; r.forEach(a => { const k = weekKey(a), km = (a.distance || 0) / 1000; (km < SHORT ? mS : mL)[k] = ((km < SHORT ? mS : mL)[k] || 0) + km; });
+  const r4 = r.filter(a => last4.includes(weekKey(a))), s4 = r4.filter(a => (a.distance || 0) / 1000 < SHORT);
+  const kmAll = r4.reduce((x, a) => x + (a.distance || 0) / 1000, 0), kmS = s4.reduce((x, a) => x + (a.distance || 0) / 1000, 0);
+  const split = r4.length ? ` <b>${s4.length} af ${r4.length} ture</b> var korte vaneture under ${SHORT} km. De holder kæden i gang, men står kun for <b>${kmAll ? Math.round(kmS / kmAll * 100) : 0} %</b> af kilometerne – resten kommer fra de ${r4.length - s4.length} rigtige ture.` : '';
+  el.innerHTML = `Du løber <b>${fmtD(a4, 0)} km om ugen</b> i snit de seneste 4 uger${ch}. Længste tur de seneste 4 uger: <b>${fmtD(longest)} km</b>.${split}`;
+  mkChart('cVol', { type: 'bar', data: { labels: weeks, datasets: [{ label: 'Rigtige ture', data: weeks.map(k => +(mL[k] || 0).toFixed(1)), borderRadius: 4, backgroundColor: 'rgba(34,197,94,.75)', stack: 'v' }, { label: 'Korte vaneture', data: weeks.map(k => +(mS[k] || 0).toFixed(1)), borderRadius: 4, backgroundColor: 'rgba(229,168,87,.8)', stack: 'v' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8b8fa3', boxWidth: 12 } }, tooltip: { callbacks: { title: c => 'Uge fra ' + weeks[c[0].dataIndex], label: c => ` ${c.dataset.label}: ${c.raw} km${weeks[c.dataIndex] === cur ? ' (i gang)' : ''}` } } },
+      scales: { x: { stacked: true, ticks: { color: '#8b8fa3', maxTicksLimit: 6, callback: (v, i) => weeks[i].substring(5) }, grid: { display: false } }, y: { stacked: true, ticks: { color: '#8b8fa3' }, grid: { color: 'rgba(42,46,61,.5)' }, title: { display: true, text: 'km', color: '#8b8fa3' } } } } });
 }
 
 
@@ -2129,7 +2230,7 @@ function renderRunDetail() {
     const rdFallback=`${km.toFixed(2)} km på ${a.moving_time?Math.round(a.moving_time/60):'–'} min${p?' ('+coachFmtPace(p)+'/km)':''}${a.average_heartrate?', snitpuls '+a.average_heartrate:''}.`;
     setCoachAI('coach-rundetail', rdHead, rdFallback);
     const rdData={
-      fokus:'Analysér netop DETTE ene løb ud fra alle dets data: hvad kendetegnede turen, hvordan gik den, og hvad fortæller puls, pulszoner, belastning, kadence, højdemeter og dagsformen den dag. Skriv IKKE om en trend over flere uger, og nævn IKKE aerob effektivitet.',
+      fokus:'Analysér netop DETTE ene løb ud fra alle dets data: hvad kendetegnede turen, hvordan gik den, og hvad fortæller puls, pulszoner, belastning, kadence, højdemeter og dagsformen den dag. Skriv IKKE om en trend over flere uger, og nævn IKKE aerob effektivitet. Feltet dagen_foer er dine egne svar om dagen før løbet (alkohol, sen koffein, måltider, mennesker, alenetid, hvad dagen krævede): nævn det KUN, hvis det plausibelt hænger sammen med noget, der faktisk skilte sig ud ved turen, og aldrig som bebrejdelse.',
       kontekst:runCtx(),
       dato:day, navn:a.name||null, loebetype:runTypeLabel,
       distance_km:+km.toFixed(2), varighed_min:a.moving_time?Math.round(a.moving_time/60):null, tempo_min_km:p?coachFmtPace(p):null,
@@ -2138,6 +2239,7 @@ function renderRunDetail() {
       traeningsbelastning:a.icu_training_load||null, hr_zoner_sekunder:a.icu_hr_zone_times||null,
       foelelse:a.feel||null, anstrengelse:a.perceived_exertion||a.icu_rpe||null,
       hvile_dage_foer:restDays,
+      dagen_foer:dayBefore(day),
       vs_snit:{tempo_min_km:avgP?coachFmtPace(avgP):null, puls:avgHRv?Math.round(avgHRv):null},
       dagsform:{soevn_timer:wl.sleepSecs?+(wl.sleepSecs/3600).toFixed(1):null, soevn_score:wl.sleepScore||null, hrv:wl.hrv||null, hvilepuls:wl.restingHR||null}
     };
