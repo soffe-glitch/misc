@@ -203,15 +203,21 @@ img,svg,canvas { max-width:100%; }
 #coach-overview .insight h3 { color:#9DB8AA; font-family:"Hanken Grotesk",sans-serif; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
 #coach-overview .insight .finding { font-family:"Fraunces",Georgia,serif; font-weight:400; font-size:24px; line-height:1.25; color:#F1F4EC; margin:10px 0; }
 #coach-overview .insight p { color:#B5C7BD; position:relative; }
-.statstrip { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x proximity; padding:2px 2px 6px; margin:0 -14px 8px; padding-left:14px; padding-right:14px; scrollbar-width:none; scroll-padding-left:14px; }
+.statstrip { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; padding:2px 0 6px; margin:0 0 8px; }
+html, body { overflow-x:hidden; overflow-x:clip; max-width:100%; }
+.insmore { margin-top:8px; }
+.insmore > summary { cursor:pointer; font-size:13px; font-weight:600; color:var(--muted); list-style:none; padding:6px 0; }
+.insmore > summary::-webkit-details-marker { display:none; }
+.insmore > summary::before { content:'▸ '; }
+.insmore[open] > summary::before { content:'▾ '; }
 .statstrip::-webkit-scrollbar { display:none; }
-.statstrip > .card { flex:0 0 138px; scroll-snap-align:start; padding:14px; box-shadow:none; }
+.statstrip > .card { padding:14px; box-shadow:none; min-width:0; }
 .statstrip > .card .val { font-size:26px; }
 .statstrip > .card .sub { display:none; }
 .chartcard .ch-head, .card > h3.hasinfo { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .chartcard .ch-head { flex-wrap:wrap; margin-bottom:14px; }
 .chartcard .ch-head h3 { margin:0; }
-.segctl { display:flex; gap:4px; background:var(--card2); padding:3px; border-radius:99px; overflow-x:auto; max-width:100%; scrollbar-width:none; }
+.segctl { display:flex; flex-wrap:wrap; gap:4px; background:var(--card2); padding:3px; border-radius:18px; max-width:100%; }
 .segctl::-webkit-scrollbar { display:none; }
 .segctl button { flex:none; border:0; background:none; color:var(--muted); font:inherit; font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:99px; cursor:pointer; white-space:nowrap; }
 .segctl button.on { background:var(--accent); color:var(--on-accent); }
@@ -352,7 +358,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
 <div class="main" id="app">
   <div class="loading" id="loader">
     <div class="spinner"></div>
-    <p style="color:var(--muted)">Henter data fra Intervals.icu...</p>
+    <p style="color:var(--muted)">Henter dine løb…</p>
   </div>
 
   <!-- OVERBLIK -->
@@ -538,6 +544,7 @@ const ATHLETE = 'i225063';
 const KEY = ''; // fjernet: live-kald går nu gennem Supabase icu-proxy
 const BASE = 'https://kphfvznawqcslkubdsyy.supabase.co/functions/v1/icu-proxy';
 let activities = [], wellness = [], events = [], months = 3, charts = {}, sickDays = [];
+let weighRows = [], lifeRows = [], dailyRows = [];
 // Garmin data will be injected below
 let garminData = null;
 
@@ -596,12 +603,23 @@ async function fetchGarminActs() {
 }
 
 // ---- Init ----
+// graferne under de fem spørgsmål er foldet sammen, så siden er kort; teksten med svaret står altid fremme
+function foldInsightCharts() {
+  document.querySelectorAll('#p-trend .card.ins').forEach(card => {
+    const ch = card.querySelector(':scope > .ch'); if (!ch || card.querySelector('.insmore')) return;
+    const det = document.createElement('details'); det.className = 'insmore';
+    const sum = document.createElement('summary'); sum.textContent = 'Vis graf'; det.appendChild(sum);
+    card.insertBefore(det, ch); det.appendChild(ch);
+    const after = det.nextElementSibling; if (after && after.classList.contains('ra-sum')) det.appendChild(after);
+    det.addEventListener('toggle', () => { sum.textContent = det.open ? 'Skjul graf' : 'Vis graf'; if (det.open) setTimeout(() => window.dispatchEvent(new Event('resize')), 50); });
+  });
+}
 async function init() {
-  setupTabs();
+  setupTabs(); foldInsightCharts();
   setupPeriod();
   try {
     await loadGarmin();
-    [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick()]);
+    [activities, wellness, events, sickDays] = await Promise.all([fetchActs(), fetchWellness(), fetchEvents(), fetchSick(), fetchOwn()]);
     try { if (window.Readiness) await Readiness.load(400); } catch (e) { console.warn("Readiness", e); }
     await fetchSyncStatus();
     if (typeof GARMIN_DATA !== 'undefined') garminData = GARMIN_DATA;
@@ -732,9 +750,17 @@ async function fetchActs() {
 }
 
 // sygedage ligger i samme Supabase-projekt som livsstil-dashboardet (markeres dér)
+// egne data fra databasen: morgenvægt (Garmin-vægten), Garmin Lifestyle Logging og aftensvarene i Dagens log
+async function fetchOwn() {
+  const get = async p => { try { const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/' + p, { headers: hdr() }); return r.ok ? await r.json() : []; } catch (e) { return []; } };
+  [weighRows, lifeRows, dailyRows] = await Promise.all([
+    get('weighins?select=log_date,weight_kg&moment=eq.morgen&order=log_date.asc&limit=5000'),
+    get('garmin_lifestyle?select=log_date,name,status&name=in.(Alcohol,Late%20Caffeine,Heavy%20Meals,Late%20Meals)&limit=5000'),
+    get('daily_log?select=log_date,people,alone_enough,day_demand&limit=2000')]);
+}
 async function fetchSick() {
   try {
-    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/sick_days?select=log_date&order=log_date.asc', { headers: hdr() });
+    const r = await fetch('https://kphfvznawqcslkubdsyy.supabase.co/rest/v1/events?select=log_date&kind=eq.sygdom&order=log_date.asc', { headers: hdr() });
     if (!r.ok) return [];
     return (await r.json()).map(x => x.log_date);
   } catch(e) { return []; }
@@ -1443,7 +1469,37 @@ function renderSleepLink() {
   let h = res.length ? `Det der betyder mest for dig: <b>${res[0].f.k.toLowerCase()}</b>.<br><br>` + res.slice(0, 3).map(line).join('<br>')
     : 'Ingen af faktorerne gør en målbar forskel på dine rolige ture. Din form er stabil på tværs af dage.';
   if (none.length) h += `<br><br><span style="color:var(--muted)">Ingen målbar forskel: ${none.map(r => r.f.k.toLowerCase()).join(', ')}.</span>`;
-  el.innerHTML = h;
+  el.innerHTML = h + ownPatterns(easy);
+}
+// dagen før løbet: dine egne svar fra Garmin Lifestyle Logging og Dagens log. Kræver mindst 4 rolige ture i hver gruppe.
+function ownPatterns(easy) {
+  const prev = iso => { const x = new Date(iso + 'T12:00:00'); x.setDate(x.getDate() - 1); return x.toISOString().substring(0, 10); };
+  const life = {}; (lifeRows || []).forEach(r => { (life[r.log_date] = life[r.log_date] || {})[r.name] = r.status; });
+  const dl = {}; (dailyRows || []).forEach(r => dl[r.log_date] = r);
+  const yn = (o, k) => o && o[k] != null ? o[k] === 'YES' : null;
+  const B = [
+    { k: 'alkohol dagen før', get: a => yn(life[prev(d(a))], 'Alcohol') },
+    { k: 'sen koffein dagen før', get: a => yn(life[prev(d(a))], 'Late Caffeine') },
+    { k: 'et tungt eller sent måltid dagen før', get: a => { const o = life[prev(d(a))]; if (!o || (o['Heavy Meals'] == null && o['Late Meals'] == null)) return null; return o['Heavy Meals'] === 'YES' || o['Late Meals'] === 'YES'; } },
+    { k: 'mange mennesker dagen før', get: a => { const r = dl[prev(d(a))]; return r && r.people ? r.people === 'mange' : null; } },
+    { k: 'for lidt alenetid dagen før', get: a => { const r = dl[prev(d(a))]; return r && r.alone_enough != null ? r.alone_enough === false : null; } },
+    { k: 'en dag der krævede mere, end du havde', get: a => { const r = dl[prev(d(a))]; return r && r.day_demand ? r.day_demand === 'mere' : null; } }
+  ];
+  const med = arr => { const v = arr.slice().sort((x, y) => x - y); return v[Math.floor(v.length / 2)]; };
+  const found = [], flat = [], wait = [];
+  B.forEach(f => {
+    const rows = easy.map(a => ({ v: f.get(a), p: pace(a) })).filter(r => r.v != null);
+    const yes = rows.filter(r => r.v), no = rows.filter(r => !r.v);
+    if (yes.length < 4 || no.length < 4) { wait.push(`${f.k} (${yes.length})`); return; }
+    const diff = (med(yes.map(r => r.p)) - med(no.map(r => r.p))) * 60;   // + = langsommere efter "ja"
+    (Math.abs(diff) >= 6 ? found : flat).push({ f, diff, ny: yes.length, nn: no.length });
+  });
+  let h = '<br><br><b>Dagen før løbet</b> (dine egne svar)<br>';
+  if (found.length) h += found.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff)).map(r => `Efter <b>${r.f.k}</b> er dine rolige ture <b class="${r.diff > 0 ? 'bad' : 'good'}">${Math.round(Math.abs(r.diff))} sek./km ${r.diff > 0 ? 'langsommere' : 'hurtigere'}</b> (${r.ny} mod ${r.nn} ture)`).join('<br>');
+  else h += flat.length ? 'Ingen af dine svar gør en målbar forskel endnu.' : 'Der er ikke nok ture med svar endnu til at sige noget.';
+  if (flat.length) h += `<br><span style="color:var(--muted)">Ingen målbar forskel: ${flat.map(r => r.f.k).join(', ')}.</span>`;
+  if (wait.length) h += `<br><span style="color:var(--muted)">Samler stadig data (mindst 4 ture i hver gruppe; tallet er ture efter et ja): ${wait.join(', ')}.</span>`;
+  return h;
 }
 
 function renderVolume() {
@@ -1503,7 +1559,10 @@ function renderWellness(w) {
   }
 
   // Weight chart
-  const wW = w.filter(x=>x.weight).sort((a,b)=>a.id.localeCompare(b.id));
+  // vægten kommer fra din egen vægttabel (Garmin-vægten); Intervals er kun reserve
+  const wFrom = w.length ? w.map(x=>x.id).sort()[0] : '0000';
+  const wOwn = weighRows.filter(r=>r.log_date>=wFrom).map(r=>({id:r.log_date,weight:+r.weight_kg}));
+  const wW = wOwn.length ? wOwn : w.filter(x=>x.weight).sort((a,b)=>a.id.localeCompare(b.id));
   if (wW.length) {
     mkChart('cWeight', { type:'line', data:{ labels:wW.map(x=>x.id), datasets:[{ data:wW.map(x=>x.weight), borderColor:'rgba(245,158,11,.8)', backgroundColor:'rgba(245,158,11,.1)', fill:true, tension:.3, pointRadius:2 }] }, options:opts({y:{title:{display:true,text:'kg'}}}) });
   }
