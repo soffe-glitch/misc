@@ -817,9 +817,10 @@ function dayBudget(){
   const actKcal=(S.gactsKcalToday||0);
   const runKm=(S.workouts||[]).filter(w=>w.log_date===t&&w.kind==="loeb").reduce((a,w)=>a+(+w.distance_km||0),0);
   const actToday=Math.max(statAct, actKcal>0?actKcal:runKm*66);  // Garmins aktivitets-kcal når de findes, ellers løbe-km×66
-  const usedAct=Math.max(typAct||0, actToday);
+  // Kun optjent aktivitet tæller (valgt 16/11): budgettet starter med hvile og vokser, efterhånden som Garmin måler aktivitet.
+  const usedAct=actToday;
   const burn=Math.round(bmrFull+usedAct+corr);
-  const src=actToday>(typAct||0)?(actToday===actKcal&&actKcal>0?"Garmin-aktiviteter i dag":actToday===statAct?"Garmin i dag":"løbe-km i dag"):"rolig dag";
+  const src=actToday>0?(actToday===actKcal&&actKcal>0?"Garmin-aktiviteter i dag":actToday===statAct?"Garmin i dag":"løbe-km i dag"):"kun hvile indtil videre";
   return {ok:true,budget:burn-deficit,burn,deficit,corr,bmrFull:Math.round(bmrFull),typAct:Math.round(typAct||0),actToday:Math.round(actToday),src};
 }
 // ---------- Matematikkur math ----------
