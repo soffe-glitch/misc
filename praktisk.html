@@ -112,6 +112,23 @@ header h1{font-size:30px;line-height:1.1}
 .addtoday{cursor:pointer;background:var(--accent-soft);color:var(--accent-ink);border-color:transparent;font-weight:600}
 .plan{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .plan input{border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:6px 8px;min-height:36px}
+.add[hidden]{display:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:16px;padding:12px 14px;min-height:86px;box-shadow:var(--shadow)}
+.tile:hover{border-color:var(--accent)}
+.tile[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.tile .ti{font-size:22px;line-height:1}
+.tile .tn{font-weight:600;margin-top:4px}
+.tile .tc{font-size:13px;color:var(--muted)}
+.newbtn{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink);border-radius:999px;padding:8px 16px;font-weight:600;min-height:40px}
+.bar{height:6px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.hero .actions .btn.go{flex:1 1 100%}
+.hero .actions .btn.ghost{flex:1 1 0;padding:8px 8px;font-size:13.5px;line-height:1.25}
+html.framed{overflow:hidden}
+html.framed body{margin:0}
+html.framed .wrap{padding-block:10px 24px}
+html.framed header .eyebrow,html.framed header h1{display:none}
 @media (prefers-reduced-motion:no-preference){.hero h2{transition:opacity .15s}}
 </style>
 </head>
@@ -122,12 +139,10 @@ header h1{font-size:30px;line-height:1.1}
       <div class="eyebrow">Livsstil · Misc</div>
       <h1>Praktisk</h1>
     </div>
-    <div class="count tnum" id="count"></div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="count tnum" id="count"></div><button class="newbtn" type="button" data-act="toggleAdd" id="newBtn">＋ Ny opgave</button></div>
   </header>
 
   <section class="hero" aria-live="polite" id="hero"></section>
-
-  <section id="mySec"></section>
 
   <section class="filters" aria-label="Tilpas forslag">
     <div class="frow"><span class="flabel">Min energi i dag</span>
@@ -136,7 +151,9 @@ header h1{font-size:30px;line-height:1.1}
       <div class="seg" id="f-time"></div></div>
   </section>
 
-  <form class="add" id="addForm" autocomplete="off">
+  <section id="mySec"></section>
+
+  <form class="add" id="addForm" autocomplete="off" hidden>
     <div class="line">
       <input type="text" id="aTitle" placeholder="Ny opgave, fx Tøm opvaskemaskinen" aria-label="Opgave" required maxlength="120">
       <button class="btn primary" type="submit">Tilføj</button>
@@ -170,13 +187,24 @@ const repeatLabel=n=>n<=0?"":n===1?"hver dag":n===7?"hver uge":n===30?"hver mån
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today=()=>{const d=new Date();return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/864e5)};
-const fmtMin=m=>m>=60?(m/60)+" t":m+" min";
+const fmtMin=m=>m>=60?String(Math.round(m/6)/10).replace(".",",")+" t":m+" min";
+const AICON={"Køkken":"🍽️","Badeværelse":"🚿","Tøj":"👕","Oprydning":"🧺","Rengøring":"🧽","Have og ude":"🌿","Indkøb":"🛒","Papirer og penge":"📄","Ærinder":"🚲","Andet":"✨"};
 
 let weekCount=null;
 let tasks=[];           // [{id,...}]
 let store=null;         // {save(task), remove(id)}
 let energy=2, maxMin=0; // maxMin 0 = ingen grænse
-let skip=0, open=null, sureDel=null, showDone=false, showLater=false;
+let open=null, sureDel=null, showDone=false, showLater=false, openArea=null;
+// forslaget: tilfældigt valgt, og dem du har sagt "en anden" til i dag kommer ikke igen
+let pick=null, passed=new Set();
+try{const p=JSON.parse(localStorage.getItem("praktisk-passed")||"{}");if(p.d===today())passed=new Set(p.ids)}catch(e){}
+const savePassed=()=>{try{localStorage.setItem("praktisk-passed",JSON.stringify({d:today(),ids:[...passed]}))}catch(e){}};
+function choose(c){
+  const cur=pick&&c.find(t=>t.id===pick); if(cur) return cur;
+  const fresh=c.filter(t=>!passed.has(t.id)); if(!fresh.length){pick=null;return null}
+  const mine=fresh.filter(isPlannedNow), pool=mine.length?mine:fresh;   // det du selv har valgt til i dag først
+  const t=pool[Math.floor(Math.random()*pool.length)]; pick=t.id; return t;
+}
 try{const p=JSON.parse(localStorage.getItem("praktisk-filter")||"{}");if(p.energy)energy=p.energy;if(p.maxMin!=null)maxMin=p.maxMin}catch(e){}
 const saveFilter=()=>{try{localStorage.setItem("praktisk-filter",JSON.stringify({energy,maxMin}))}catch(e){}};
 
@@ -243,7 +271,12 @@ function renderHero(){
     const sub = readyAll===0 ? "Alt er gjort, eller venter på næste gang det skal gentages." : `${readyAll} opgaver venter. Prøv mere tid eller højere energi, hvis du kan.`;
     h.innerHTML=`<div class="eyebrow">Næste skridt</div><h2>${msg}</h2><p class="why">${sub}</p>`;return;
   }
-  const t=c[skip%c.length];
+  const t=choose(c);
+  if(!t){
+    h.innerHTML=`<div class="eyebrow">Start her</div><h2>Du har været alle forslag igennem.</h2><p class="why">${c.length} opgaver kan stadig gøres i dag, hvis du får lyst.</p>
+      <div class="actions"><button class="btn go" data-act="resetPassed">Vis forslagene igen</button></div>`;return;
+  }
+  const left=c.filter(x=>!passed.has(x.id)).length;
   const why = isPlannedNow(t) ? `Planlagt til ${planLabel(t.planned,t.plannedTime)}.` : t.min<=15 ? "Den er hurtig, så det er nemt at komme i gang." : "Den passer til den energi og tid, du har valgt.";
   h.innerHTML=`<div class="eyebrow">Start her · ${esc(t.area)}</div>
     <h2>${esc(t.title)}</h2>
@@ -251,8 +284,9 @@ function renderHero(){
     <p class="why">${why}</p>
     <div class="actions">
       <button class="btn go" data-act="done" data-id="${t.id}">Gjort</button>
-      ${c.length>1?`<button class="btn ghost" data-act="skip">Ikke den her</button>`:""}
-      <button class="btn ghost" data-act="snooze" data-id="${t.id}">Ikke relevant i dag</button>
+      ${left>1?`<button class="btn ghost" data-act="skip" data-id="${t.id}">🎲 En anden</button>`:""}
+      ${isRecurring(t)?`<button class="btn ghost" data-act="skipround" data-id="${t.id}" title="Kommer først igen om ${t.repeat} dage">Spring runden over</button>`:""}
+      <button class="btn ghost" data-act="snooze" data-id="${t.id}">Ikke i dag</button>
     </div>`;
 }
 function renderFilters(){
@@ -261,9 +295,9 @@ function renderFilters(){
 }
 function rowHTML(t,kind){
   let extra="";
-  if(kind==="later"){const d=dueIn(t); extra=isSnoozed(t)?`<span class="chip">udsat til i morgen</span>`:`<span class="chip tnum">om ${d} ${d===1?"dag":"dage"}</span>`;}
+  if(kind==="later"){const d=dueIn(t); extra=isSnoozed(t)?`<span class="chip tnum">${t.snooze-today()===1?"udsat til i morgen":"sprunget over · tilbage om "+(t.snooze-today())+" dage"}</span>`:`<span class="chip tnum">om ${d} ${d===1?"dag":"dage"}</span>`;}
   const isDone=kind==="done";
-  const more=open===t.id?`<div class="more">${kind==="ready"?`<button class="del" style="color:var(--ink)" data-act="snooze" data-id="${t.id}">Ikke relevant i dag</button>`:""}${isSnoozed(t)?`<button class="del" style="color:var(--ink)" data-act="unsnooze" data-id="${t.id}">Hent tilbage i dag</button>`:""}<label class="ev">Gentages hver <input type="number" min="0" max="365" value="${t.repeat}" data-ev="${t.id}" aria-label="Antal dage mellem gentagelser, 0 er aldrig"> dage</label><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
+  const more=open===t.id?`<div class="more">${(kind==="ready"||kind==="my")?`<button class="del" style="color:var(--ink)" data-act="snooze" data-id="${t.id}">Ikke i dag</button>`:""}${(kind==="ready"||kind==="my")&&isRecurring(t)?`<button class="del" style="color:var(--ink)" data-act="skipround" data-id="${t.id}">Spring denne runde over</button>`:""}${isSnoozed(t)?`<button class="del" style="color:var(--ink)" data-act="unsnooze" data-id="${t.id}">Hent tilbage nu</button>`:""}<label class="ev">Gentages hver <input type="number" min="0" max="365" value="${t.repeat}" data-ev="${t.id}" aria-label="Antal dage mellem gentagelser, 0 er aldrig"> dage</label><button class="del ${sureDel===t.id?"sure":""}" data-act="del" data-id="${t.id}">${sureDel===t.id?"Tryk igen for at slette":"Slet"}</button>
     ${isDone?`<button class="del" style="color:var(--ink)" data-act="undo" data-id="${t.id}">Fortryd</button>`:""}</div>`:"";
   return `<div class="row ${isDone?"done":""}">
     <button class="check" data-act="${isDone?"undo":"done"}" data-id="${t.id}" aria-label="${isDone?"Marker som ikke gjort":"Marker som gjort"}: ${esc(t.title)}">${isDone?'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':""}</button>
@@ -279,6 +313,15 @@ function groupByArea(list,kind){
     return `<div class="area"><h3>${esc(a)}<span class="tnum">${items.length} · ${fmtMin(mins)}</span></h3><div class="rows">${items.map(t=>rowHTML(t,kind)).join("")}</div></div>`;
   }).join("");
 }
+function areaTiles(list){
+  const by={};list.forEach(t=>(by[t.area]??=[]).push(t));
+  const order=[...AREAS,...Object.keys(by).filter(a=>!AREAS.includes(a))].filter(a=>by[a]);
+  if(openArea&&!by[openArea]) openArea=null;
+  const tiles=order.map(a=>{const it=by[a],mins=it.reduce((x,t)=>x+t.min,0);
+    return `<button class="tile" type="button" aria-expanded="${openArea===a}" data-act="area" data-area="${esc(a)}"><span class="ti" aria-hidden="true">${AICON[a]||"✨"}</span><span class="tn">${esc(a)}</span><span class="tc tnum">${it.length} · ${fmtMin(mins)}</span></button>`}).join("");
+  const rows=openArea?`<div class="area" style="margin-top:14px"><h3>${esc(openArea)}</h3><div class="rows">${by[openArea].sort((x,y)=>(x.min-y.min)||x.title.localeCompare(y.title,"da")).map(t=>rowHTML(t,"ready")).join("")}</div></div>`:"";
+  return `<div class="tiles">${tiles}</div>${rows}`;
+}
 function renderMyDay(){
   const t0=today();
   const mine=tasks.filter(t=>t.planned===t0&&(isOpenTask(t)||doneToday(t)));
@@ -286,12 +329,13 @@ function renderMyDay(){
   const done=mine.filter(t=>!isOpenTask(t));
   const el=$("mySec");
   if(!mine.length){
-    el.innerHTML=`<div class="sec-h"><h2>Min dag</h2></div><div class="empty">Vælg det, du vil nå i dag: tryk <b>＋ I dag</b> på en opgave, eller skriv en ny ovenfor og vælg “I dag”. Resten behøver du ikke tænke på.</div>`;
+    el.innerHTML=`<div class="sec-h"><h2>Min dag</h2></div><div class="empty">Vælg det, du vil nå i dag: åbn et område nedenfor og tryk <b>＋ I dag</b>, eller tryk <b>＋ Ny opgave</b>. Resten behøver du ikke tænke på.</div>`;
     return;
   }
   const mins=open.reduce((s,t)=>s+t.min,0);
   const hint=open.length?`${done.length} af ${mine.length} gjort · ca. ${fmtMin(mins)} tilbage`:`Det hele er gjort — resten af dagen er din.`;
   el.innerHTML=`<div class="sec-h"><h2>Min dag</h2><span class="note">${hint}</span></div>
+    <div class="bar"><i style="width:${Math.round(done.length/mine.length*100)}%"></i></div>
     <div class="rows" style="margin-top:10px">${open.map(t=>rowHTML(t,"my")).join("")}${done.map(t=>rowHTML(t,"done")).join("")}</div>
     ${open.length?`<button class="toggle" data-act="carry">Flyt det der er tilbage til i morgen</button>`:""}`;
 }
@@ -305,8 +349,8 @@ function render(){
     ? `<div class="sec-h"><h2>Planlagt fremad</h2><button class="toggle" data-act="ics">Hent til kalender</button></div><div class="rows" style="margin-top:10px">${plans.map(t=>rowHTML(t,"ready")).join("")}</div>`
     : "";
   $("ready").innerHTML = ready.length
-    ? `<div class="sec-h"><h2>Kan gøres</h2></div><div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">${groupByArea(ready,"ready")}</div>`
-    : `<div class="empty">Ingen åbne opgaver. Tilføj en ovenfor.</div>`;
+    ? `<div class="sec-h"><h2>Kan gøres</h2><span class="note">${ready.length} opgaver · tryk på et område</span></div><div style="margin-top:10px">${areaTiles(ready)}</div>`
+    : `<div class="empty">Ingen åbne opgaver lige nu.</div>`;
   $("later").innerHTML = later.length
     ? `<div class="sec-h"><h2>Senere</h2><button class="toggle" data-act="toggleLater">${showLater?"Skjul":"Vis "+later.length}</button></div>${showLater?`<div style="display:flex;flex-direction:column;gap:18px;margin-top:10px">${groupByArea(later,"later")}</div>`:""}`:"";
   $("doneSec").innerHTML = done.length
@@ -316,19 +360,24 @@ function render(){
 /* ---- actions ---- */
 const byId=id=>tasks.find(t=>t.id===id);
 function patch(id,p){const t=byId(id);if(!t)return;Object.assign(t,p);render();store&&store.save(t)}
-function markDone(id){const t=byId(id);if(!t)return;skip=0;patch(id,{done:!isRecurring(t),lastDone:today()});if(weekCount!=null)weekCount++;logDone(t)}
+function markDone(id){const t=byId(id);if(!t)return;if(pick===id)pick=null;patch(id,{done:!isRecurring(t),lastDone:today()});if(weekCount!=null)weekCount++;logDone(t)}
 function undo(id){const t=byId(id);if(!t)return;patch(id,{done:false,lastDone:null});if(weekCount>0)weekCount--;unlogDone(id)}
 
 document.addEventListener("change",e=>{const el=e.target;if(!el.dataset||!el.dataset.ev)return;const n=Math.max(0,Math.min(365,Math.round(+el.value)||0));const t=byId(el.dataset.ev);if(!t)return;patch(t.id,{repeat:n,done:n>0?false:t.done})});
 document.addEventListener("click",e=>{
   const el=e.target.closest("button");if(!el)return;
   const {act,id}=el.dataset;
-  if(el.dataset.energy){energy=+el.dataset.energy;skip=0;saveFilter();render();return}
-  if(el.dataset.time!=null&&el.dataset.time!==""&&el.closest("#f-time")){maxMin=+el.dataset.time;skip=0;saveFilter();render();return}
+  if(el.dataset.energy){energy=+el.dataset.energy;pick=null;saveFilter();render();return}
+  if(el.dataset.time!=null&&el.dataset.time!==""&&el.closest("#f-time")){maxMin=+el.dataset.time;pick=null;saveFilter();render();return}
   if(act==="done")markDone(id);
   else if(act==="undo")undo(id);
-  else if(act==="skip"){skip++;render()}
-  else if(act==="snooze"){skip=0;open=null;patch(id,{snooze:today()+1})}
+  else if(act==="skip"){if(id)passed.add(id);pick=null;savePassed();render()}
+  else if(act==="resetPassed"){passed=new Set();pick=null;savePassed();render()}
+  else if(act==="snooze"){if(pick===id)pick=null;open=null;patch(id,{snooze:today()+1})}
+  // spring denne runde over: kommer først igen om ét interval, og tæller ikke som gjort
+  else if(act==="skipround"){const t=byId(id);if(!t)return;if(pick===id)pick=null;open=null;patch(id,{snooze:today()+Math.max(1,t.repeat||1),planned:t.planned===today()?null:t.planned})}
+  else if(act==="area"){openArea=openArea===el.dataset.area?null:el.dataset.area;open=null;render()}
+  else if(act==="toggleAdd"){const f=$("addForm");f.hidden=!f.hidden;$("newBtn").textContent=f.hidden?"＋ Ny opgave":"Luk";if(!f.hidden)$("aTitle").focus()}
   else if(act==="unsnooze"){patch(id,{snooze:null})}
   else if(act==="open"){open=open===id?null:id;sureDel=null;render()}
   else if(act==="del"){
@@ -414,6 +463,11 @@ async function start(){
   render();
 }
 start();
+if(window.self!==window.top){
+  document.documentElement.classList.add("framed");
+  const wrap=document.querySelector(".wrap"), fit=()=>{try{parent.postMessage({praktiskHeight:wrap.offsetHeight+4},location.origin)}catch(e){}};
+  new ResizeObserver(fit).observe(wrap); window.addEventListener("load",fit); fit();
+}
 </script>
 </body>
 </html>
