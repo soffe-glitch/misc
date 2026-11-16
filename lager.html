@@ -184,6 +184,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <h2>Tilføj vare</h2>
     <label class="f wide">Navn<input id="aName" required placeholder="fx Havregryn"></label>
     <label class="f">Kategori<select id="aCat"></select></label>
+    <label class="f">Afdeling i butikken<select id="aSec"></select></label>
     <label class="f" id="aQtyWrap">Antal<input id="aQty" type="number" inputmode="decimal" min="0" step="1" value="1"></label>
     <label class="f" id="aUnitWrap">Enhed (valgfri)<input id="aUnit" placeholder="stk, ds, poser"></label>
     <label class="f" id="aExpWrap">Udløber<input id="aExp" type="date"></label>
@@ -205,6 +206,7 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <h2 id="eTitle">Vare</h2>
     <label class="f wide">Navn<input id="eName" required></label>
     <label class="f">Kategori<select id="eCat"></select></label>
+    <label class="f">Afdeling i butikken<select id="eSec"></select></label>
     <label class="chk wide"><input type="checkbox" id="eFast"><span>Fast vare<br><small>Kommer på indkøbslisten, når den slipper op. Ellers er den et engangskøb, der forsvinder, når den er brugt op.</small></span></label>
     <label class="f" id="eMinWrap">På listen under<input id="eMin" type="number" inputmode="decimal" min="0" step="1"></label>
     <label class="f" id="eUnitWrap">Enhed<input id="eUnit" placeholder="stk"></label>
@@ -239,9 +241,12 @@ const CATS=[
   {k:"medicin",  t:"Medicin", ic:"💊"},
 ];
 const CAT=Object.fromEntries(CATS.map(c=>[c.k,c]));
-// rækkefølgen man går rundt i butikken: køl, tørvarer, frost, husholdning, pleje, medicin
-const SHOP=[["mad","Køl & frisk"],["torvarer","Tørvarer"],["fryser","Frost"],["husholdning","Husholdning"],["pleje","Personlig pleje"],["medicin","Apotek"]];
+// supermarkedets afdelinger i den rækkefølge, man går rundt
+const SHOP=[["frugt","Frugt & grønt"],["brod","Brød & bageri"],["kod","Kød, fisk & pålæg"],["mejeri","Mejeri & æg"],["kolonial","Kolonial"],["drikke","Kaffe & drikke"],["slik","Slik & snacks"],["frost","Frost"],["hus","Husholdning"],["pleje","Personlig pleje"],["apotek","Apotek"]];
+const SECDEF={mad:"mejeri",torvarer:"kolonial",fryser:"frost",husholdning:"hus",pleje:"pleje",medicin:"apotek"};
+const secOf=i=>i.shop_section||SECDEF[i.category]||"kolonial";
 const shopIx=k=>{const i=SHOP.findIndex(x=>x[0]===k);return i<0?99:i;};
+const secOptions=sel=>SHOP.map(([k,t])=>`<option value="${k}"${k===sel?" selected":""}>${t}</option>`).join("");
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -286,13 +291,13 @@ function lifespan(dates){
 function render(){
   const act=items.filter(i=>i.active);
   // indkøbsliste
-  const lowAll=act.filter(isLow).sort((a,b)=>(shopIx(a.category)-shopIx(b.category))||a.name.localeCompare(b.name,"da"));
+  const lowAll=act.filter(isLow).sort((a,b)=>(shopIx(secOf(a))-shopIx(secOf(b)))||a.name.localeCompare(b.name,"da"));
   const low=lowAll.filter(i=>!snoozed(i)), skipped=lowAll.filter(snoozed);
   const L=$("#list");
   L.classList.toggle("empty",!low.length&&!skipped.length);
   L.innerHTML=`<h2>Indkøbsliste</h2>
     <div class="cnt">${low.length?low.length+(low.length===1?" vare mangler eller er ved at slippe op":" varer mangler eller er ved at slippe op"):"Intet mangler lige nu."}</div>
-    <ul>${low.map((i,n)=>(n===0||low[n-1].category!==i.category?`<li class="grp">${(SHOP[shopIx(i.category)]||["","Andet"])[1]}</li>`:"")+`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="bt" data-bought="${i.id}" aria-label="${esc(i.name)} er købt">Købt</button><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
+    <ul>${low.map((i,n)=>(n===0||secOf(low[n-1])!==secOf(i)?`<li class="grp">${(SHOP[shopIx(secOf(i))]||["","Andet"])[1]}</li>`:"")+`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="bt" data-bought="${i.id}" aria-label="${esc(i.name)} er købt">Købt</button><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
     ${skipped.length?`<div class="hidden-note">${skipped.length} sprunget over denne gang · <button id="togSk">${showSkipped?"Skjul":"Vis"}</button></div>`:""}
     ${skipped.length&&showSkipped?`<ul class="skipped">${skipped.map(i=>`<li><i></i><span class="nm">${esc(i.name)} <small>til ${fmtD(i.snooze_until)}</small></span><button class="sk" data-unskip="${i.id}">På listen igen</button></li>`).join("")}</ul>`:""}
     ${low.length?`<div class="acts"><button class="btn primary" id="shareBtn">Del listen</button><button class="btn" id="copyBtn">Kopiér</button></div>`:""}`;
@@ -301,7 +306,7 @@ function render(){
   L.querySelectorAll("[data-unskip]").forEach(b=>b.onclick=()=>skipItem(+b.dataset.unskip,false));
   const tg=$("#togSk"); if(tg) tg.onclick=()=>{showSkipped=!showSkipped;render();};
   if(low.length){
-    const txt=low.map((i,n)=>(n===0||low[n-1].category!==i.category?(n?"\n":"")+(SHOP[shopIx(i.category)]||["","Andet"])[1].toUpperCase()+"\n":"")+"– "+i.name).join("\n");
+    const txt=low.map((i,n)=>(n===0||secOf(low[n-1])!==secOf(i)?(n?"\n":"")+(SHOP[shopIx(secOf(i))]||["","Andet"])[1].toUpperCase()+"\n":"")+"– "+i.name).join("\n");
     $("#copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast("Listen er kopieret");}catch(e){toast("Kunne ikke kopiere");}};
     $("#shareBtn").onclick=async()=>{ if(navigator.share){try{await navigator.share({title:"Indkøb",text:txt});}catch(e){}} else $("#copyBtn").click(); };
   }
@@ -435,7 +440,7 @@ async function saveLine(id,r){
       let item, factor=1;
       if(v==="new"){
         const cat=r.querySelector(".nc").value, st=!!CAT[cat].state;
-        const body={name:r.querySelector(".nn").value.trim()||titleCase(l.receipt_name),category:cat,qty:st?2:+l.qty,min_qty:0,fast:false};
+        const body={name:r.querySelector(".nn").value.trim()||titleCase(l.receipt_name),category:cat,shop_section:SECDEF[cat]||"kolonial",qty:st?2:+l.qty,min_qty:0,fast:false};
         [item]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(item);
       } else {
         item=items.find(i=>i.id===+v); factor=Math.max(1,+r.querySelector(".fac").value||1);
@@ -486,7 +491,7 @@ function openEdit(id){
   const i=items.find(x=>x.id===id); if(!i) return; editId=id;
   const c=CAT[i.category];
   $("#eTitle").textContent=i.name; $("#eName").value=i.name; $("#eCat").innerHTML=catOptions(i.category);
-  $("#eMin").value=+i.min_qty||1; $("#eFast").checked=!!i.fast; $("#eUnit").value=i.unit||""; $("#eDate").value=i.frozen_date||""; $("#eNote").value=i.note||""; $("#eExp").value=i.expires||"";
+  $("#eSec").innerHTML=secOptions(secOf(i)); $("#eMin").value=+i.min_qty||1; $("#eFast").checked=!!i.fast; $("#eUnit").value=i.unit||""; $("#eDate").value=i.frozen_date||""; $("#eNote").value=i.note||""; $("#eExp").value=i.expires||"";
   toggleEditFields(i.category);
   const ds=[...(i.empty_dates||[])].sort();
   $("#eHist").innerHTML=ds.length?`Løbet tør: ${ds.map(fmtD).join(", ")}${lifespan(ds)?" — "+lifespan(ds):""}`:"Ingen historik endnu. Datoen gemmes automatisk, når varen rammer 0.";
@@ -503,7 +508,7 @@ $("#eCancel").onclick=()=>$("#dlg").close();
 $("#editForm").onsubmit=async e=>{
   e.preventDefault();
   const i=items.find(x=>x.id===editId); const cat=$("#eCat").value, c=CAT[cat];
-  const patch={name:$("#eName").value.trim(),category:cat,unit:$("#eUnit").value.trim()||null,note:$("#eNote").value.trim()||null,
+  const patch={name:$("#eName").value.trim(),category:cat,shop_section:$("#eSec").value,unit:$("#eUnit").value.trim()||null,note:$("#eNote").value.trim()||null,
     frozen_date:c.freezer?($("#eDate").value||null):null,expires:$("#eExp").value||null,fast:$("#eFast").checked,updated_at:new Date().toISOString()};
   const willState=c.state&&!patch.unit, wasState=useState(i);
   if(willState){patch.min_qty=2; if(!wasState) patch.qty=+i.qty>0?2:0;}
@@ -527,11 +532,12 @@ function toggleAdd(){
   $("#aQtyWrap").hidden=!!(c.state&&!hasUnit); $("#aUnitWrap").hidden=false; $("#aDateWrap").hidden=!c.freezer;
   if(c.freezer&&!$("#aDate").value) $("#aDate").value=todayISO();
 }
-$("#aCat").onchange=toggleAdd; $("#aUnit").oninput=toggleAdd; toggleAdd();
+$("#aSec").innerHTML=secOptions(SECDEF[$("#aCat").value]);
+$("#aCat").onchange=()=>{toggleAdd();$("#aSec").value=SECDEF[$("#aCat").value]||"kolonial";}; $("#aUnit").oninput=toggleAdd; toggleAdd();
 $("#addForm").onsubmit=async e=>{
   e.preventDefault();
   const cat=$("#aCat").value, c=CAT[cat];
-  const body={name:$("#aName").value.trim(),category:cat,
+  const body={name:$("#aName").value.trim(),category:cat,shop_section:$("#aSec").value,
     unit:$("#aUnit").value.trim()||null};
   const st=c.state&&!body.unit;
   const fast=$("#aFast").checked;
