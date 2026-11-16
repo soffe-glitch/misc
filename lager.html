@@ -138,6 +138,10 @@ section.cat h2 small{font-family:"Hanken Grotesk",sans-serif;font-size:13px;colo
 .add[hidden]{display:none}
 .add{margin-bottom:18px}
 .list li button.bt{font:inherit;font-size:12.5px;font-weight:700;background:#F4F1E8;color:#1E5543;border:0;border-radius:999px;padding:3px 10px;cursor:pointer;flex:none}
+.list ul{columns:1}
+.list li.grp{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#B5C7BD;font-weight:700;padding:10px 0 2px}
+.list li.grp:first-child{padding-top:0}
+.soon .undated{font-size:13.5px;color:var(--muted);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:8px;margin-top:6px}
 .res-h{font-size:13.5px;color:var(--muted);margin:0 2px 10px}
 .item .tag{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;background:var(--surface-2);color:var(--muted);flex:none}
 
@@ -235,6 +239,9 @@ const CATS=[
   {k:"medicin",  t:"Medicin", ic:"💊"},
 ];
 const CAT=Object.fromEntries(CATS.map(c=>[c.k,c]));
+// rækkefølgen man går rundt i butikken: køl, tørvarer, frost, husholdning, pleje, medicin
+const SHOP=[["mad","Køl & frisk"],["torvarer","Tørvarer"],["fryser","Frost"],["husholdning","Husholdning"],["pleje","Personlig pleje"],["medicin","Apotek"]];
+const shopIx=k=>{const i=SHOP.findIndex(x=>x[0]===k);return i<0?99:i;};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -279,13 +286,13 @@ function lifespan(dates){
 function render(){
   const act=items.filter(i=>i.active);
   // indkøbsliste
-  const lowAll=act.filter(isLow).sort((a,b)=>(+a.qty)-(+b.qty)||a.name.localeCompare(b.name,"da"));
+  const lowAll=act.filter(isLow).sort((a,b)=>(shopIx(a.category)-shopIx(b.category))||a.name.localeCompare(b.name,"da"));
   const low=lowAll.filter(i=>!snoozed(i)), skipped=lowAll.filter(snoozed);
   const L=$("#list");
   L.classList.toggle("empty",!low.length&&!skipped.length);
   L.innerHTML=`<h2>Indkøbsliste</h2>
     <div class="cnt">${low.length?low.length+(low.length===1?" vare mangler eller er ved at slippe op":" varer mangler eller er ved at slippe op"):"Intet mangler lige nu."}</div>
-    <ul>${low.map(i=>`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="bt" data-bought="${i.id}" aria-label="${esc(i.name)} er købt">Købt</button><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
+    <ul>${low.map((i,n)=>(n===0||low[n-1].category!==i.category?`<li class="grp">${(SHOP[shopIx(i.category)]||["","Andet"])[1]}</li>`:"")+`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="bt" data-bought="${i.id}" aria-label="${esc(i.name)} er købt">Købt</button><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
     ${skipped.length?`<div class="hidden-note">${skipped.length} sprunget over denne gang · <button id="togSk">${showSkipped?"Skjul":"Vis"}</button></div>`:""}
     ${skipped.length&&showSkipped?`<ul class="skipped">${skipped.map(i=>`<li><i></i><span class="nm">${esc(i.name)} <small>til ${fmtD(i.snooze_until)}</small></span><button class="sk" data-unskip="${i.id}">På listen igen</button></li>`).join("")}</ul>`:""}
     ${low.length?`<div class="acts"><button class="btn primary" id="shareBtn">Del listen</button><button class="btn" id="copyBtn">Kopiér</button></div>`:""}`;
@@ -294,13 +301,20 @@ function render(){
   L.querySelectorAll("[data-unskip]").forEach(b=>b.onclick=()=>skipItem(+b.dataset.unskip,false));
   const tg=$("#togSk"); if(tg) tg.onclick=()=>{showSkipped=!showSkipped;render();};
   if(low.length){
-    const txt=low.map(i=>i.name).join("\n");
+    const txt=low.map((i,n)=>(n===0||low[n-1].category!==i.category?(n?"\n":"")+(SHOP[shopIx(i.category)]||["","Andet"])[1].toUpperCase()+"\n":"")+"– "+i.name).join("\n");
     $("#copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast("Listen er kopieret");}catch(e){toast("Kunne ikke kopiere");}};
     $("#shareBtn").onclick=async()=>{ if(navigator.share){try{await navigator.share({title:"Indkøb",text:txt});}catch(e){}} else $("#copyBtn").click(); };
   }
   // brug snart: udløbet eller inden for advarselsgrænsen
   const soon=act.filter(i=>i.expires&&+i.qty>0&&daysTo(i.expires)<=warnDays(i)).sort((a,b)=>a.expires.localeCompare(b.expires));
-  $("#soon").innerHTML=soon.length?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}</ul></div>`:"";
+  // fryseren: ting der har ligget i 3 måneder eller mere (rød fra 6 måneder), ældste først
+  const inFrz=act.filter(i=>i.category==="fryser"&&+i.qty>0);
+  const old=inFrz.filter(i=>i.frozen_date&&daysSince(i.frozen_date)>=90).sort((a,b)=>a.frozen_date.localeCompare(b.frozen_date));
+  const undated=inFrz.filter(i=>!i.frozen_date).length;
+  const frzLi=old.map(i=>{const m=Math.floor(daysSince(i.frozen_date)/30);return `<li><span>${esc(i.name)} <small style="color:var(--faint)">fryser</small></span><span class="age ${m>=6?"a2":"a1"}">i fryseren ${m} mdr.</span></li>`;}).join("");
+  $("#soon").innerHTML=(soon.length||old.length||undated)?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}${frzLi}</ul>${
+    undated?`<div class="undated"><span>${undated} ting i fryseren har ingen dato, så jeg kan ikke minde dig om dem.</span><button class="btn" type="button" id="frzToday">Tæl fra i dag</button></div>`:""}</div>`:"";
+  const ft=$("#frzToday"); if(ft) ft.onclick=dateFreezer;
   // kategorier som fliser; den åbne kategori foldes ud lige under sin flise
   const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&!snoozed(i)).length;
   const rowsOf=c=>{
@@ -344,6 +358,13 @@ function renderResults(){
   bindRows(R);
   R.querySelectorAll("[data-refill]").forEach(b=>b.onclick=()=>refill(+b.dataset.refill));
   const aq=$("#addQ"); if(aq) aq.onclick=()=>{ $("#addForm").hidden=false; $("#aName").value=query.trim().replace(/^./,c=>c.toLocaleUpperCase("da")); $("#aName").focus(); };
+}
+// giver alle fryser-ting uden dato dags dato, så påmindelsen kan begynde at tælle
+async function dateFreezer(){
+  const t=todayISO(), list=items.filter(i=>i.active&&i.category==="fryser"&&+i.qty>0&&!i.frozen_date);
+  if(!list.length||!confirm(list.length+" ting i fryseren får dags dato som indfrysningsdato. Du kan rette den enkelte ved at trykke på varen.")) return;
+  try{ await api("lager?category=eq.fryser&active=is.true&frozen_date=is.null&qty=gt.0",{method:"PATCH",body:JSON.stringify({frozen_date:t})});
+    list.forEach(i=>i.frozen_date=t); render(); toast("Fryseren tæller fra i dag"); }catch(e){ showErr(e); }
 }
 async function refill(id){
   const i=items.find(x=>x.id===id); if(!i) return;
