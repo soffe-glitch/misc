@@ -93,7 +93,7 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .btn:hover{border-color:var(--accent)} .btn:active{transform:scale(.97)}
 .theme-btn{width:40px; padding:0; font-size:16px; justify-content:center}
 .tabbar{display:flex; gap:4px; margin:6px 0 4px; background:var(--surface-2); border-radius:99px; padding:4px; width:fit-content}
-.tab{border:0; background:transparent; color:var(--muted); font:inherit; font-weight:600; font-size:14px; padding:9px 20px; border-radius:99px; cursor:pointer; transition:background .15s,color .15s}
+.tab{border:0; background:transparent; color:var(--muted); font:inherit; font-weight:600; font-size:14px; padding:9px 15px; white-space:nowrap; border-radius:99px; cursor:pointer; transition:background .15s,color .15s}
 .tab.on{background:var(--surface); color:var(--ink); box-shadow:var(--shadow)}
 .framewrap{margin-top:10px}
 #vaegtFrame,#praktiskFrame{width:100%; border:0; border-radius:var(--r); min-height:640px; background:var(--bg); display:block}
@@ -287,7 +287,6 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <header class="top">
     <div class="brand"><div class="eyebrow">Livsstil</div><h1>Sofies dashboard</h1><div class="hint" id="sub" style="margin-top:6px">indlæser…</div><div class="hint" id="garminStatus" style="margin-top:2px"></div></div>
     <div class="tools">
-      <a class="btn" href="run.html" style="text-decoration:none;color:var(--trae);border-color:var(--trae-soft)" title="Åbn run-dashboard">🏃 Run</a>
       <a class="btn" href="lager.html" style="text-decoration:none;color:var(--ink)" title="Åbn lager og indkøbsliste">🧺 Lager</a>
       <button class="btn" id="syncBtn" title="Hent nyeste fra Garmin og intervals.icu">↻ Synk</button>
       <details class="moremenu" id="moreMenu">
@@ -307,6 +306,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <button class="tab on" data-tab="liv">Livsstil</button>
     <button class="tab" data-tab="vaegt">Vægttab</button>
     <button class="tab" data-tab="praktisk">Praktisk</button>
+    <a class="tab" href="run.html" style="text-decoration:none">Run</a>
   </div>
 
   <div id="viewLiv">
@@ -2353,7 +2353,7 @@ window.addEventListener("message",e=>{ if(e.origin!==location.origin||!e.data) r
 });
 function showTab(t){
   $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");$("#viewPraktisk").hidden=(t!=="praktisk");
-  $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  $("#tabbar").querySelectorAll(".tab[data-tab]").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   $("#syncBtn").style.display=""; // Synk virker nu på begge faner (opdaterer også vægt-iframen)
   if(t==="vaegt"&&!frame.getAttribute("src"))frame.setAttribute("src","vaegt.html?v="+Date.now());
   if(t==="praktisk"&&!pframe.getAttribute("src"))pframe.setAttribute("src","praktisk.html?v="+Date.now());
@@ -2361,7 +2361,7 @@ function showTab(t){
   if(t==="praktisk")sizeFrame(pframe);
   try{localStorage.setItem("liv-tab",t)}catch(e){}
 }
-$("#tabbar").querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+$("#tabbar").querySelectorAll(".tab[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(!$("#viewPraktisk").hidden)sizeFrame(pframe);});
 (function(){let t="liv";try{t=localStorage.getItem("liv-tab")||"liv"}catch(e){}if(t==="vaegt"||t==="praktisk")showTab(t);})();
 
