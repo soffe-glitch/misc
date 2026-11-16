@@ -123,6 +123,27 @@ section.cat h2 small{font-family:"Hanken Grotesk",sans-serif;font-size:13px;colo
 .rl input.fac{flex:0 0 74px;min-width:0}
 .rl .lbl{font-size:12.5px;color:var(--muted)}
 .empty-cat{padding:16px 14px;color:var(--muted);font-size:14px}
+.search{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);margin:0 -16px 14px;padding:6px 16px 10px;display:flex;gap:8px}
+.search input{border-radius:999px;padding:11px 16px}
+.search .btn{flex:none;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px;grid-auto-flow:dense}
+.tile{font:inherit;color:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:18px;padding:12px 14px;min-height:88px;cursor:pointer;scroll-margin-top:80px}
+.tile[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.tile .ti{font-size:22px;line-height:1}
+.tile .tn{font-weight:600;margin-top:4px}
+.tile .tc{font-size:13px;color:var(--muted)}
+.tile .tc b{color:var(--amber);font-weight:600}
+.tilerows{grid-column:1/-1}
+.tilerows section.cat{margin-bottom:4px}
+.add[hidden]{display:none}
+.add{margin-bottom:18px}
+.list li button.bt{font:inherit;font-size:12.5px;font-weight:700;background:#F4F1E8;color:#1E5543;border:0;border-radius:999px;padding:3px 10px;cursor:pointer;flex:none}
+.list ul{columns:1}
+.list li.grp{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#B5C7BD;font-weight:700;padding:10px 0 2px}
+.list li.grp:first-child{padding-top:0}
+.soon .undated{font-size:13.5px;color:var(--muted);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:8px;margin-top:6px}
+.res-h{font-size:13.5px;color:var(--muted);margin:0 2px 10px}
+.item .tag{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;background:var(--surface-2);color:var(--muted);flex:none}
 
 .add{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;display:grid;gap:10px;grid-template-columns:1fr 1fr}
 .add h2{grid-column:1/-1;font-size:19px}
@@ -157,13 +178,9 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     </div>
     <a class="btn" href="index.html">Dashboard</a>
   </header>
+  <div class="search"><input id="q" type="search" placeholder="Søg – har jeg det allerede?" aria-label="Søg i lageret" autocomplete="off"><button class="btn" type="button" id="addToggle">＋ Vare</button></div>
   <div id="err"></div>
-  <div class="list" id="list"></div>
-  <div id="soon"></div>
-  <div id="rcpt"></div>
-  <nav class="tabs" id="tabs" aria-label="Kategorier"></nav>
-  <div id="cats"></div>
-  <form class="add" id="addForm" autocomplete="off">
+  <form class="add" id="addForm" autocomplete="off" hidden>
     <h2>Tilføj vare</h2>
     <label class="f wide">Navn<input id="aName" required placeholder="fx Havregryn"></label>
     <label class="f">Kategori<select id="aCat"></select></label>
@@ -174,6 +191,13 @@ dialog .row{grid-column:1/-1;display:flex;gap:8px;justify-content:space-between;
     <label class="chk wide"><input type="checkbox" id="aFast"><span>Fast vare<br><small>Skal altid være på lager. Ellers et engangskøb.</small></span></label>
     <div class="row"><button class="btn primary" type="submit">Tilføj</button></div>
   </form>
+  <div id="results"></div>
+  <div id="main">
+    <div class="list" id="list"></div>
+    <div id="soon"></div>
+    <div id="rcpt"></div>
+    <div class="tiles" id="tabs" aria-label="Kategorier"></div>
+  </div>
 </div>
 
 <dialog id="dlg">
@@ -207,21 +231,24 @@ const HEAD={apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"Content-Ty
 
 // mad og tørvarer bruger tre tilstande i stedet for at tælle: 2 = har, 1 = snart tom, 0 = tom
 const CATS=[
-  {k:"mad",      t:"Køleskab & skab", state:true},
-  {k:"torvarer", t:"Tørvarer",        state:true},
-  {k:"fryser",   t:"Fryser",          freezer:true},
-  {k:"husholdning",t:"Husholdning"},
-  {k:"pleje",    t:"Personlig pleje"},
-  {k:"medicin",  t:"Medicin"},
+  {k:"mad",      t:"Køleskab & skab", state:true, ic:"🥗"},
+  {k:"torvarer", t:"Tørvarer",        state:true, ic:"🌾"},
+  {k:"fryser",   t:"Fryser",          freezer:true, ic:"❄️"},
+  {k:"husholdning",t:"Husholdning", ic:"🧻"},
+  {k:"pleje",    t:"Personlig pleje", ic:"🧴"},
+  {k:"medicin",  t:"Medicin", ic:"💊"},
 ];
 const CAT=Object.fromEntries(CATS.map(c=>[c.k,c]));
+// rækkefølgen man går rundt i butikken: køl, tørvarer, frost, husholdning, pleje, medicin
+const SHOP=[["mad","Køl & frisk"],["torvarer","Tørvarer"],["fryser","Frost"],["husholdning","Husholdning"],["pleje","Personlig pleje"],["medicin","Apotek"]];
+const shopIx=k=>{const i=SHOP.findIndex(x=>x[0]===k);return i<0?99:i;};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 const fmtD=iso=>{const [y,m,d]=iso.split("-");return (+d)+"/"+(+m)+(y!==String(new Date().getFullYear())?"-"+y.slice(2):"");};
 const daysSince=iso=>Math.round((new Date(todayISO())-new Date(iso))/864e5);
 
-let items=[], filter="alle", lines=[], showSkipped=false;
+let items=[], filter=null, lines=[], showSkipped=false, query="";
 const snoozed=i=>i.snooze_until&&i.snooze_until>=todayISO();
 // dage til udløb; madvarer advarer 3 dage før, alt andet 30 dage før
 const daysTo=iso=>Math.round((new Date(iso)-new Date(todayISO()))/864e5);
@@ -259,52 +286,100 @@ function lifespan(dates){
 function render(){
   const act=items.filter(i=>i.active);
   // indkøbsliste
-  const lowAll=act.filter(isLow).sort((a,b)=>(+a.qty)-(+b.qty)||a.name.localeCompare(b.name,"da"));
+  const lowAll=act.filter(isLow).sort((a,b)=>(shopIx(a.category)-shopIx(b.category))||a.name.localeCompare(b.name,"da"));
   const low=lowAll.filter(i=>!snoozed(i)), skipped=lowAll.filter(snoozed);
   const L=$("#list");
   L.classList.toggle("empty",!low.length&&!skipped.length);
   L.innerHTML=`<h2>Indkøbsliste</h2>
     <div class="cnt">${low.length?low.length+(low.length===1?" vare mangler eller er ved at slippe op":" varer mangler eller er ved at slippe op"):"Intet mangler lige nu."}</div>
-    <ul>${low.map(i=>`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
+    <ul>${low.map((i,n)=>(n===0||low[n-1].category!==i.category?`<li class="grp">${(SHOP[shopIx(i.category)]||["","Andet"])[1]}</li>`:"")+`<li class="${+i.qty===0?"zero":""}"><i></i><span class="nm">${esc(i.name)} ${+i.qty===0&&i.empty_dates?.length?`<small>tom siden ${fmtD([...i.empty_dates].sort().pop())}</small>`:label(i)==="snart tom"?"<small>snart tom</small>":""}</span><button class="bt" data-bought="${i.id}" aria-label="${esc(i.name)} er købt">Købt</button><button class="sk" data-skip="${i.id}" aria-label="Spring ${esc(i.name)} over denne gang">Ikke nu</button></li>`).join("")}</ul>
     ${skipped.length?`<div class="hidden-note">${skipped.length} sprunget over denne gang · <button id="togSk">${showSkipped?"Skjul":"Vis"}</button></div>`:""}
     ${skipped.length&&showSkipped?`<ul class="skipped">${skipped.map(i=>`<li><i></i><span class="nm">${esc(i.name)} <small>til ${fmtD(i.snooze_until)}</small></span><button class="sk" data-unskip="${i.id}">På listen igen</button></li>`).join("")}</ul>`:""}
     ${low.length?`<div class="acts"><button class="btn primary" id="shareBtn">Del listen</button><button class="btn" id="copyBtn">Kopiér</button></div>`:""}`;
   L.querySelectorAll("[data-skip]").forEach(b=>b.onclick=()=>skipItem(+b.dataset.skip,true));
+  L.querySelectorAll("[data-bought]").forEach(b=>b.onclick=()=>bought(+b.dataset.bought));
   L.querySelectorAll("[data-unskip]").forEach(b=>b.onclick=()=>skipItem(+b.dataset.unskip,false));
   const tg=$("#togSk"); if(tg) tg.onclick=()=>{showSkipped=!showSkipped;render();};
   if(low.length){
-    const txt=low.map(i=>i.name).join("\n");
+    const txt=low.map((i,n)=>(n===0||low[n-1].category!==i.category?(n?"\n":"")+(SHOP[shopIx(i.category)]||["","Andet"])[1].toUpperCase()+"\n":"")+"– "+i.name).join("\n");
     $("#copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast("Listen er kopieret");}catch(e){toast("Kunne ikke kopiere");}};
     $("#shareBtn").onclick=async()=>{ if(navigator.share){try{await navigator.share({title:"Indkøb",text:txt});}catch(e){}} else $("#copyBtn").click(); };
   }
   // brug snart: udløbet eller inden for advarselsgrænsen
   const soon=act.filter(i=>i.expires&&+i.qty>0&&daysTo(i.expires)<=warnDays(i)).sort((a,b)=>a.expires.localeCompare(b.expires));
-  $("#soon").innerHTML=soon.length?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}</ul></div>`:"";
-  // faner
+  // fryseren: ting der har ligget i 3 måneder eller mere (rød fra 6 måneder), ældste først
+  const inFrz=act.filter(i=>i.category==="fryser"&&+i.qty>0);
+  const old=inFrz.filter(i=>i.frozen_date&&daysSince(i.frozen_date)>=90).sort((a,b)=>a.frozen_date.localeCompare(b.frozen_date));
+  const undated=inFrz.filter(i=>!i.frozen_date).length;
+  const frzLi=old.map(i=>{const m=Math.floor(daysSince(i.frozen_date)/30);return `<li><span>${esc(i.name)} <small style="color:var(--faint)">fryser</small></span><span class="age ${m>=6?"a2":"a1"}">i fryseren ${m} mdr.</span></li>`;}).join("");
+  $("#soon").innerHTML=(soon.length||old.length||undated)?`<div class="soon"><h2>Brug snart</h2><ul>${soon.map(i=>`<li><span>${esc(i.name)}</span>${expBadge(i)}</li>`).join("")}${frzLi}</ul>${
+    undated?`<div class="undated"><span>${undated} ting i fryseren har ingen dato, så jeg kan ikke minde dig om dem.</span><button class="btn" type="button" id="frzToday">Tæl fra i dag</button></div>`:""}</div>`:"";
+  const ft=$("#frzToday"); if(ft) ft.onclick=dateFreezer;
+  // kategorier som fliser; den åbne kategori foldes ud lige under sin flise
   const lowBy=k=>act.filter(i=>i.category===k&&isLow(i)&&!snoozed(i)).length;
-  $("#tabs").innerHTML=[`<button data-f="alle" aria-pressed="${filter==="alle"}">Alle</button>`]
-    .concat(CATS.map(c=>`<button data-f="${c.k}" aria-pressed="${filter===c.k}">${c.t}${lowBy(c.k)?`<b>${lowBy(c.k)}</b>`:""}</button>`)).join("");
-  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.f;render();});
-  // kategorier
-  const show=filter==="alle"?CATS:CATS.filter(c=>c.k===filter);
-  $("#cats").innerHTML=show.map(c=>{
+  const rowsOf=c=>{
     let rows=act.filter(i=>i.category===c.k);
-    if(c.freezer) rows.sort((a,b)=>(a.frozen_date||"9999").localeCompare(b.frozen_date||"9999"));
-    else rows.sort((a,b)=>a.name.localeCompare(b.name,"da"));
-    if(c.freezer) rows=rows.filter(i=>+i.qty>0||i.fast);
-    const sub=c.freezer?(rows.length?"ældste først":""):(rows.length?rows.length+(rows.length===1?" vare":" varer"):"");
-    return `<section class="cat" id="c-${c.k}"><h2>${c.t}<small>${sub}</small></h2><div class="items">${
-      rows.length?rows.map(row).join(""):`<div class="empty-cat">${c.freezer?"Fryseren er tom. Tilføj det, du lægger i den, nederst på siden.":"Ingen varer endnu. Tilføj dem nederst på siden."}</div>`
-    }</div></section>`;
+    if(c.freezer) rows=rows.filter(i=>+i.qty>0||i.fast).sort((a,b)=>(a.frozen_date||"9999").localeCompare(b.frozen_date||"9999"));
+    else rows.sort((a,b)=>((isLow(b)&&!snoozed(b))-(isLow(a)&&!snoozed(a)))||a.name.localeCompare(b.name,"da"));   // det der mangler øverst
+    return rows;
+  };
+  $("#tabs").innerHTML=CATS.map(c=>{
+    const rows=rowsOf(c), lw=lowBy(c.k);
+    const tile=`<button class="tile" type="button" data-f="${c.k}" aria-expanded="${filter===c.k}"><span class="ti" aria-hidden="true">${c.ic}</span><span class="tn">${c.t}</span><span class="tc tnum">${rows.length} ${rows.length===1?"vare":"varer"}${lw?` · <b>${lw} mangler</b>`:""}</span></button>`;
+    const open=filter===c.k?`<div class="tilerows"><section class="cat" id="c-${c.k}"><div class="items">${
+      rows.length?rows.map(row).join(""):`<div class="empty-cat">${c.freezer?"Fryseren er tom.":"Ingen varer endnu."} Tryk ＋ Vare øverst.</div>`}</div></section></div>`:"";
+    return tile+open;
   }).join("");
-  $("#cats").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>act_(b.dataset.act,+b.dataset.id,b.dataset.v));
-  $("#cats").querySelectorAll(".name").forEach(b=>b.onclick=()=>openEdit(+b.dataset.id));
+  $("#tabs").querySelectorAll(".tile").forEach(b=>b.onclick=()=>{filter=filter===b.dataset.f?null:b.dataset.f;render();
+    const t=document.querySelector('.tile[aria-expanded="true"]'); if(t) t.scrollIntoView({block:"start",behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});});
+  bindRows($("#tabs"));
+  renderResults();
   renderRcpt();
   const n=act.filter(i=>i.category!=="fryser").length, f=act.filter(i=>i.category==="fryser"&&+i.qty>0).length;
   $("#sub").textContent=n+" varer i lageret, "+f+" ting i fryseren";
 }
 
-function row(i){
+function bindRows(el){
+  el.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>act_(b.dataset.act,+b.dataset.id,b.dataset.v));
+  el.querySelectorAll(".name").forEach(b=>b.onclick=()=>openEdit(+b.dataset.id));
+}
+// søgning på tværs af alle kategorier – også varer der er brugt op
+function renderResults(){
+  const R=$("#results"), q=query.trim().toLocaleLowerCase("da");
+  $("#main").hidden=!!q;
+  if(!q){R.innerHTML="";return;}
+  const hit=items.filter(i=>i.name.toLocaleLowerCase("da").includes(q)||(i.note||"").toLocaleLowerCase("da").includes(q))
+    .sort((a,b)=>(b.active-a.active)||a.name.localeCompare(b.name,"da"));
+  const exact=items.some(i=>i.name.toLocaleLowerCase("da")===q);
+  const have=hit.filter(i=>i.active&&+i.qty>0).length;
+  R.innerHTML=`<div class="res-h">${hit.length?`${hit.length} ${hit.length===1?"vare matcher":"varer matcher"} · ${have} på lager`:`Du har ikke noget, der hedder “${esc(query.trim())}”.`}</div>
+    ${hit.length?`<div class="items" style="margin-bottom:14px">${hit.map(i=>i.active?row(i,true):`<div class="item"><button class="name" data-id="${i.id}"><span>${esc(i.name)}</span><small>${CAT[i.category]?.t||""} · brugt op</small></button><button class="btn" data-refill="${i.id}">Fyld op</button></div>`).join("")}</div>`:""}
+    ${exact?"":`<button class="btn primary" type="button" id="addQ">＋ Tilføj “${esc(query.trim())}”</button>`}`;
+  bindRows(R);
+  R.querySelectorAll("[data-refill]").forEach(b=>b.onclick=()=>refill(+b.dataset.refill));
+  const aq=$("#addQ"); if(aq) aq.onclick=()=>{ $("#addForm").hidden=false; $("#aName").value=query.trim().replace(/^./,c=>c.toLocaleUpperCase("da")); $("#aName").focus(); };
+}
+// giver alle fryser-ting uden dato dags dato, så påmindelsen kan begynde at tælle
+async function dateFreezer(){
+  const t=todayISO(), list=items.filter(i=>i.active&&i.category==="fryser"&&+i.qty>0&&!i.frozen_date);
+  if(!list.length||!confirm(list.length+" ting i fryseren får dags dato som indfrysningsdato. Du kan rette den enkelte ved at trykke på varen.")) return;
+  try{ await api("lager?category=eq.fryser&active=is.true&frozen_date=is.null&qty=gt.0",{method:"PATCH",body:JSON.stringify({frozen_date:t})});
+    list.forEach(i=>i.frozen_date=t); render(); toast("Fryseren tæller fra i dag"); }catch(e){ showErr(e); }
+}
+async function refill(id){
+  const i=items.find(x=>x.id===id); if(!i) return;
+  const patch={active:true,snooze_until:null,expires:null,qty:useState(i)?2:Math.max(1,+i.min_qty||1),updated_at:new Date().toISOString()};
+  try{ const [u]=await api("lager?id=eq."+id,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(i,u); render(); toast(i.name+" er fyldt op"); }catch(e){ showErr(e); }
+}
+// "Købt" på indkøbslisten: fylder varen op, så den forsvinder fra listen
+async function bought(id){
+  const i=items.find(x=>x.id===id); if(!i) return;
+  const patch={snooze_until:null,qty:useState(i)?2:Math.max(+i.min_qty||1,+i.qty+1),updated_at:new Date().toISOString()};
+  if(+i.qty===0) patch.expires=null;
+  const prev={...i}; Object.assign(i,patch); render();
+  try{ await api("lager?id=eq."+id,{method:"PATCH",body:JSON.stringify(patch)}); toast(i.name+" er købt"); }catch(e){ Object.assign(i,prev); render(); showErr(e); }
+}
+function row(i,withCat){
   const c=CAT[i.category]; const cls=["item"]; if(isLow(i)&&!snoozed(i)) cls.push(+i.qty===0?"out":"low");
   const meta=[];
   if(c.freezer&&i.frozen_date){
@@ -316,6 +391,7 @@ function row(i){
   if(+i.qty===0&&i.empty_dates?.length) meta.push("tom siden "+fmtD([...i.empty_dates].sort().pop()));
   const ls=lifespan(i.empty_dates); if(ls&&!useState(i)) meta.push(ls);
   if(i.note) meta.push(esc(i.note));
+  if(withCat) meta.unshift(c.t);
   const ctrl=useState(i)
     ? `<div class="seg" role="group" aria-label="Status for ${esc(i.name)}">${[[2,"Har"],[1,"Snart"],[0,"Tom"]].map(([v,t])=>`<button class="s${v}" aria-pressed="${+i.qty===v}" data-act="set" data-id="${i.id}" data-v="${v}">${t}</button>`).join("")}</div>`
     : `<div class="q"><button aria-label="Én mindre ${esc(i.name)}" data-act="dec" data-id="${i.id}">−</button><output class="tnum">${(+i.qty).toLocaleString("da-DK",{maximumFractionDigits:2})}${i.unit?`<small>${esc(i.unit)}</small>`:""}</output><button aria-label="Én mere ${esc(i.name)}" data-act="inc" data-id="${i.id}">+</button></div>`;
@@ -441,6 +517,8 @@ $("#eDel").onclick=async()=>{
   catch(err){ showErr(err); }
 };
 
+$("#q").oninput=e=>{query=e.target.value;renderResults();};
+$("#addToggle").onclick=()=>{const f=$("#addForm");f.hidden=!f.hidden;$("#addToggle").textContent=f.hidden?"＋ Vare":"Luk";if(!f.hidden)$("#aName").focus();};
 // tilføj
 $("#aCat").innerHTML=catOptions("mad");
 function toggleAdd(){
@@ -470,12 +548,12 @@ $("#addForm").onsubmit=async e=>{
     if(fast&&!ex.fast){patch.fast=true; patch.min_qty=useState(ex)?2:1;}
     try{ const [u]=await api("lager?id=eq."+ex.id,{method:"PATCH",body:JSON.stringify(patch)}); Object.assign(ex,u);
       $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value=""; $("#aFast").checked=false;
-      filter=ex.category; render(); toast(ex.name+" er fyldt op"); }
+      filter=ex.category; query=""; $("#q").value=""; render(); toast(ex.name+" er fyldt op"); }
     catch(err){ showErr(err); }
     return;
   }
   try{ const [r]=await api("lager",{method:"POST",body:JSON.stringify(body)}); items.push(r); $("#aFast").checked=false; $("#aName").value=""; $("#aQty").value=1; $("#aUnit").value=""; $("#aExp").value="";
-    filter=cat; render(); toast(body.name+" er tilføjet"); document.getElementById("c-"+cat)?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"}); }
+    filter=cat; query=""; $("#q").value=""; $("#addForm").hidden=true; $("#addToggle").textContent="＋ Vare"; render(); toast(body.name+" er tilføjet"); document.getElementById("c-"+cat)?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"}); }
   catch(err){ showErr(err); }
 };
 
