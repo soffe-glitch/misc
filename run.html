@@ -421,7 +421,7 @@ details.sec .tile, details.sec .factor { background:var(--card2); }
       <div class="ins-k">2024</div><h3>Har jeg slået 2024-mig?</h3>
       <div id="vs24-body" class="ins-t"></div>
       <div class="ch tall" style="margin-top:10px"><canvas id="cVs24"></canvas></div>
-      <div class="ra-sum" style="margin-top:8px">De to opbygninger er lagt oven på hinanden fra første uge: 2024 fra 11. marts, den nuværende fra første løb efter din seneste pause. Stiplet er 2024-dig, grøn er dig nu. Prognosen forlænger din fremgang de seneste 8 uger og er et skøn, ikke et løfte.</div>
+      <div class="ra-sum" style="margin-top:8px">De to opbygninger er lagt oven på hinanden fra første uge: 2024 fra 6. maj, hvor du begyndte at sætte mængden op, den nuværende fra første løb efter din seneste pause. Stiplet er 2024-dig, grøn er dig nu. Prognosen forlænger din fremgang de seneste 8 uger og er et skøn, ikke et løfte.</div>
     </div>
 
     <div class="card ins" style="margin-bottom:12px">
@@ -1531,7 +1531,7 @@ function ownPatterns(easy) {
 
 // "Har jeg slået 2024-mig?" – spøgelseskurve: de to opbygninger lagt oven på hinanden, uge for uge fra start,
 // plus en prognose for, hvornår du passerer 2024-toppen med din nuværende fremgang.
-const VS24_START = '2024-03-11';   // første uge med Garmin-data i 2024-opbygningen
+const VS24_START = '2024-05-06';   // ugen hvor mængden begyndte at stige i 2024 (ugen før: 7 km) – svarer til starten efter pausen nu
 let vs24Metric = 'vo2';
 function vs24Build() {
   const R = runs(activities).slice().sort((x, y) => x.start_date_local.localeCompare(y.start_date_local));
