@@ -795,7 +795,7 @@ async function loadAll(){
 
 // ---- Dagsbudget = dagens (skønnede) forbrug − ønsket underskud (settings.daily_deficit, std. 300) ----
 // Forbrug i dag = Garmins hvileforbrug for et helt døgn (snit af seneste 7 dage)
-//   + max(dit aktive forbrug på en rolig dag [33.-percentil, 28 dage], dagens aktive forbrug [Garmin-stats / aktiviteter / løbe-km×66])
+//   + max(dit aktive forbrug på en rolig dag [25.-percentil, 28 dage], dagens aktive forbrug [Garmin-stats / aktiviteter / løbe-km×66])
 //   + korrektion (settings.garmin_kcal_correction, std. −250).
 // Så er budgettet "en almindelig dag" om morgenen og vokser, når du træner.
 function dayBudget(){
@@ -807,10 +807,10 @@ function dayBudget(){
   const bmrs=past.filter(g=>g.kb!=null&&g.kb>1000).slice(-7).map(g=>g.kb);
   const acts=past.filter(g=>g.ka!=null&&g.kb!=null&&g.kb>1000&&g.log_date>=addDays(t,-28)).map(g=>g.ka);
   const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
-  // typisk aktivitet på en rolig dag = 33.-percentilen af de seneste 28 dage (ikke gennemsnittet, som løbedage trækker op).
+  // typisk aktivitet på en rolig dag = 25.-percentilen af de seneste 28 dage (33. ramte første ikke-rolige dag, fordi kun ~8 af 28 dage er rolige) (ikke gennemsnittet, som løbedage trækker op).
   // Så starter budgettet tæt på en dag uden træning og vokser kun, når aktiviteten faktisk sker.
   const pct=(a,p)=>{ if(!a.length) return null; const s=[...a].sort((x,y)=>x-y); const i=(s.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return s[lo]+(s[hi]-s[lo])*(i-lo); };
-  const bmrFull=mean(bmrs), typAct=pct(acts,0.33);
+  const bmrFull=mean(bmrs), typAct=pct(acts,0.25);
   if(bmrFull==null){ const tg=+s.calorie_target||1600; return {ok:false,budget:tg,burn:tg+deficit,deficit,src:"fast dagsmål (ingen Garmin-data)"}; }
   const gT=G.find(g=>g.log_date===t);
   const statAct=gT&&gT.ka!=null?gT.ka:0;
