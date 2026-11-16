@@ -7,6 +7,7 @@
 <script src="connections.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sofies Livsstil</title>
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -59,6 +60,7 @@
 }
 *{box-sizing:border-box} html,body{margin:0}
 html{scroll-behavior:smooth}
+html,body{overflow-x:hidden; overflow-x:clip; max-width:100%}
 body{background:var(--bg); color:var(--ink); font-family:"Hanken Grotesk",system-ui,-apple-system,sans-serif; font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased}
 .wrap{max-width:1120px; margin:0 auto; padding:0 18px 90px}
 .tnum{font-variant-numeric:tabular-nums}
@@ -69,7 +71,18 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .eyebrow{font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700}
 .brand h1{font-size:34px; line-height:1.02; margin-top:3px; font-weight:400}
 .brand .hint{font-size:13px}
-.tools{display:flex; gap:8px; align-items:center}
+.tools{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-width:0}
+.moremenu{position:relative}
+.moremenu>summary{list-style:none} .moremenu>summary::-webkit-details-marker{display:none}
+.moremenu .pop{position:absolute; right:0; top:46px; z-index:60; display:flex; flex-direction:column; gap:6px; padding:10px; min-width:190px; background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.14)}
+.moremenu .pop .btn{width:100%; justify-content:flex-start}
+.devcard{margin:0 0 14px; border-left:4px solid var(--accent)}
+.devcard.lav{border-left-color:var(--warn)} .devcard.hoej{border-left-color:var(--good)}
+.devcard .nums{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 10px}
+.devcard .nums span{background:var(--surface-2); border-radius:99px; padding:4px 10px; font-size:12.5px; font-weight:600}
+.lifechips{display:flex; gap:6px; flex-wrap:wrap}
+.lifechips span{background:var(--surface-2); border-radius:99px; padding:4px 10px; font-size:12.5px}
+.lifechips span.on{background:var(--energi-soft,var(--surface-2)); font-weight:600}
 .btn{background:var(--surface); border:1px solid var(--border); color:var(--muted); height:40px; border-radius:99px; cursor:pointer; font:inherit; font-size:13px; font-weight:600; padding:0 16px; display:inline-flex; align-items:center; gap:6px; transition:border-color .15s,transform .1s}
 .btn:hover{border-color:var(--accent)} .btn:active{transform:scale(.97)}
 .theme-btn{width:40px; padding:0; font-size:16px; justify-content:center}
@@ -271,10 +284,15 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <a class="btn" href="run.html" style="text-decoration:none;color:var(--trae);border-color:var(--trae-soft)" title="Åbn run-dashboard">🏃 Run</a>
       <a class="btn" href="lager.html" style="text-decoration:none;color:var(--ink)" title="Åbn lager og indkøbsliste">🧺 Lager</a>
       <button class="btn" id="syncBtn" title="Hent nyeste fra Garmin og intervals.icu">↻ Synk</button>
-      <button class="btn theme-btn" id="themeBtn" title="Skift tema">◐</button>
-      <button class="btn" id="lockBtn" title="Face ID-lås på denne enhed" style="display:none">🔓</button>
-      <button class="btn" id="pwBtn" title="Skift adgangskode">🔑</button>
-      <button class="btn" id="logoutBtn" title="Log ud af denne enhed">Log ud</button>
+      <details class="moremenu" id="moreMenu">
+        <summary class="btn theme-btn" title="Mere">⋯</summary>
+        <div class="pop">
+          <button class="btn" id="themeBtn" title="Skift tema">◐ Skift tema</button>
+          <button class="btn" id="lockBtn" title="Face ID-lås på denne enhed" style="display:none">🔓</button>
+          <button class="btn" id="pwBtn" title="Skift adgangskode">🔑 Skift adgangskode</button>
+          <button class="btn" id="logoutBtn" title="Log ud af denne enhed">Log ud</button>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -288,6 +306,7 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   <!-- I DAG -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span><span id="todayLabel">I dag</span></div>
   <div class="statusrow" id="statusRow"></div>
+  <div class="card devcard" id="devCard" style="display:none"></div>
   <div class="dash"><div class="blk">
   <div class="grid lead">
     <div class="coach" id="coach">
@@ -362,25 +381,8 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
           <button type="button" data-v="sofa">▼ Sofa</button>
         </div>
       </div>
-      <div class="field"><label>Kommunikation <span class="hint">(batteri drænet)</span></label>
-        <div class="seg" id="commSeg" data-val="">
-          <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
-          <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
-          <button type="button" data-v="5">5</button>
-        </div>
-      </div>
-      <div class="field"><label>Arbejde</label>
-        <div class="seg" id="workSeg" data-val="">
-          <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button>
-          <button type="button" data-v="3">3</button><button type="button" data-v="4">4</button>
-          <button type="button" data-v="5">5</button>
-        </div>
-      </div>
-      <div class="field"><label>Alkohol <span class="hint">(genstande · tom = 0)</span></label>
-        <input class="inp" id="alcInp" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
-      </div>
-      <div class="field"><label>Koffein</label>
-        <button type="button" class="btn" id="coffeeBtn" style="width:100%">☕ Kaffe efter kl. 14</button>
+      <div class="field"><label>Fra Garmin <span class="hint">(Lifestyle Logging · udfyldes i Garmin Connect)</span></label>
+        <div id="lifeBox" class="lifechips"><span>Ingen svar hentet endnu</span></div>
       </div>
       <div class="field"><label>Hvad gav energi i dag? <span class="hint">(tryk, gemmes med det samme)</span></label>
         <div class="seg multi" id="gaveSeg" style="flex-wrap:wrap">
@@ -750,6 +752,8 @@ async function loadAll(){
   try{ S.naps=await get("naps","?select=*&order=ts.asc"); }catch(e){ S.naps=[]; }
   try{ S.events=await get("events","?select=*&order=log_date.asc,created_at.asc"); }catch(e){ S.events=[]; }
   rebuildEventViews();
+  try{ S.life=await get("garmin_lifestyle","?select=log_date,name,status,amount,details&log_date=gte."+addDays(todayISO(),-200)); }catch(e){ S.life=[]; }
+  try{ S.dev=await get("deviations","?select=*&order=log_date.asc"); }catch(e){ S.dev=[]; }
   try{ S.ctx=await get("daily_context","?select=*&order=log_date.asc&log_date=gte."+addDays(todayISO(),-400)); }catch(e){ S.ctx=[]; }
   syncContext(); // henter vejr/dagslys i baggrunden (backfill første gang)
   try{ const gs=await get("garmin_misc","?select=data&kind=eq.official_sync_status"); S.gsync=gs[0]&&gs[0].data||null; }catch(e){ S.gsync=null; }
@@ -787,7 +791,7 @@ async function loadAll(){
     });
     S.wellness.sort((a,b)=>a.log_date<b.log_date?-1:1);
   }catch(e){}
-  S.daily=daily; S.checkins=checkins; S.meds=meds;
+  S.daily=daily; S.checkins=checkins; S.meds=meds; mergeLife();
   S.labs=labs.map(l=>({...l,tsh:l.tsh==null?null:+l.tsh}));
   try{ S.books=await booksGet(); }catch(e){ S.books=[]; }
 }
@@ -990,6 +994,79 @@ function sleepRhythm(t,days){
   const free=rows.filter(r=>r.free), work=rows.filter(r=>!r.free);
   return {n:rows.length,bedSd:sdev(rows.map(r=>r.bed)),wakeSd:sdev(rows.map(r=>r.wake)),
     sjl:(free.length>=2&&work.length>=3)?Math.abs(avg(free.map(r=>r.mid))-avg(work.map(r=>r.mid))):null};
+}
+// ---- Garmin Lifestyle Logging ----
+const LIFE_DA={"Alcohol":"Alkohol","Morning Caffeine":"Koffein morgen","Late Caffeine":"Sen koffein","Illness":"Syg","Injured":"Skadet","Migraines":"Migræne",
+  "Light Exercise":"Let motion","Moderate Exercise":"Moderat motion","Vigorous Exercise":"Hård motion","Healthy Meals":"Sunde måltider","Heavy Meals":"Tunge måltider",
+  "Late Meals":"Sene måltider","Traveling/Vacation":"Rejse/ferie","Sunlight":"Sollys","Reading in Bed":"Læsning i sengen","Screens Before Bed":"Skærm før sengetid"};
+function lifeOn(date){ const o={}; (S.life||[]).forEach(r=>{ if(r.log_date===date) o[r.name]=r; }); return o; }
+// Garmin-svarene lægges oven på dagsloggen i hukommelsen, så alle analyser (alkohol, sen kaffe) bruger dem
+function mergeLife(){
+  const by={}; (S.life||[]).forEach(r=>{ (by[r.log_date]=by[r.log_date]||{})[r.name]=r; });
+  Object.keys(by).forEach(d=>{
+    let row=S.daily.find(x=>x.log_date===d); if(!row){ row={log_date:d}; S.daily.push(row); }
+    const al=by[d]["Alcohol"]; if(al) row.alcohol_units=al.status==="YES"?(al.amount==null?1:+al.amount):0;
+    const lc=by[d]["Late Caffeine"]; if(lc) row.late_coffee=lc.status==="YES";
+  });
+  S.daily.sort((a,b)=>a.log_date<b.log_date?-1:1);
+}
+function paintLife(){
+  const el=$("#lifeBox"); if(!el) return;
+  const t=todayISO(); let d=t, L=lifeOn(t), lab="i dag";
+  if(!Object.keys(L).length){ d=addDays(t,-1); L=lifeOn(d); lab="i går"; }
+  const yes=Object.values(L).filter(r=>r.status==="YES");
+  if(!Object.keys(L).length){ el.innerHTML='<span>Ingen svar hentet for i dag eller i går</span>'; return; }
+  el.innerHTML=`<span>${lab}:</span>`+(yes.length?yes.map(r=>`<span class="on">${LIFE_DA[r.name]||r.name}${r.amount!=null?" · "+(+r.amount):""}</span>`).join(""):'<span>intet markeret</span>');
+}
+// ---- "Noget stak ud": nætter der afviger tydeligt fra dit eget normalområde (seneste 60 nætter) ----
+const DEV_CAUSES=[["alkohol","Alkohol"],["sent","Sent i seng"],["arbejde","Arbejde/stress"],["bekymring","Bekymring"],["mennesker","For mange mennesker"],
+  ["traening","Hård træning"],["syg","Syg på vej"],["mad","Sent/tungt måltid"],["koffein","Sen koffein"],["roeg","Røg"],["ro","Rolig dag"],["ved_ikke","Ved ikke"]];
+function deviationFor(d){
+  const g=(S.garmin||[]).find(x=>x.log_date===d); if(!g||g.hrv==null) return null;
+  const prev=(S.garmin||[]).filter(x=>x.log_date<d&&x.log_date>=addDays(d,-60));
+  const q=(arr,p)=>{const a=arr.filter(v=>v!=null).sort((x,y)=>x-y); if(a.length<21) return null; const i=(a.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i); return a[lo]+(a[hi]-a[lo])*(i-lo);};
+  const H=prev.map(x=>x.hrv),R=prev.map(x=>x.rhr),Sc=prev.map(x=>x.score);
+  if(q(H,.5)==null) return null;
+  // HRV skal være med: lav = HRV i de laveste 10 % plus høj hvilepuls eller dårlig søvnscore (eller HRV helt i bund)
+  const rHi=g.rhr!=null&&q(R,.5)!=null&&g.rhr>q(R,.9), rLo=g.rhr!=null&&q(R,.5)!=null&&g.rhr<q(R,.1);
+  const sLo=g.score!=null&&q(Sc,.5)!=null&&g.score<q(Sc,.1), sHi=g.score!=null&&q(Sc,.5)!=null&&g.score>q(Sc,.9);
+  const lav=(g.hrv<q(H,.1)&&(rHi||sLo))||g.hrv<q(H,.03), hoej=g.hrv>q(H,.97)&&(rLo||sHi);
+  const dir=lav?"lav":(hoej?"hoej":null); if(!dir) return null;
+  return {log_date:d,direction:dir,metrics:{hrv:g.hrv,hrv_normal:Math.round(q(H,.5)),hvilepuls:g.rhr,hvilepuls_normal:q(R,.5)==null?null:Math.round(q(R,.5)),
+    soevnscore:g.score,soevnscore_normal:q(Sc,.5)==null?null:Math.round(q(Sc,.5)),soevn_t:g.sleep_h==null?null:+g.sleep_h.toFixed(1)}};
+}
+function openDeviations(){
+  const t=todayISO(), done=new Set((S.dev||[]).map(x=>x.log_date)), out=[];
+  for(let i=0;i<7;i++){ const d=addDays(t,-i); if(done.has(d)) continue; const v=deviationFor(d); if(v) out.push(v); }
+  return out;   // nyeste først
+}
+function devGuess(d){   // forudfyld ud fra Garmin-svarene dagen før natten (og sygdom samme dag)
+  const y=lifeOn(addDays(d,-1)), s0=lifeOn(d), g=new Set(), yes=n=>y[n]&&y[n].status==="YES";
+  if(yes("Alcohol")) g.add("alkohol"); if(yes("Late Caffeine")) g.add("koffein"); if(yes("Vigorous Exercise")) g.add("traening");
+  if(yes("Late Meals")||yes("Heavy Meals")) g.add("mad"); if(yes("Illness")||(s0["Illness"]&&s0["Illness"].status==="YES")) g.add("syg");
+  return g;
+}
+function renderDeviation(){
+  const el=$("#devCard"); if(!el) return;
+  const open=openDeviations(); if(!open.length){ el.style.display="none"; el.innerHTML=""; return; }
+  const v=open[0], m=v.metrics, lav=v.direction==="lav", guess=devGuess(v.log_date);
+  const df=new Intl.DateTimeFormat("da-DK",{weekday:"long",day:"numeric",month:"long"}).format(parseD(v.log_date));
+  const al=lifeOn(addDays(v.log_date,-1))["Alcohol"];
+  el.className="card devcard "+v.direction; el.style.display="";
+  el.innerHTML=`<div class="ch"><h3>${lav?"Noget stak ud":"En usædvanlig god nat"}</h3><span class="hint">natten til ${df}${open.length>1?" · "+(open.length-1)+" mere":""}</span></div>
+    <div class="nums"><span>HRV ${m.hrv} <small>(normalt ${m.hrv_normal})</small></span>${m.hvilepuls!=null?`<span>Hvilepuls ${m.hvilepuls} <small>(normalt ${m.hvilepuls_normal})</small></span>`:""}${m.soevnscore!=null?`<span>Søvnscore ${m.soevnscore} <small>(normalt ${m.soevnscore_normal})</small></span>`:""}${m.soevn_t!=null?`<span>${String(m.soevn_t).replace(".",",")} t søvn</span>`:""}</div>
+    <div class="field" style="margin:0"><label>Hvad tror du selv? <span class="hint">${al&&al.status==="YES"?"Du loggede "+(al.amount!=null?+al.amount:"")+" genstand(e) dagen før · ":""}vælg gerne flere</span></label>
+      <div class="seg multi" id="devSeg" style="flex-wrap:wrap">${DEV_CAUSES.map(([k,l])=>`<button type="button" data-v="${k}" class="${guess.has(k)?"sel":""}">${l}</button>`).join("")}</div>
+      <input class="inp" id="devNote" placeholder="Evt. med dine egne ord" style="margin-top:8px">
+      <button class="pbtn" id="devSave" style="width:100%;margin-top:10px">Gem</button><div class="note" id="noteDev"></div></div>`;
+  el.querySelectorAll("#devSeg button").forEach(b=>b.onclick=()=>b.classList.toggle("sel"));
+  $("#devSave").onclick=async()=>{
+    const causes=[...el.querySelectorAll("#devSeg button.sel")].map(b=>b.dataset.v), note=$("#devNote").value.trim();
+    if(!causes.length&&!note){ setNote("#noteDev","Vælg mindst én – eller \"Ved ikke\".","err"); return; }
+    try{ const row=(await upsert("deviations",{log_date:v.log_date,direction:v.direction,metrics:m,causes,note:note||null,answered_at:new Date().toISOString()},"log_date"))[0];
+      S.dev=(S.dev||[]).filter(x=>x.log_date!==row.log_date).concat([row]); renderDeviation();
+    }catch(e){ setNote("#noteDev","Fejl: "+e.message,"err"); }
+  };
 }
 // dit eget normalområde: 25.-75. percentil af de seneste 60 nætter (uden i nat)
 function hrvBaseline(t){
@@ -1526,6 +1603,8 @@ function dayExtras(t){
   try{
     const hy=hypoTests().filter(r=>r.status==="tydelig"||r.status==="antydning").map(r=>({spoergsmaal:r.q,styrke:r.status,[r.expLabel]:r.m1,[r.ctlLabel]:r.m2,dage:[r.n1,r.n2]}));
     if(hy.length) o.egne_hypoteser_antydninger=hy;
+    const dv=(S.dev||[]).slice(-5).map(x=>({nat_til:x.log_date,retning:x.direction,egen_forklaring:(x.causes||[]).join(", ")+(x.note?" – "+x.note:"")}));
+    if(dv.length) o.egne_forklaringer_paa_afvigende_naetter=dv;
   }catch(e){}
   try{ const bp=bigPatternForCoach(t); if(bp) o.langsigtet_moenster=bp; }catch(e){}
   try{
@@ -1557,8 +1636,9 @@ function bigPatternForCoach(t){
     note:"Baggrund fra 2,5 års egne data. Nævn det KUN hvis det hjælper med at forklare dagens tal – højst én kort sætning, aldrig som regel eller opsang, og ikke hvis det ikke passer til i dag. Det er sammenhæng i data, ikke bevis for årsag."};
 }
 function paintDayExtras(){
+  renderDeviation();
   const d=S.daily.find(x=>x.log_date===todayISO())||{};
-  const cb=$("#coffeeBtn"); if(cb){ const on=!!d.late_coffee; cb.textContent=on?"☕ Kaffe efter kl. 14 ✓":"☕ Kaffe efter kl. 14"; cb.style.background=on?"var(--kost-soft)":""; cb.style.borderColor=on?"var(--kost)":""; }
+  paintLife();
   const gs=$("#gaveSeg"); if(gs){ const set=new Set(d.gave_energy||[]); gs.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",set.has(b.dataset.v))); }
 }
 async function saveDayField(patch){
@@ -1993,15 +2073,14 @@ async function submitCheckin(){
   }catch(e){setNote("#noteCheckin","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
 async function submitDaily(){
-  const dt=segVal("dayTypeSeg"),cl=segVal("commSeg"),wk=segVal("workSeg"),al=$("#alcInp").value;
+  const dt=segVal("dayTypeSeg");
   const ex=S.daily.find(d=>d.log_date===todayISO())||{};
   const btn=$("#dailyBtn");btn.disabled=true;setNote("#noteDaily","Gemmer…");
-  // tom alkohol-rubrik = 0 (hvis dagen ikke allerede har en værdi); øvrige felter overskrives ikke med tomt
-  const body={log_date:todayISO(),day_type:dt||ex.day_type||null,comm_load:cl?+cl:(ex.comm_load??null),work_load:wk?+wk:(ex.work_load??null),
-    alcohol_units:al!==""?+al:(ex.alcohol_units!=null?+ex.alcohol_units:0),late_coffee:ex.late_coffee===true,updated_at:new Date().toISOString()};
+  // alkohol og koffein kommer fra Garmin Lifestyle Logging; her gemmes kun dagsformen
+  const body={log_date:todayISO(),day_type:dt||ex.day_type||null,updated_at:new Date().toISOString()};
   try{const row=(await upsert("daily_log",body,"log_date"))[0];
     const i=S.daily.findIndex(d=>d.log_date===row.log_date);if(i>=0)S.daily[i]=row;else S.daily.push(row);
-    setNote("#noteDaily","Gemt ✓","ok");render();
+    mergeLife();setNote("#noteDaily","Gemt ✓","ok");render();
   }catch(e){setNote("#noteDaily","Fejl: "+e.message,"err");}finally{btn.disabled=false;}
 }
 async function saveNap(min){
@@ -2079,10 +2158,10 @@ setInterval(paintGarminStatus,60000);
   $("#themeBtn").onclick=()=>{const cur=r.getAttribute("data-theme");const sys=matchMedia("(prefers-color-scheme:dark)").matches;const now=cur||(sys?"dark":"light");const nx=now==="dark"?"light":"dark";r.setAttribute("data-theme",nx);try{localStorage.setItem("liv-theme",nx)}catch(e){}try{syncFrameTheme()}catch(e){}};})();
 
 // ---------- wire up ----------
-["moodSeg","dayTypeSeg","commSeg","workSeg","mIntSeg","mTrigSeg","eKindSeg"].forEach(seg);
+["moodSeg","dayTypeSeg","mIntSeg","mTrigSeg","eKindSeg"].forEach(seg);
 $("#checkinBtn").onclick=submitCheckin;
 $("#dailyBtn").onclick=submitDaily;
-$("#coffeeBtn").onclick=()=>{const d=S.daily.find(x=>x.log_date===todayISO())||{};saveDayField({late_coffee:!d.late_coffee});};
+
 $("#gaveSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{
   const d=S.daily.find(x=>x.log_date===todayISO())||{}, set=new Set(d.gave_energy||[]);
   if(set.has(b.dataset.v)) set.delete(b.dataset.v); else set.add(b.dataset.v);
@@ -2248,6 +2327,10 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(
   }
   layoutDash(); logTabs(); let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{layoutDash();logTabs();},120);});
 })();
+</script>
+<script>
+document.addEventListener("click",e=>{const m=document.getElementById("moreMenu");if(m&&m.open&&!m.contains(e.target))m.open=false;});
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
 </script>
 </body>
 </html>
