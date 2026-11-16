@@ -113,7 +113,9 @@ header h1{font-size:30px;line-height:1.1}
 .plan{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .plan input{border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:6px 8px;min-height:36px}
 .add[hidden]{display:none}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;grid-auto-flow:dense}
+.tilerows{grid-column:1/-1}
+.tile{scroll-margin-top:150px}
 .tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:16px;padding:12px 14px;min-height:86px;box-shadow:var(--shadow)}
 .tile:hover{border-color:var(--accent)}
 .tile[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent)}
@@ -196,12 +198,14 @@ let store=null;         // {save(task), remove(id)}
 let energy=2, maxMin=0; // maxMin 0 = ingen grænse
 let open=null, sureDel=null, showDone=false, showLater=false, openArea=null;
 // forslaget: tilfældigt valgt, og dem du har sagt "en anden" til i dag kommer ikke igen
-let pick=null, passed=new Set();
+let pick=null, passed=new Set(), lastPass=null;
 try{const p=JSON.parse(localStorage.getItem("praktisk-passed")||"{}");if(p.d===today())passed=new Set(p.ids)}catch(e){}
 const savePassed=()=>{try{localStorage.setItem("praktisk-passed",JSON.stringify({d:today(),ids:[...passed]}))}catch(e){}};
 function choose(c){
   const cur=pick&&c.find(t=>t.id===pick); if(cur) return cur;
-  const fresh=c.filter(t=>!passed.has(t.id)); if(!fresh.length){pick=null;return null}
+  let fresh=c.filter(t=>!passed.has(t.id));
+  if(!fresh.length){ passed=new Set(lastPass&&c.length>1?[lastPass]:[]); savePassed(); fresh=c.filter(t=>!passed.has(t.id)); }
+  if(!fresh.length){pick=null;return null}
   const mine=fresh.filter(isPlannedNow), pool=mine.length?mine:fresh;   // det du selv har valgt til i dag først
   const t=pool[Math.floor(Math.random()*pool.length)]; pick=t.id; return t;
 }
@@ -284,7 +288,7 @@ function renderHero(){
     <p class="why">${why}</p>
     <div class="actions">
       <button class="btn go" data-act="done" data-id="${t.id}">Gjort</button>
-      ${left>1?`<button class="btn ghost" data-act="skip" data-id="${t.id}">🎲 En anden</button>`:""}
+      ${c.length>1?`<button class="btn ghost" data-act="skip" data-id="${t.id}">🎲 En anden</button>`:""}
       ${isRecurring(t)?`<button class="btn ghost" data-act="skipround" data-id="${t.id}" title="Kommer først igen om ${t.repeat} dage">Spring runden over</button>`:""}
       <button class="btn ghost" data-act="snooze" data-id="${t.id}">Ikke i dag</button>
     </div>`;
@@ -317,10 +321,10 @@ function areaTiles(list){
   const by={};list.forEach(t=>(by[t.area]??=[]).push(t));
   const order=[...AREAS,...Object.keys(by).filter(a=>!AREAS.includes(a))].filter(a=>by[a]);
   if(openArea&&!by[openArea]) openArea=null;
+  const rowsFor=a=>`<div class="tilerows"><div class="rows">${by[a].sort((x,y)=>(x.min-y.min)||x.title.localeCompare(y.title,"da")).map(t=>rowHTML(t,"ready")).join("")}</div></div>`;
   const tiles=order.map(a=>{const it=by[a],mins=it.reduce((x,t)=>x+t.min,0);
-    return `<button class="tile" type="button" aria-expanded="${openArea===a}" data-act="area" data-area="${esc(a)}"><span class="ti" aria-hidden="true">${AICON[a]||"✨"}</span><span class="tn">${esc(a)}</span><span class="tc tnum">${it.length} · ${fmtMin(mins)}</span></button>`}).join("");
-  const rows=openArea?`<div class="area" style="margin-top:14px"><h3>${esc(openArea)}</h3><div class="rows">${by[openArea].sort((x,y)=>(x.min-y.min)||x.title.localeCompare(y.title,"da")).map(t=>rowHTML(t,"ready")).join("")}</div></div>`:"";
-  return `<div class="tiles">${tiles}</div>${rows}`;
+    return `<button class="tile" type="button" aria-expanded="${openArea===a}" data-act="area" data-area="${esc(a)}"><span class="ti" aria-hidden="true">${AICON[a]||"✨"}</span><span class="tn">${esc(a)}</span><span class="tc tnum">${it.length} · ${fmtMin(mins)}</span></button>`+(openArea===a?rowsFor(a):"")}).join("");
+  return `<div class="tiles">${tiles}</div>`;
 }
 function renderMyDay(){
   const t0=today();
@@ -371,12 +375,13 @@ document.addEventListener("click",e=>{
   if(el.dataset.time!=null&&el.dataset.time!==""&&el.closest("#f-time")){maxMin=+el.dataset.time;pick=null;saveFilter();render();return}
   if(act==="done")markDone(id);
   else if(act==="undo")undo(id);
-  else if(act==="skip"){if(id)passed.add(id);pick=null;savePassed();render()}
+  else if(act==="skip"){if(id){passed.add(id);lastPass=id}pick=null;savePassed();render()}
   else if(act==="resetPassed"){passed=new Set();pick=null;savePassed();render()}
   else if(act==="snooze"){if(pick===id)pick=null;open=null;patch(id,{snooze:today()+1})}
   // spring denne runde over: kommer først igen om ét interval, og tæller ikke som gjort
   else if(act==="skipround"){const t=byId(id);if(!t)return;if(pick===id)pick=null;open=null;patch(id,{snooze:today()+Math.max(1,t.repeat||1),planned:t.planned===today()?null:t.planned})}
-  else if(act==="area"){openArea=openArea===el.dataset.area?null:el.dataset.area;open=null;render()}
+  else if(act==="area"){openArea=openArea===el.dataset.area?null:el.dataset.area;open=null;render();
+    const tl=document.querySelector('.tile[aria-expanded="true"]'); if(tl) setTimeout(()=>{ if(window.self!==window.top){try{parent.postMessage({praktiskScrollTo:tl.getBoundingClientRect().top},location.origin)}catch(e){}} else tl.scrollIntoView({block:"start",behavior:"smooth"}); },80)}
   else if(act==="toggleAdd"){const f=$("addForm");f.hidden=!f.hidden;$("newBtn").textContent=f.hidden?"＋ Ny opgave":"Luk";if(!f.hidden)$("aTitle").focus()}
   else if(act==="unsnooze"){patch(id,{snooze:null})}
   else if(act==="open"){open=open===id?null:id;sureDel=null;render()}
