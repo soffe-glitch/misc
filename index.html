@@ -2334,7 +2334,10 @@ pframe.addEventListener("load",()=>{ // Praktisk henter data async → mål høj
 });
 // Praktisk melder selv sin højde, så der kun er én scroll (den ydre side)
 pframe.setAttribute("scrolling","no");
-window.addEventListener("message",e=>{ if(e.origin===location.origin&&e.data&&e.data.praktiskHeight) pframe.style.height=Math.ceil(e.data.praktiskHeight)+"px"; });
+window.addEventListener("message",e=>{ if(e.origin!==location.origin||!e.data) return;
+  if(e.data.praktiskHeight) pframe.style.height=Math.ceil(e.data.praktiskHeight)+"px";
+  if(e.data.praktiskScrollTo!=null){ const hh=(document.querySelector("header.top")||{}).offsetHeight||0; window.scrollTo({top:pframe.getBoundingClientRect().top+window.scrollY+e.data.praktiskScrollTo-hh-12,behavior:"smooth"}); }
+});
 function showTab(t){
   $("#viewLiv").hidden=(t!=="liv");$("#viewVaegt").hidden=(t!=="vaegt");$("#viewPraktisk").hidden=(t!=="praktisk");
   $("#tabbar").querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
