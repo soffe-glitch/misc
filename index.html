@@ -915,7 +915,7 @@ document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest
   weightChart.range=b.dataset.r;document.querySelectorAll("#wRange button").forEach(x=>x.classList.toggle("sel",x===b));weightChart();});
 function fatChart(){
   const el=$("#fatChart"); const B=S.body.filter(b=>b.fat_pct!=null);
-  if(B.length<2){el.innerHTML='<div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen. Withings har '+B.length+' indtil videre.</div>';return;}
+  if(B.length<2){el.innerHTML='<div class="empty">To eller flere kropssammensætnings-målinger tegner overlejringen. Der er '+B.length+' indtil videre.</div>';return;}
   // vægt (morgen) på venstre akse, fedt% på højre — fælles dato-akse
   const M=morning();
   const w=680,h=240,mL=36,mR=40,mT=16,mB=24;
@@ -928,11 +928,12 @@ function fatChart(){
   const YF=v=>mT+(fMax-v)/((fMax-fMin)||1)*(h-mT-mB);
   let grid="";for(let i=0;i<=4;i++){const y=mT+i/4*(h-mT-mB);const wvv=wMax-i/4*(wMax-wMin);const fvv=fMax-i/4*(fMax-fMin);
     grid+=`<line x1="${mL}" x2="${w-mR}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${mL-6}" y="${y+3}" text-anchor="end" class="axis">${wvv.toFixed(0)}</text><text x="${w-mR+6}" y="${y+3}" class="axis" fill="var(--kost)">${fvv.toFixed(0)}</text>`;}
+  const gFirst=B.find(b=>b.source==="garmin"), gMark=gFirst&&B.some(b=>b.source!=="garmin")?(()=>{const gx=X(parseD(gFirst.log_date).getTime());return `<line x1="${gx}" x2="${gx}" y1="${mT}" y2="${h-mB}" stroke="var(--faint)" stroke-dasharray="4 3"/><text x="${gx-4}" y="${mT+10}" text-anchor="end" class="axis">Garmin-vægt →</text>`})():"";
   const line=(arr,val,Y,col)=>{let d="";arr.forEach((o,i)=>{const x=X(parseD(o.log_date).getTime()),y=Y(val(o));d+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";});const lst=arr[arr.length-1];return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2"/><circle cx="${X(parseD(lst.log_date).getTime()).toFixed(1)}" cy="${Y(val(lst)).toFixed(1)}" r="3.4" fill="${col}"/>`;};
   el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${grid}
     ${M.length?line(M,o=>o.weight_kg,YW,"var(--krop)"):""}
-    ${line(B,o=>o.fat_pct,YF,"var(--kost)")}</svg>
-    <div class="legend"><span style="--x:var(--krop)">vægt (kg)</span><span style="--x:var(--kost)">fedt%</span></div>`;
+    ${line(B,o=>o.fat_pct,YF,"var(--kost)")}${gMark}</svg>
+    <div class="legend"><span style="--x:var(--krop)">vægt (kg)</span><span style="--x:var(--kost)">fedt%</span></div>${gMark?'<p class="note" style="margin:6px 0 0">Withings og Garmin måler fedt% med hver sin algoritme, så spranget ved stregen er et målerskifte og ikke en ændring i din krop.</p>':""}`;
 }
 
 function tshChart(){
@@ -1111,10 +1112,11 @@ function render(){
     $("#tToGoalSub").textContent="mål "+fmt(+s.goal_weight,1)+" kg"+(s.next_phase_goal?" · derefter "+fmt(+s.next_phase_goal,0)+" i det nye år":"");
   }
   const bLast=S.body[S.body.length-1];
+  const sameSrc=S.body.filter(b=>bLast&&b.source===bLast.source);
   if(bLast){
     if(bLast.fat_pct!=null){$("#tFat").innerHTML=fmt(bLast.fat_pct,1)+'<small> %</small>';
-      const bFirst=S.body.find(b=>b.fat_pct!=null);if(bFirst&&bFirst!==bLast){const d=bLast.fat_pct-bFirst.fat_pct;$("#tFatSub").textContent=(d<=0?"↓ ":"↑ ")+fmt(Math.abs(d),1)+" %";$("#tFatSub").style.color=d<=0?"var(--good)":"var(--warn)";}else $("#tFatSub").textContent="baseline";}
-    if(bLast.muscle_kg!=null){$("#tMuscle").innerHTML=fmt(bLast.muscle_kg,1)+'<small> kg</small>';$("#tMuscleSub").textContent="muskelmasse";}
+      const bFirst=sameSrc.find(b=>b.fat_pct!=null);if(bFirst&&bFirst!==bLast){const d=bLast.fat_pct-bFirst.fat_pct;$("#tFatSub").textContent=(d<=0?"↓ ":"↑ ")+fmt(Math.abs(d),1)+" % siden "+bFirst.log_date.slice(5).replace("-","/");$("#tFatSub").style.color=d<=0?"var(--good)":"var(--warn)";}else{$("#tFatSub").textContent=bLast.source==="garmin"?"Garmin · baseline":"baseline";$("#tFatSub").style.color="";}}
+    if(bLast.muscle_kg!=null){$("#tMuscle").innerHTML=fmt(bLast.muscle_kg,1)+'<small> kg</small>';$("#tMuscleSub").textContent=bLast.source==="garmin"?"skeletmuskel (Garmin)":"muskelmasse";}
   }
   fatChart(); tshChart();
 
@@ -1823,8 +1825,8 @@ function insights(){
   const rows=[],{top,days}=findPatterns();
   top.forEach(o=>rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:o.t,p:o.p}));
   if(!top.length) rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:"Ingen tydelige sammenhænge endnu.",p:`Jeg sammenligner dage med fx kort søvn, alkohol, hård arbejdsdag og mange skridt med din energi, dine sofadage, løb og vægt. Lige nu har jeg ${days.soevn} dage med søvn, ${days.log} med dagslog og ${days.energi} med energi-check-in — jeg skal bruge mindst 7 dage i hver gruppe, før noget vises.`});
-  const B=S.body.filter(b=>b.fat_pct!=null);
-  if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden start. Se overlejringen i Krop-sektionen før du dømmer et vægt-plateau.`});}
+  const Ball=S.body.filter(b=>b.fat_pct!=null), B=Ball.filter(b=>b.source===(Ball[Ball.length-1]||{}).source);
+  if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden ${B[0].log_date} (${B[0].source==="garmin"?"Garmin":"Withings"}). Se overlejringen i Krop-sektionen før du dømmer et vægt-plateau.`});}
   $("#insights").innerHTML=rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--${r.bg});color:var(--${r.col})">${r.ic}</div><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("")+
     `<p class="hint" style="margin:10px 0 0">Sammenfald i dine egne data de seneste 120 dage — ikke bevis. Opdateres automatisk, jo mere du logger.</p>`;
 }
