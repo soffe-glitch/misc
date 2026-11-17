@@ -814,10 +814,11 @@ async function reloadData(){
   S.weighins=wg.map(w=>({...w,weight_kg:+w.weight_kg}));
 }
 async function runSync(days){
-  // henter træning (intervals); vægt kommer fra Garmin-synken på Mac'en
+  // henter træning (intervals) og vægt (Garmin, via skyen)
   const opt={headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}};
   await Promise.allSettled([
-    fetch(FN_URL+"?days="+days,opt).then(r=>r.json())
+    fetch(FN_URL+"?days="+days,opt).then(r=>r.json()),
+    fetch(SUPABASE_URL+"/functions/v1/sync-garmin-extra?days=7&ldays=1",{method:"POST",headers:{...opt.headers,"Content-Type":"application/json"}}).then(r=>r.json())   // vægt fra Garmin-vægten
   ]);
 }
 const nowHM=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes());};

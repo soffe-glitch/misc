@@ -2199,7 +2199,8 @@ async function doSync(){
   if(doSync._busy)return; doSync._busy=true;
   const btn=$("#syncBtn");btn.disabled=true;const old=btn.textContent;btn.textContent="synker…";
   const opt={headers:{apikey:KEY,Authorization:"Bearer "+KEY}};
-  try{const rs=await Promise.allSettled([fetch(FN_INT+"?days=30",opt),fetch(FN_GARMIN+"?days=2&maxFit=5",{method:"POST",headers:{...opt.headers,"Content-Type":"application/json"}})]);
+  try{const rs=await Promise.allSettled([fetch(FN_INT+"?days=30",opt),fetch(FN_GARMIN+"?days=2&maxFit=5",{method:"POST",headers:{...opt.headers,"Content-Type":"application/json"}}),
+      fetch(SB+"/functions/v1/sync-garmin-extra?days=7&ldays=1",{method:"POST",headers:{...opt.headers,"Content-Type":"application/json"}})]);   // vægt fra Garmin-vægten
     let gErr=null; try{ const gr=rs[1].status==="fulfilled"?await rs[1].value.json():null; if(!gr||!gr.ok) gErr=(gr&&(gr.note||gr.error))||"Garmin svarede ikke"; }catch(e){ gErr="Garmin svarede ikke"; }
     S.gErr=gErr;
     await loadAll();render();
