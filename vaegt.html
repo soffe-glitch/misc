@@ -542,6 +542,8 @@ function calib(){
   const s=S.settings||{}, t=todayISO();
   const corr=(s.garmin_kcal_correction==null)?-250:+s.garmin_kcal_correction;
   let start=addDays(t,-28); if(s.line_adj_date&&s.line_adj_date>start) start=s.line_adj_date;
+  // ny vægt (Garmin fra 17/11): de to vægte kan ikke sammenlignes, så vinduet starter tidligst på skiftedagen
+  if(s.scale_switch_date&&s.scale_switch_date>start) start=s.scale_switch_date;
   const days=Math.max(0,daysBetween(start,t));            // fulde dage i vinduet (i dag tæller ikke med)
   const kmap={}; S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
   const gmap={}; (S.garmin||[]).forEach(g=>{gmap[g.log_date]=g;});
