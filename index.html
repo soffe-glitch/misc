@@ -212,6 +212,12 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .scal .c.ill{background:var(--kost)}
 .scal .c.fut{background:none; border:1.5px dashed var(--border); cursor:default}
 .scal .c.pre{opacity:.45}
+.scal .c{position:relative}
+.scal .c.am{box-shadow:inset 0 0 0 2px #E8A33D}
+.scal .c.am::after{content:"☀️"; position:absolute; top:-7px; right:-5px; font-size:13px; line-height:1}
+.scalwrap{max-height:268px; overflow-y:auto; overscroll-behavior:contain; margin-top:4px; padding:6px 4px 2px 2px; scrollbar-width:thin}
+.scalh{margin-top:14px}
+.legend .amleg::before{display:none}
 .scal .c.today{outline:2px solid var(--accent); outline-offset:2px}
 .scal .c.l1{color:var(--ink)}
 .scal .wk{font-size:11px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
@@ -531,10 +537,12 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
       <div class="streakmeta">
         <div><span id="streakRec">—</span> <span class="hint">rekord (90 d)</span></div>
         <div><span id="streakWeek">—</span> <span class="hint">løb denne uge</span></div>
+        <div><span id="streakAm">—</span> <span class="hint">☀️ morgenløb i kæden</span></div>
       </div>
     </div>
-    <div class="scal" id="streakStrip"></div>
-    <div class="legend"><span style="--x:color-mix(in srgb,var(--trae) 40%,var(--surface))">under 3 km</span><span style="--x:color-mix(in srgb,var(--trae) 72%,var(--surface))">3–8 km</span><span style="--x:var(--trae)">over 8 km</span><span style="--x:var(--kost)">syg</span></div>
+    <div class="scal scalh" id="streakHead"></div>
+    <div class="scalwrap" id="streakWrap"><div class="scal" id="streakStrip" style="margin-top:0"></div></div>
+    <div class="legend"><span style="--x:color-mix(in srgb,var(--trae) 40%,var(--surface))">under 3 km</span><span style="--x:color-mix(in srgb,var(--trae) 72%,var(--surface))">3–8 km</span><span style="--x:var(--trae)">over 8 km</span><span style="--x:var(--kost)">syg</span><span class="amleg">☀️ morgenløb (før kl. 10)</span></div>
     <p class="hint" style="margin-top:6px">Syg? Tryk på dagen ovenfor — sygedage bryder ikke kæden og tæller ikke som afbrydelser.</p>
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
@@ -810,6 +818,9 @@ async function loadAll(){
       .map(g=>({log_date:g.log_date,sleep_h:g.sleep_secs==null?null:g.sleep_secs/3600,score:g.sleep_score,hrv:g.hrv_last_night==null?null:+g.hrv_last_night,
                rhr:g.resting_hr,stress:g.stress_avg,bb_wake:g.bb_wake==null?null:+g.bb_wake,bed_ts:g.sleep_start,wake_ts:g.sleep_end,kt:g.kcal_total==null?null:+g.kcal_total,ka:g.kcal_active==null?null:+g.kcal_active,kb:g.kcal_bmr==null?null:+g.kcal_bmr})); }catch(e){ S.garmin=[]; }
   try{ S.gacts=await get("garmin_activities","?select=activity_id,start_local,log_date,type,distance_m,duration_s,training_load,aerobic_te,anaerobic_te,calories&log_date=gte."+addDays(todayISO(),-45)); }catch(e){ S.gacts=[]; }
+  // starttid for løb (et år tilbage) → morgenløb i streak-kalenderen
+  try{ S.runStart={}; (await get("garmin_activities","?select=log_date,start_local&type=in.(running,treadmill_running,trail_running,virtual_run)&log_date=gte."+addDays(todayISO(),-400)))
+      .forEach(a=>{const hm=String(a.start_local||"").slice(11,16); if(hm&&(!S.runStart[a.log_date]||hm<S.runStart[a.log_date])) S.runStart[a.log_date]=hm;}); }catch(e){ S.runStart={}; }
   S.gactsKcalToday=(S.gacts||[]).filter(a=>a.log_date===todayISO()).reduce((x,a)=>x+(+a.calories||0),0);
   try{ if(window.Readiness){ await Readiness.load(120); S.rd=Readiness.today(); } }catch(e){ S.rd=null; }
   bigStart();
@@ -1394,10 +1405,13 @@ function streak(){
   // kalender: hele kæden + lidt før, i ugerækker (man–søn), farvet efter km, ugesum til højre
   const km={}; S.workouts.filter(w=>w.kind==="loeb").forEach(w=>{km[w.log_date]=(km[w.log_date]||0)+(+w.distance_km||0);});
   let sStart=t; {let c=days.has(t)?t:addDays(t,-1),n=0; while(n<cur){ if(days.has(c)){n++; sStart=c;} c=addDays(c,-1); if(c<addDays(t,-4000))break; }}
-  let from=weekStart(addDays(sStart,-7)); if(daysBetween(from,t)<41) from=weekStart(addDays(t,-41));
-  if(daysBetween(from,t)>7*12) from=weekStart(addDays(t,-7*11));
+  // hele løbehistorikken (højst et år) — kalenderen ruller, nyeste uge nederst
+  const firstRun=[...days].sort()[0]||t;
+  let from=weekStart(firstRun<addDays(t,-364)?addDays(t,-364):firstRun);
+  const AM=d=>{const hm=(S.runStart||{})[d]; return !!hm&&hm<"10:00";};
   const DN=["M","T","O","T","F","L","S"];
-  let strip=DN.map(x=>`<span class="h">${x}</span>`).join("")+`<span class="h wk">km</span>`;
+  $("#streakHead").innerHTML=DN.map(x=>`<span class="h">${x}</span>`).join("")+`<span class="h wk">km</span>`;
+  let strip="";
   for(let ws=from; ws<=t; ws=addDays(ws,7)){
     const first=ws===from?ws:[0,1,2,3,4,5,6].map(n=>addDays(ws,n)).find(d=>d.slice(8)==="01");
     if(first) strip+=`<span class="mo">${parseD(first).toLocaleDateString("da-DK",{month:"long"})}</span>`;
@@ -1406,10 +1420,15 @@ function streak(){
       if(d>t){strip+=`<span class="c fut"></span>`;continue;}
       const ran=days.has(d), k=km[d]||0, ill=!ran&&sick.has(d); sum+=k;
       const cls=ran?(k>=8?"l3":k>=3?"l2":"l1"):ill?"ill":"";
-      strip+=`<span class="c ${cls}${d<sStart&&cur?' pre':''}${d===t?' today':''}" data-d="${d}" title="${daLabel(d)}${ran?': '+k.toFixed(1).replace('.',',')+' km':ill?': syg':''} — tryk for at markere syg">${ran?(k>=10?Math.round(k):k.toFixed(k<1?1:0)):ill?'🤒':''}</span>`;}
+      const am=ran&&AM(d);
+      strip+=`<span class="c ${cls}${am?' am':''}${d<sStart&&cur?' pre':''}${d===t?' today':''}" data-d="${d}" title="${daLabel(d)}${ran?': '+k.toFixed(1).replace('.',',')+' km'+(am?' kl. '+S.runStart[d]+' ☀':''):ill?': syg':''} — tryk for at markere syg">${ran?(k>=10?Math.round(k):k.toFixed(k<1?1:0)):ill?'🤒':''}</span>`;}
     strip+=`<span class="wk">${sum?Math.round(sum):""}</span>`;
   }
   $("#streakStrip").innerHTML=strip;
+  const wrap=$("#streakWrap"); if(wrap&&!wrap.dataset.scrolled){ wrap.scrollTop=wrap.scrollHeight; wrap.dataset.scrolled="1"; }
+  // morgenbonus
+  let amN=0; for(let d=sStart; d<=t; d=addDays(d,1)) if(days.has(d)&&AM(d)) amN++;
+  $("#streakAm").textContent=cur?amN:0;
   let note;
   const sickToday=sick.has(t);
   const sickRecent=[...sick].filter(d=>d>=addDays(t,-14)&&d<=t).length;
@@ -1417,6 +1436,8 @@ function streak(){
   else if(cur===0) note="Ny start — løb i morgen tidlig, så begynder kæden. 1 km tæller.";
   else if(!activeToday) note=`${cur} dage i træk — et løb i dag holder kæden i live.`;
   else { const nx=[7,14,21,30,50,75,100,150,200,365].find(m=>m>cur); note=`${cur} dage i træk ✓`+(nx?` — ${nx-cur} ${nx-cur===1?"dag":"dage"} til ${nx}.`:" — bliv ved, én morgen ad gangen."); }
+  if(activeToday&&AM(t)){ const amMsg=["Morgenløb ☀️ — dagen er vundet, før den er begyndt.","☀️ Løbet før kl. 10. Resten af dagen er bonus.","Morgenløb ☀️ — det tæller dobbelt i bogen her."]; note+=" "+amMsg[parseD(t).getDate()%amMsg.length]; }
+  else if(cur&&amN) note+=` ☀️ ${amN} af kædens ${cur} dage var morgenløb.`;
   if(sickRecent&&!sickToday) note+=` (${sickRecent} sygedage de seneste 14 dage bryder ikke kæden.)`;
   $("#streakNote").textContent=note;
   const sb=$("#sickBtn"); if(sb) sb.textContent=sickToday?"🤒 Syg i dag ✓ (tryk for at fjerne)":"🤒 Syg i dag";
