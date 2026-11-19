@@ -202,6 +202,20 @@ header.top{position:sticky; top:0; z-index:40; display:flex; align-items:center;
 .streaknum .v{font-size:56px; color:var(--trae); line-height:.9; font-family:"Fraunces",serif; font-weight:400}
 .streakmeta{display:flex; flex-direction:column; gap:4px; font-size:15px; font-weight:600}
 .streakmeta .hint{font-weight:400}
+.scal{display:grid; grid-template-columns:repeat(7,1fr) 34px; gap:4px; margin-top:14px; align-items:center}
+.scal .h{font-size:10.5px; color:var(--muted); text-align:center; font-weight:600; text-transform:uppercase}
+.scal .h.wk{text-align:right}
+.scal .c{height:30px; border-radius:8px; display:grid; place-items:center; font-size:11px; font-weight:600; color:#fff; cursor:pointer; background:var(--surface-3); font-variant-numeric:tabular-nums}
+.scal .c.l1{background:color-mix(in srgb,var(--trae) 40%,var(--surface))}
+.scal .c.l2{background:color-mix(in srgb,var(--trae) 72%,var(--surface))}
+.scal .c.l3{background:var(--trae)}
+.scal .c.ill{background:var(--kost)}
+.scal .c.fut{background:none; border:1.5px dashed var(--border); cursor:default}
+.scal .c.pre{opacity:.45}
+.scal .c.today{outline:2px solid var(--accent); outline-offset:2px}
+.scal .c.l1{color:var(--ink)}
+.scal .wk{font-size:11px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
+.scal .mo{grid-column:1/-1; font-size:10.5px; color:var(--muted); margin-top:4px}
 .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:12px}
 .legend span::before{content:""; display:inline-block; width:10px;height:10px;border-radius:50%; margin-right:6px; vertical-align:middle; background:var(--x)}
 .medgrid{display:grid; grid-template-columns:auto repeat(7,1fr); gap:6px; align-items:center; font-size:12px}
@@ -519,8 +533,8 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
         <div><span id="streakWeek">—</span> <span class="hint">løb denne uge</span></div>
       </div>
     </div>
-    <div class="formstrip" id="streakStrip" style="margin-top:14px"></div>
-    <div class="legend"><span style="--x:var(--trae)">løb</span><span style="--x:var(--kost)">syg</span><span style="--x:var(--surface-3)">fri</span><span style="--x:var(--accent)">i dag</span></div>
+    <div class="scal" id="streakStrip"></div>
+    <div class="legend"><span style="--x:color-mix(in srgb,var(--trae) 40%,var(--surface))">under 3 km</span><span style="--x:color-mix(in srgb,var(--trae) 72%,var(--surface))">3–8 km</span><span style="--x:var(--trae)">over 8 km</span><span style="--x:var(--kost)">syg</span></div>
     <p class="hint" style="margin-top:6px">Syg? Tryk på dagen ovenfor — sygedage bryder ikke kæden og tæller ikke som afbrydelser.</p>
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
@@ -1377,10 +1391,24 @@ function streak(){
   $("#streakCur").textContent=cur;
   $("#streakRec").textContent=longest;
   $("#streakWeek").textContent=week;
-  // 21-dages strip
-  let strip="";
-  for(let i=20;i>=0;i--){const d=addDays(t,-i);const ran=days.has(d);const ill=!ran&&sick.has(d);const today=d===t;
-    strip+=`<span class="fp${today?' today':''}" data-d="${d}" style="cursor:pointer;background:${ran?'var(--trae)':ill?'var(--kost)':'var(--surface-3)'}" title="${daLabel(d)}${ran?': løb ✓':ill?': syg':''} — tryk for at markere syg">${ill?'🤒':''}</span>`;}
+  // kalender: hele kæden + lidt før, i ugerækker (man–søn), farvet efter km, ugesum til højre
+  const km={}; S.workouts.filter(w=>w.kind==="loeb").forEach(w=>{km[w.log_date]=(km[w.log_date]||0)+(+w.distance_km||0);});
+  let sStart=t; {let c=days.has(t)?t:addDays(t,-1),n=0; while(n<cur){ if(days.has(c)){n++; sStart=c;} c=addDays(c,-1); if(c<addDays(t,-4000))break; }}
+  let from=weekStart(addDays(sStart,-7)); if(daysBetween(from,t)<41) from=weekStart(addDays(t,-41));
+  if(daysBetween(from,t)>7*12) from=weekStart(addDays(t,-7*11));
+  const DN=["M","T","O","T","F","L","S"];
+  let strip=DN.map(x=>`<span class="h">${x}</span>`).join("")+`<span class="h wk">km</span>`;
+  for(let ws=from; ws<=t; ws=addDays(ws,7)){
+    const first=ws===from?ws:[0,1,2,3,4,5,6].map(n=>addDays(ws,n)).find(d=>d.slice(8)==="01");
+    if(first) strip+=`<span class="mo">${parseD(first).toLocaleDateString("da-DK",{month:"long"})}</span>`;
+    let sum=0;
+    for(let i=0;i<7;i++){const d=addDays(ws,i);
+      if(d>t){strip+=`<span class="c fut"></span>`;continue;}
+      const ran=days.has(d), k=km[d]||0, ill=!ran&&sick.has(d); sum+=k;
+      const cls=ran?(k>=8?"l3":k>=3?"l2":"l1"):ill?"ill":"";
+      strip+=`<span class="c ${cls}${d<sStart&&cur?' pre':''}${d===t?' today':''}" data-d="${d}" title="${daLabel(d)}${ran?': '+k.toFixed(1).replace('.',',')+' km':ill?': syg':''} — tryk for at markere syg">${ran?(k>=10?Math.round(k):k.toFixed(k<1?1:0)):ill?'🤒':''}</span>`;}
+    strip+=`<span class="wk">${sum?Math.round(sum):""}</span>`;
+  }
   $("#streakStrip").innerHTML=strip;
   let note;
   const sickToday=sick.has(t);
@@ -1388,7 +1416,7 @@ function streak(){
   if(sickToday) note=`Syg i dag — hvil. Kæden (${cur} dage) står og venter; sygedage bryder den ikke.`;
   else if(cur===0) note="Ny start — løb i morgen tidlig, så begynder kæden. 1 km tæller.";
   else if(!activeToday) note=`${cur} dage i træk — et løb i dag holder kæden i live.`;
-  else note=`${cur} dage i træk ✓ — bliv ved, én morgen ad gangen.`;
+  else { const nx=[7,14,21,30,50,75,100,150,200,365].find(m=>m>cur); note=`${cur} dage i træk ✓`+(nx?` — ${nx-cur} ${nx-cur===1?"dag":"dage"} til ${nx}.`:" — bliv ved, én morgen ad gangen."); }
   if(sickRecent&&!sickToday) note+=` (${sickRecent} sygedage de seneste 14 dage bryder ikke kæden.)`;
   $("#streakNote").textContent=note;
   const sb=$("#sickBtn"); if(sb) sb.textContent=sickToday?"🤒 Syg i dag ✓ (tryk for at fjerne)":"🤒 Syg i dag";
