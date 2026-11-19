@@ -1151,7 +1151,7 @@ function statusRow(){
   chip("Eltroxin",n+"<small> / 2</small>",(n===2?"begge taget ✓":rec.morning?"morgen ✓":"ikke taget"),(rec.morning&&(rec.evening||h<20))?"good":(!rec.morning&&h>=10?"warn":""));
   // rygestop
   try{const st=smokeStats();
-    if(st.started){const d=Math.floor(st.ms/864e5);chip("Røgfri",d+"<small> dage</small>",st.slipN?st.slipN+" slip i alt":"ingen slip","good");}
+    if(st.started){const d=Math.floor(st.ms/864e5);chip("Røgfri",d+"<small> dage</small>",kr(smokeSaved(st).now)+" sparet","good");}
     else chip("Røgfri","—","starter snart");
   }catch(e){chip("Røgfri","—","");}
   el.innerHTML=chips.join("");
@@ -2046,6 +2046,16 @@ function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 
 // ---------- RYGESTOP ----------
 const SMOKE_REASONS=["Jeg lugter ikke af røg (mærkes efter få dage)","Løb føles lettere (mærkes efter få uger)","Huden heler bedre — rygning hæmmer blodgennemstrømning og kollagen"];
+// forbrug før stop: ca. 15 cigaretter om dagen, pakke à 20 stk = 64 kr
+const SMOKE_COST={perDay:15,packPrice:64,packSize:20};
+function smokeSaved(st){
+  const perDay=SMOKE_COST.perDay*SMOKE_COST.packPrice/SMOKE_COST.packSize;
+  const slipDays=new Set(st.slips.map(x=>x.log_date)).size;
+  const cur=Math.max(0,st.ms/864e5-slipDays);
+  const prev=st.attempts.filter(a=>!a.ongoing).reduce((n,a)=>n+a.days,0);
+  return {perDay,now:cur*perDay,total:(cur+prev)*perDay,cigs:Math.round(cur*SMOKE_COST.perDay)};
+}
+const kr=n=>Math.round(n).toLocaleString("da-DK")+" kr";
 const WEEKDAYS_FULL=["søndag","mandag","tirsdag","onsdag","torsdag","fredag","lørdag"];
 function isoOf(d){return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Copenhagen",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);}
 function cphOffsetMin(d){const v=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Copenhagen",timeZoneName:"longOffset"}).formatToParts(d).find(x=>x.type==="timeZoneName").value;const m=v.match(/GMT([+-])(\d{2}):?(\d{2})?/);return m?(m[1]==="-"?-1:1)*(+m[2]*60+(+m[3]||0)):0;}
@@ -2100,9 +2110,11 @@ function renderSmoke(){
   const mileHtml=ms.map((m,i)=>`<div class="mile ${m.on?'on':i===nextI?'next':''}"><span class="dot">${m.on?'✓':''}</span><div><b>${m.t}</b><div class="when">${m.s?m.s+' · ':''}${m.on?'nået '+m.date:(m.range?'':m.date+' · ')+'om '+(dur(m.left).big+' '+dur(m.left).small)}</div></div></div>`).join("");
   const longest=Math.max(0,...st.attempts.map(a=>a.ongoing?Math.floor(st.ms/864e5):a.days));
   const attemptsHtml=st.attempts.map((a,i)=>`<div class="hint" style="margin:3px 0">Forsøg ${i+1}: ${daLabel(a.start)} → ${a.ongoing?'igangværende':a.firstSlip?'slip '+daLabel(a.firstSlip):'nyt stop'} (${a.ongoing?Math.floor(st.ms/864e5):a.days} dage)</div>`).join("");
+  const sv=smokeSaved(st);
   const reasons='<ol style="margin:4px 0 8px 18px;padding:0;font-size:14px;line-height:1.7">'+SMOKE_REASONS.map(r=>"<li>"+r+"</li>").join("")+'</ol>';
   body.innerHTML=`<div class="smokebig tnum">${d.big}<small>${d.small} røgfri</small></div>
     <div class="hint" style="margin-top:8px">${st.slipN?st.slipN+' slip siden stop':'ingen slip siden stop'} · længste stræk <b>${longest}</b> dage</div>
+    <div class="smokemsg" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><span><b class="tnum" style="font-size:20px">${kr(sv.now)}</b> sparet</span><span class="tnum">${sv.cigs} cigaretter ikke røget${sv.total-sv.now>1?' · '+kr(sv.total)+' i alt':''} · ${kr(sv.perDay*30)}/md</span></div>
     <div class="formstrip" style="margin-top:10px;grid-template-columns:repeat(7,1fr);gap:4px">${strip}</div>
     <div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn" id="smokeSlip" style="flex:1">Jeg røg i dag</button><button type="button" class="btn" id="smokeQuit" style="flex:1">Nyt stop i dag</button></div>
     <details class="smoked"><summary>Forsøg, milepæle og grunde</summary>${attemptsHtml}${mileHtml}${reasons}</details>`;
