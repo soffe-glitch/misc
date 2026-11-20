@@ -557,29 +557,12 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   </div>
 
   </div></div><!-- /dash -->
-  <!-- LIV: ARBEJDE, VEJR & LÆSNING -->
-  <details class="fold" id="foldLiv" style="margin-top:34px"><summary><span>Arbejde, vejr &amp; læsning</span><span class="hint">tryk for at åbne</span></summary>
-  <div class="grid g3">
-    <div class="card">
-      <div class="ch"><h3>Arbejdsbelastning</h3><span class="hint">fra dagens log</span></div>
-      <div id="arbChart"><div class="empty">Log arbejdsbelastning i dagens log.</div></div>
-      <p class="hint" style="margin-top:8px" id="arbNote"></p>
-    </div>
-    <div class="card">
-      <div class="ch"><h3>Vejr</h3><span class="hint">København</span></div>
-      <div class="grid g2">
-        <div class="tile"><div class="k">Lige nu</div><div class="v tnum" id="wTemp">—</div><div class="sub" id="wDesc">henter…</div></div>
-        <div class="tile"><div class="k">Løbelyst</div><div class="v" style="font-size:16px" id="wRun">—</div><div class="sub" id="wRunSub"></div></div>
-      </div>
-      <p class="hint" style="margin-top:10px">Grå, våde dage koster ofte aftenløbet — planlæg dem indenfor eller tidligt.</p>
-    </div>
-    <div class="card">
-      <div class="ch"><h3>Læsning</h3><span class="hint">sider/dag · 7-dages snit · fra Books</span></div>
-      <div id="readChart"><div class="empty">henter…</div></div>
-      <p class="hint" style="margin-top:8px" id="readNote"></p>
-    </div>
+  <!-- LÆSNING -->
+  <div class="card" style="margin-top:34px;margin-bottom:14px">
+    <div class="ch"><h3>Læsning</h3><span class="hint">sider/dag · 7-dages snit · fra Books</span></div>
+    <div id="readChart"><div class="empty">henter…</div></div>
+    <p class="hint" style="margin-top:8px" id="readNote"></p>
   </div>
-  </details>
 
   <!-- SAMMENHÆNGE -->
   <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge</div>
@@ -1226,11 +1209,6 @@ function render(){
 
 
 
-  // --- arbejde 7d ---
-  const wmap={};S.daily.forEach(d=>{if(d.work_load!=null)wmap[d.log_date]=d.work_load;});
-  const wdays=Object.keys(wmap).sort().slice(-14);
-  if(wdays.length){bars("arbChart",wdays.map(d=>({d,v:wmap[d]})),0,"var(--arb)","var(--arb)");
-    const hard=wdays.filter(d=>wmap[d]>=4).length;$("#arbNote").innerHTML=hard?`<b style="color:var(--arb)">${hard} hårde dage</b> i vinduet — hold øje med energi og aftenløb.`:"";}
 
   // --- læsning ---
   const rsRaw=readingSeries(90);
@@ -1583,18 +1561,6 @@ function dayExtras(t){
   const sr=S.workouts.find(w=>w.log_date===t&&w.kind==="skridt"); o.skridt_i_dag=sr?sr.steps:null; o.skridt_maal=7000;
   const md=S.meds.find(m=>m.log_date===t)||{}; o.eltroxin_i_dag={morgen:!!md.morning,aften:!!md.evening};
   const ci=S.checkins.filter(c=>c.log_date===t&&(c.energy||c.mood)); if(ci.length) o.energi_checkin_i_dag_1til5=+avg(ci.map(c=>c.energy||c.mood)).toFixed(1);
-  const dl=S.daily.find(d=>d.log_date===t)||{}; if(dl.work_load!=null) o.arbejdsbelastning_i_dag_1til5=+dl.work_load;
-  if(dl.comm_load!=null) o.kommunikation_i_dag_1til5=+dl.comm_load;
-  // egen sammenhæng: energi dagen EFTER høj vs. lav kommunikationsbelastning (kun når der er nok dage)
-  try{
-    const dy=S.daily.find(d=>d.log_date===addDays(t,-1))||{};
-    if(dy.comm_load!=null) o.kommunikation_i_gaar_1til5=+dy.comm_load;
-    const eBy={}; S.checkins.forEach(c=>{const v=c.energy||c.mood; if(v==null)return; (eBy[c.log_date]=eBy[c.log_date]||[]).push(v);});
-    const hi=[],lo=[];
-    S.daily.forEach(d=>{ if(d.comm_load==null||!eBy[addDays(d.log_date,1)]) return; (d.comm_load>=4?hi:lo).push(avg(eBy[addDays(d.log_date,1)])); });
-    if(hi.length>=3&&lo.length>=3) o.energi_dagen_efter_kommunikation={efter_hoej_4til5:+avg(hi).toFixed(1),efter_lav_1til3:+avg(lo).toFixed(1),antal_dage:[hi.length,lo.length],
-      note:"Gennemsnitlig energi (1-5) dagen efter. Få dage — fortolk forsigtigt og kun hvis forskellen er tydelig."};
-  }catch(e){}
   try{
     const cx=S.ctx.find(c=>c.log_date===t); if(cx){ o.dagslys_minutter_i_dag=cx.daylight_min; o.solskin_minutter_i_dag=cx.sunshine_min; }
     const yd=S.daily.find(d=>d.log_date===addDays(t,-1))||{}; if(yd.late_coffee!=null) o.kaffe_efter_14_i_gaar=!!yd.late_coffee;
@@ -1871,7 +1837,6 @@ function findPatterns(){
   const mapBy=(arr,f)=>{const m={};arr.forEach(r=>{if(!inW(r.log_date))return;const v=f(r);if(v!=null&&!isNaN(v))m[r.log_date]=v;});return m;};
   const sleep=mapBy(S.wellness,w=>w.sleep_hours), hrv=mapBy(S.wellness,w=>w.hrv);
   const alc=mapBy(S.daily,d=>d.alcohol_units==null?null:+d.alcohol_units);
-  const work=mapBy(S.daily,d=>d.work_load==null?null:+d.work_load), comm=mapBy(S.daily,d=>d.comm_load==null?null:+d.comm_load);
   const sofa={},ovr={}; S.daily.forEach(d=>{if(inW(d.log_date)&&d.day_type){sofa[d.log_date]=d.day_type==="sofa"?1:0;ovr[d.log_date]=d.day_type==="overskud"?1:0;}});
   const kc={};S.nutrition.forEach(n=>{if(inW(n.log_date)&&n.calories_in>0)kc[n.log_date]=(kc[n.log_date]||0)+n.calories_in;});
   const steps=mapBy(S.workouts.filter(w=>w.kind==="skridt"),w=>w.steps>0?+w.steps:null);
@@ -1887,8 +1852,6 @@ function findPatterns(){
   const X={
     soevn:{s:"Kort søvn (<6,5 t)",data:sleep,a:v=>v<6.5,b:v=>v>=7,wa:"efter <6,5 t søvn",wb:"efter ≥7 t"},
     alko:{s:"Alkohol",data:alc,a:v=>v>0,b:v=>v===0,wa:"på alkohol-dage",wb:"uden alkohol"},
-    arbejde:{s:"Hård arbejdsdag",data:work,a:v=>v>=4,b:v=>v<=2,wa:"efter hårde arbejdsdage (4-5)",wb:"efter lette (1-2)"},
-    komm:{s:"Drænende kommunikation",data:comm,a:v=>v>=4,b:v=>v<=2,wa:"efter høj kommunikation (4-5)",wb:"efter lav (1-2)"},
     kcal:{s:"Over "+(tgt+250)+" kcal",data:kc,a:v=>v>tgt+250,b:v=>v<=tgt,wa:"efter dage over "+(tgt+250)+" kcal",wb:"efter dage inden for målet"},
     skridt:{s:"Mange skridt (≥7.000)",data:steps,a:v=>v>=7000,b:v=>v<4000,wa:"efter ≥7.000 skridt",wb:"efter <4.000 skridt"},
     loeb:{s:"Løbetur",data:ran,a:v=>v===1,b:v=>v===0,wa:"på løbedage",wb:"uden løb"},
@@ -1907,7 +1870,6 @@ function findPatterns(){
   // par: [årsag, udfald, forsinkelse i dage]
   const P=[["soevn","energi",0],["soevn","sofa",0],["soevn","loeb",0],["hrvLav","energi",0],["hrvLav","loeb",0],
     ["alko","soevn",1],["alko","hrv",1],["alko","energi",1],["alko","sofa",1],
-    ["arbejde","soevn",1],["arbejde","energi",1],["arbejde","loeb",1],["komm","energi",1],["komm","soevn",1],
     ["kcal","vaegt",0],["skridt","soevn",1],["loeb","energi",0],["loeb","soevn",1]];
   const mean=a=>a.reduce((x,y)=>x+y,0)/a.length, sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/Math.max(1,a.length-1));};
   const out=[];
@@ -1928,8 +1890,6 @@ function findPatterns(){
   if(migDays.length>=3){
     const sM=migDays.map(d=>sleep[d]).filter(v=>v!=null), sO=Object.keys(sleep).filter(d=>!migDays.includes(d)).map(d=>sleep[d]);
     if(sM.length>=3&&sO.length>=10&&mean(sO)-mean(sM)>=0.6) out.push({z:2.5,t:"Migræne: kortere søvn op til anfaldene",p:`Natten før dine ${sM.length} anfald sov du i snit ${hhmm(mean(sM))} mod ${hhmm(mean(sO))} ellers.`,xk:"mig"});
-    const wM=migDays.map(d=>work[addDays(d,-1)]).filter(v=>v!=null), wO=Object.keys(work).filter(d=>!migDays.includes(addDays(d,1))).map(d=>work[d]);
-    if(wM.length>=3&&wO.length>=10&&mean(wM)-mean(wO)>=0.8) out.push({z:2.4,t:"Migræne: hård arbejdsdag dagen før",p:`Arbejdsbelastning ${fmt(mean(wM),1)}/5 dagen før anfald mod ${fmt(mean(wO),1)}/5 ellers (${wM.length} anfald).`,xk:"mig"});
   }
   out.sort((a,b)=>b.z-a.z);
   const seen={},top=[]; out.forEach(o=>{if((seen[o.xk]=(seen[o.xk]||0)+1)<=2&&top.length<5)top.push(o);});
@@ -1996,22 +1956,6 @@ function hypotheses(){
         :`${r.expLabel}: <b>${r.m1}</b> (${r.n1} dage) mod ${r.ctlLabel}: <b>${r.m2}</b> (${r.n2} dage).`;
       return `<div class="insight"><div><b>${r.q}</b><p><span style="color:${b[1]};font-weight:600">${b[0]}</span> · ${body}</p></div></div>`;}).join("")+
     `<p class="hint" style="margin:10px 0 0">Sammenfald i få dage — ikke bevis. En forskel kan skyldes noget helt andet (fx at fridage både er solrige og hviler). Jo flere dage du logger, jo mere troværdigt.</p>`;
-}
-
-// ---------- weather (open-meteo, ingen nøgle) ----------
-async function weather(){
-  try{
-    const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m,precipitation,cloud_cover,weather_code&timezone=Europe%2FCopenhagen");
-    const j=await r.json();const c=j.current;if(!c)return;
-    $("#wTemp").innerHTML=Math.round(c.temperature_2m)+'<small>°</small>';
-    const wc=c.weather_code,rain=c.precipitation>0.1,cloudy=c.cloud_cover>70;
-    const desc=wc>=71&&wc<=77?"sne":rain?"regn":cloudy?"skyet":wc<=1?"klart":"lettere skyet";
-    $("#wDesc").textContent=desc;
-    const bad=rain||(cloudy&&c.temperature_2m<8);
-    $("#wRun").textContent=bad?"Lav":c.temperature_2m>=6&&!rain?"God":"OK";
-    $("#wRun").style.color=bad?"var(--warn)":"var(--good)";
-    $("#wRunSub").textContent=rain?"vådt":cloudy?"gråvejr":"tørt";
-  }catch(e){$("#wDesc").textContent="ikke tilgængelig";}
 }
 
 // ---------- utils ----------
@@ -2357,7 +2301,7 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(
 
 // ---------- boot ----------
 (async function(){
-  try{await loadAll();if(!S.settings)throw new Error("Ingen indstillinger fundet.");render();weather();}
+  try{await loadAll();if(!S.settings)throw new Error("Ingen indstillinger fundet.");render();}
   catch(e){$("#sub").textContent="Kunne ikke hente data: "+e.message;$("#sub").style.color="var(--bad)";}
 })();
 </script>
