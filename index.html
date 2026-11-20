@@ -1116,7 +1116,7 @@ function render(){
   const now=new Date();const df=new Intl.DateTimeFormat("da-DK",{timeZone:"Europe/Copenhagen",weekday:"long",day:"numeric",month:"long"});
   $("#todayLabel").textContent="I dag · "+df.format(now);
   const dag=daysBetween(s.kur_start_date,t)+1;
-  $("#sub").textContent=`Kurdag ${dag} af ${daysBetween(s.kur_start_date,s.kur_end_date)+1} · start ${fmt(+s.start_weight,1)} kg → mål ${fmt(+s.goal_weight,1)} kg${s.next_phase_goal?" · næste fase "+fmt(+s.next_phase_goal,0)+" kg i det nye år":""}`;
+  $("#sub").textContent=""; $("#sub").style.display="none";
 
   // --- I dag tiles ---
   const foraften=weighToday("foraften"),morg=weighToday("morgen");
@@ -2302,7 +2302,7 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(
 // ---------- boot ----------
 (async function(){
   try{await loadAll();if(!S.settings)throw new Error("Ingen indstillinger fundet.");render();}
-  catch(e){$("#sub").textContent="Kunne ikke hente data: "+e.message;$("#sub").style.color="var(--bad)";}
+  catch(e){$("#sub").style.display="";$("#sub").textContent="Kunne ikke hente data: "+e.message;$("#sub").style.color="var(--bad)";}
 })();
 </script>
 <script>
