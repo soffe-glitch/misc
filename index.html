@@ -299,6 +299,9 @@ details.fold>.grid{gap:0; margin:0!important}
 details.fold>.card{margin:0!important}
 details.smoked{margin-top:12px;border-top:1px solid var(--border);padding-top:4px}
 details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10px 2px;color:var(--ink)}
+#bigCard .nf-h{font-size:14px;margin:18px 0 4px;padding-top:14px;border-top:1px solid var(--border)}
+#bigCard .watch{margin-top:14px}#bigCard .watch summary{cursor:pointer;color:var(--muted);font-size:13px}
+#bigCard .watch ul{margin:8px 0 0;padding-left:18px;font-size:13px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -547,66 +550,10 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <p class="hint" id="streakNote" style="margin-top:8px"></p>
   </div>
   </div><div class="blk">
-  <details class="fold" id="foldVane"><summary><span>Vane-modning 🌱</span><span class="hint">hvornår løbet kører af sig selv</span></summary>
-  <div class="card" id="vaneCard" style="margin-bottom:14px">
-    <div class="ch" style="display:none"><h2>Vane-modning 🌱</h2></div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 6px">
-      <span id="vaneDays" style="font-weight:600">—</span>
-      <span class="hint" id="vanePct">—</span>
-    </div>
-    <div style="height:10px;border-radius:6px;background:var(--surface-3);overflow:hidden">
-      <div id="vaneBar" style="height:100%;width:0;background:var(--trae);border-radius:6px;transition:width .4s"></div>
-    </div>
-    <p class="hint" id="vaneWindow" style="margin:6px 0 0"></p>
-    <div class="streakrow" style="margin-top:16px">
-      <div class="streaknum"><div class="v tnum" id="vaneAdh" style="font-size:34px">—</div><div class="sub">træfprocent</div></div>
-      <div class="streakmeta">
-        <div><span id="vaneComeback">—</span> <span class="hint">comeback-hastighed</span></div>
-        <div><span id="vaneMiss">—</span> <span class="hint">afbrydelser</span></div>
-      </div>
-    </div>
-    <p class="hint" id="vaneNote" style="margin-top:10px"></p>
-  </div>
-  </details>
-  </div><div class="blk">
-  <div class="grid lead">
-    <div class="card">
-      <div class="ch"><h2>Seneste løb</h2><span class="hint">fra intervals.icu</span></div>
-      <div id="runList"></div>
-      <div id="loadChart" style="margin-top:12px"></div>
-    </div>
-    <div class="grid g2" style="align-content:start">
+  <div class="grid g2" style="align-content:start">
       <div class="tile"><div class="k">Ugens km</div><div class="v tnum" id="tWeekKm">—</div><div class="sub" id="tWeekKmSub"></div></div>
       <div class="tile"><div class="k">Skridt i dag</div><div class="v tnum" id="tSteps">—</div><div class="sub" id="tStepsSub">mål 7.000</div></div>
       <div class="tile" style="grid-column:span 2"><div class="k">Styrke denne uge</div><div class="v" style="font-size:16px" id="tStrength">—</div><div class="sub" id="tStrengthSub"></div></div>
-    </div>
-  </div>
-
-  </div><div class="blk">
-  <!-- RESTITUTION + KOST -->
-  <div class="grid g2">
-    <div>
-      <div class="section-label"><span class="bar" style="background:var(--rest)"></span>Restitution</div>
-      <div class="card"><div class="grid g3">
-        <div class="tile"><div class="k">Søvn i nat</div><div class="v tnum" id="tSleep">—</div><div class="sub" id="tSleepSub"></div></div>
-        <div class="tile"><div class="k">HRV</div><div class="v tnum" id="tHrv">—</div><div class="sub" id="tHrvSub"></div></div>
-        <div class="tile"><div class="k">Hvilepuls</div><div class="v tnum" id="tRhr">—</div><div class="sub" id="tRhrSub"></div></div>
-      </div>
-      <div id="sleepChart" style="margin-top:14px"></div>
-      </div>
-    </div>
-    <div>
-      <div class="section-label"><span class="bar" style="background:var(--kost)"></span>Kost</div>
-      <div class="card">
-        <div class="ch"><h3>Kalorier — 14 dage</h3></div>
-        <div id="kostChart"><div class="empty">Log mad i vægt-dashboardet, så vises kalorierne her.</div></div>
-        <div class="legend" id="kostLegend" style="display:none"></div>
-        <div class="grid g2" style="margin-top:12px">
-          <div class="tile"><div class="k">Snit kcal</div><div class="v tnum" id="tAvgKcal">—</div><div class="sub">mål 1648</div></div>
-          <div class="tile"><div class="k">Dage logget</div><div class="v tnum" id="tKostDays">—</div><div class="sub">seneste 14</div></div>
-        </div>
-      </div>
-    </div>
   </div>
 
   </div></div><!-- /dash -->
@@ -635,10 +582,8 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
   </details>
 
   <!-- SAMMENHÆNGE -->
-  <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge — hvorfor</div>
-  <div class="card" id="bigCard" style="margin-bottom:14px"></div>
-  <div class="card" id="hypoCard" style="margin-bottom:14px"></div>
-  <details class="fold" id="foldIns"><summary><span>Flere iagttagelser</span><span class="hint">vægt vs. fedt% m.m.</span></summary><div class="card" id="insights"></div></details>
+  <div class="section-label"><span class="bar" style="background:var(--accent)"></span>Sammenhænge</div>
+  <div class="card" id="bigCard" style="margin-bottom:14px"><div id="bigMain"></div><div id="nearFind"></div><div id="watchList"></div></div>
   </div><!-- /viewLiv -->
 
   <div id="viewVaegt" hidden>
@@ -1259,15 +1204,6 @@ function render(){
   // --- medicin uge-grid (denne uge, man-søn) ---
   medgrid();
   // --- træning ---
-  const runs=S.workouts.filter(w=>w.kind==="loeb").sort((a,b)=>a.log_date<b.log_date?1:-1).slice(0,4);
-  $("#runList").innerHTML=runs.length?runs.map(r=>{
-    const pace=(r.distance_km&&r.duration_min)?(r.duration_min/r.distance_km):null;
-    const pc=pace?`${Math.floor(pace)}:${pad(Math.round((pace%1)*60))}/km`:"";
-    return `<div class="runrow"><div class="d">${daLabel(r.log_date)}</div><div>${fmt(r.distance_km,1)} km${r.note?" · "+esc(r.note):""}</div><div class="chip" style="background:var(--trae-soft);color:var(--trae)">${pc}</div></div>`;
-  }).join(""):'<div class="empty">Ingen løb i vinduet.</div>';
-  // load chart: km per løb seneste 8
-  const runL=S.workouts.filter(w=>w.kind==="loeb"&&w.distance_km).sort((a,b)=>a.log_date<b.log_date?-1:1).slice(-8);
-  if(runL.length)bars("loadChart",runL.map(r=>({d:r.log_date,v:r.distance_km,label:fmt(r.distance_km,1)+" km"})),0,"var(--trae)","var(--trae)");
   // ugens km + skridt + styrke
   const wkStart=weekStart(t);
   const wkRuns=S.workouts.filter(w=>w.kind==="loeb"&&w.log_date>=wkStart);
@@ -1279,7 +1215,6 @@ function render(){
   const wkStr=S.workouts.filter(w=>w.kind==="styrke"&&w.log_date>=wkStart).length;
   $("#tStrength").textContent=wkStr+(wkStr===1?" gang":" gange");$("#tStrengthSub").textContent="mål 1/uge";
   streak();
-  vane();
   renderSmoke();
   sleepDebtWarn();
   energiCheck();
@@ -1289,21 +1224,7 @@ function render(){
   statusRow();
   paintDayExtras();
 
-  // --- restitution ---
-  if(wl){
-    if(wl.sleep_hours!=null){const np=napH(wl.log_date);$("#tSleep").textContent=hhmm(wl.sleep_hours);const avgS=avg(S.wellness.slice(-14).map(w=>w.sleep_hours).filter(x=>x!=null));$("#tSleepSub").textContent="snit "+hhmm(avgS)+(np>0?" · +"+Math.round(np*60)+" min lur":"");const tot=wl.sleep_hours+np;$("#tSleepSub").style.color=(tot<avgS-0.5)?"var(--warn)":"";}
-    if(wl.hrv!=null){$("#tHrv").innerHTML=wl.hrv+'<small> ms</small>';}
-    if(wl.resting_hr!=null){$("#tRhr").textContent=wl.resting_hr;}
-  }
-  sleepChart();
 
-  // --- kost 14d ---
-  const kmap={};S.nutrition.forEach(n=>{kmap[n.log_date]=(kmap[n.log_date]||0)+(n.calories_in||0);});
-  const kdays=Object.keys(kmap).filter(d=>kmap[d]>0).sort().slice(-14);
-  if(kdays.length){bars("kostChart",kdays.map(d=>({d,v:kmap[d]})),+s.calorie_target,"var(--accent)","var(--kost)");
-    const kl=$("#kostLegend");const nOver=kdays.filter(d=>kmap[d]>+s.calorie_target).length;
-    kl.style.display="";kl.innerHTML=`<span style="--x:var(--accent)">under mål</span><span style="--x:var(--kost)">over mål (${nOver} af ${kdays.length} dage)</span><span style="--x:var(--accent-ink)">stiplet = ${s.calorie_target} kcal</span>`;
-    $("#tAvgKcal").textContent=Math.round(avg(kdays.map(d=>kmap[d])));$("#tKostDays").textContent=kdays.length;}
 
   // --- arbejde 7d ---
   const wmap={};S.daily.forEach(d=>{if(d.work_load!=null)wmap[d.log_date]=d.work_load;});
@@ -1323,7 +1244,6 @@ function render(){
   // --- coach + insights ---
   coach();
   insights();
-  hypotheses();
   bigPicture();
   paintGarminStatus();
   $("#foot").textContent="Sidst opdateret "+now.toLocaleTimeString("da-DK",{timeZone:"Europe/Copenhagen",hour:"2-digit",minute:"2-digit"});
@@ -1349,7 +1269,7 @@ function bigBars(el,c){
   el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${svg}</svg><div class="cap">${c.unit}</div>`;
 }
 async function bigPicture(){
-  const el=$("#bigCard"); if(!el||bigDone||typeof Connections==="undefined") return;
+  const el=$("#bigMain"); if(!el||bigDone||typeof Connections==="undefined") return;
   bigDone=true;
   el.innerHTML=`<div class="ch"><h2>Det store billede</h2><span class="hint">analyserer dine data…</span></div>`;
   try{
@@ -2017,13 +1937,20 @@ function findPatterns(){
   return {top,days};
 }
 function insights(){
-  const rows=[],{top,days}=findPatterns();
-  top.forEach(o=>rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:o.t,p:o.p}));
-  if(!top.length) rows.push({ic:"🔎",bg:"accent-soft",col:"accent",t:"Ingen tydelige sammenhænge endnu.",p:`Jeg sammenligner dage med fx kort søvn, alkohol, hård arbejdsdag og mange skridt med din energi, dine tunge dage, løb og vægt. Lige nu har jeg ${days.soevn} dage med søvn, ${days.log} med dagslog og ${days.energi} med energi-check-in — jeg skal bruge mindst 7 dage i hver gruppe, før noget vises.`});
-  const Ball=S.body.filter(b=>b.fat_pct!=null), B=Ball.filter(b=>b.source===(Ball[Ball.length-1]||{}).source);
-  if(B.length>=2){const d=B[B.length-1].fat_pct-B[0].fat_pct;rows.push({ic:"🏋️",bg:"trae-soft",col:"trae",t:"Vægt vs. fedt%.",p:`Fedt% har bevæget sig ${d<=0?"ned":"op"} ${fmt(Math.abs(d),1)} point siden ${B[0].log_date} (${B[0].source==="garmin"?"Garmin":"Withings"}). Se overlejringen i Krop-sektionen før du dømmer et vægt-plateau.`});}
-  $("#insights").innerHTML=rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--${r.bg});color:var(--${r.col})">${r.ic}</div><div><b>${r.t}</b><p>${r.p}</p></div></div>`).join("")+
-    `<p class="hint" style="margin:10px 0 0">Sammenfald i dine egne data de seneste 120 dage — ikke bevis. Opdateres automatisk, jo mere du logger.</p>`;
+  const el=$("#nearFind"), wl=$("#watchList"); if(!el) return;
+  const {top}=findPatterns(), H=hypoTests();
+  const rows=top.map(o=>({t:o.t,p:o.p,b:null}));
+  H.filter(h=>h.status==="tydelig"||h.status==="antydning").forEach(h=>rows.push({
+    t:h.q.replace(/\?$/,"")+(h.retning?` — ${h.retning}`:""),
+    p:`${h.expLabel}: <b>${h.m1}</b> (${h.n1} dage) mod ${h.ctlLabel}: <b>${h.m2}</b> (${h.n2} dage).`,
+    b:h.status==="tydelig"?["Tydelig","var(--good)"]:["Antydning","var(--warn)"]}));
+  el.innerHTML=`<h3 class="nf-h">Seneste 120 dage</h3>`+(rows.length
+    ? rows.map(r=>`<div class="insight"><div class="ic" style="background:var(--accent-soft);color:var(--accent)">🔎</div><div><b>${r.t}</b><p>${r.b?`<span style="color:${r.b[1]};font-weight:600">${r.b[0]}</span> · `:""}${r.p}</p></div></div>`).join("")
+    : `<p class="hint" style="margin:4px 0 0">Ingen tydelige mønstre i den korte periode endnu.</p>`);
+  const wait=H.filter(h=>h.status==="for-faa"||h.status==="ingen");
+  if(wl) wl.innerHTML=wait.length?`<details class="watch"><summary>Holder øje med ${wait.length} spørgsmål ›</summary><ul>`+
+    wait.map(h=>`<li>${h.q}<span class="hint"> · ${h.status==="ingen"?"ingen forskel":`mangler ${h.mangler} dage`}</span></li>`).join("")+
+    `</ul><p class="hint" style="margin:6px 0 0">Dukker op ovenfor, så snart der er nok dage til at sige noget.</p></details>`:"";
 }
 
 // ---------- Ugens hypoteser: dine egne spørgsmål testet mod dine egne data ----------
@@ -2437,7 +2364,7 @@ window.addEventListener("resize",()=>{if(!$("#viewVaegt").hidden)sizeFrame();if(
 <script>
 // Temakolonner på bred skærm: I dag & velvære | Krop & kost | Træning (2 kolonner: I dag | Krop, træning & kost)
 (function(){
-  const GROUPS=['I','L','E','K','K','K','T','T','T','R']; // I dag, Hurtig-log, Energi, Krop(3), Træning(3), Restitution+Kost
+  const GROUPS=['I','L','E','K','K','K','T','T']; // I dag, Hurtig-log, Energi, Krop(3), Træning(2)
   const MAPS={3:[['I','L','E'],['K','R'],['T']],2:[['I','L','E'],['K','T','R']],1:[['I','L','E','K','T','R']]};
   function layoutDash(){
     const d=document.querySelector('.dash'); if(!d) return;
