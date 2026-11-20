@@ -350,7 +350,6 @@ details.smoked>summary{cursor:pointer;font-weight:600;font-size:14px;padding:10p
     <div class="grid g2" style="align-content:start">
       <div class="tile"><div class="k">Kalorier tilbage</div><div class="v tnum" id="tRation">—</div><div class="sub" id="tRationSub">af dagsmålet</div></div>
       <div class="tile" style="display:none"><div class="k">Kalorier i dag</div><div class="v tnum" id="tKcal">—</div><div class="meter"><i id="tKcalBar" style="width:0%;background:var(--accent)"></i></div></div>
-      <div class="tile"><div class="k">Protein</div><div class="v tnum" id="tProt">—</div><div class="meter"><i id="tProtBar" style="width:0%;background:var(--accent)"></i></div><div class="sub" id="tProtSub">mål 80 g</div></div>
       <div class="tile"><div class="k">Dagens træning</div><div class="v" style="font-size:16px" id="tTrain">—</div><div class="sub" id="tTrainSub"></div></div>
       <div class="tile" style="display:none"><div class="k">Restitution</div><div class="v" style="font-size:16px" id="tRest">—</div><div class="sub" id="tRestSub"></div></div>
     </div>
@@ -1131,13 +1130,6 @@ function render(){
   const kcal=sumDay(S.nutrition,t,"calories_in");
   $("#tKcal").innerHTML=kcal?`${kcal}<small> / ${s.calorie_target}</small>`:'—';
   $("#tKcalBar").style.width=Math.min(100,kcal/(s.calorie_target||1648)*100)+"%";
-  { // protein i dag mod målet (settings.protein_target_g), + snit for de sidste 7 dage
-    const pt=+s.protein_target_g||80, p=Math.round(sumDay(S.nutrition,t,"protein_g"));
-    $("#tProt").innerHTML=p?`${p}<small> g</small>`:'—';
-    $("#tProtBar").style.width=Math.min(100,p/pt*100)+"%";
-    const ds=[];for(let i=1;i<=7;i++){const d=addDays(t,-i);if(S.nutrition.some(n=>n.log_date===d&&n.protein_g!=null))ds.push(sumDay(S.nutrition,d,"protein_g"));}
-    $("#tProtSub").textContent=`mål ${pt} g`+(ds.length?` · snit 7 d: ${Math.round(ds.reduce((a,b)=>a+b,0)/ds.length)} g`:"");
-  }
   const wt=S.workouts.filter(w=>w.log_date===t);
   const runT=wt.find(w=>w.kind==="loeb"),strT=wt.find(w=>w.kind==="styrke"),stepT=wt.find(w=>w.kind==="skridt");
   const plToday=S.planned.filter(p=>p.log_date===t);
