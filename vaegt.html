@@ -737,6 +737,15 @@ function render(){
     <div class="tile"><div class="k">Kalorier i dag</div><div class="v tnum">${kcalToday}<small> / ~${num(B.budget,0)}</small></div>
       <div class="meter"><i style="width:${kcalPct}%;background:${kcalCol}"></i></div>
       <div class="sub" style="color:${kcalSubCol}">${kcalSub}</div></div>
+    ${(()=>{ // protein i dag mod mål (settings.protein_target_g) + snit af de sidste 7 dage med protein logget
+      const pt=+s.protein_target_g||80, td=todayISO();
+      const pd=d=>S.nutrition.filter(n=>n.log_date===d).reduce((a,n)=>a+(+n.protein_g||0),0);
+      const p=Math.round(pd(td)), ds=[];
+      for(let i=1;i<=7;i++){const d=addDays(td,-i);if(S.nutrition.some(n=>n.log_date===d&&n.protein_g!=null))ds.push(pd(d));}
+      const a7=ds.length?Math.round(ds.reduce((x,y)=>x+y,0)/ds.length):null;
+      return `<div class="tile" style="grid-column:1/-1"><div class="k">Protein i dag</div><div class="v tnum">${p||"—"}<small>${p?" g":""} / ${pt} g</small></div>
+      <div class="meter"><i style="width:${Math.min(100,p/pt*100)}%;background:${p>=pt?"var(--good)":"var(--accent)"}"></i></div>
+      <div class="sub">${a7!=null?"snit 7 dage: "+a7+" g":"ingen protein logget endnu"}</div></div>`;})()}
   </section>
   <section class="stats stats4">
     <div class="tile"><div class="k">Tabt i alt</div><div class="v tnum">${num(st.lost,1)}<small> kg</small></div><div class="sub">siden start</div></div>
