@@ -1008,7 +1008,10 @@ function paintLife(){
 }
 // ---- "Noget stak ud": nætter der afviger tydeligt fra dit eget normalområde (seneste 60 nætter) ----
 const DEV_CAUSES=[["alkohol","Alkohol"],["sent","Sent i seng"],["arbejde","Arbejde/stress"],["bekymring","Bekymring"],["mennesker","For mange mennesker"],
-  ["traening","Hård træning"],["syg","Syg på vej"],["mad","Sent/tungt måltid"],["koffein","Sen koffein"],["roeg","Røg"],["ro","Rolig dag"],["ved_ikke","Ved ikke"]];
+  ["traening","Hård træning"],["syg","Syg på vej"],["mad","Sent/tungt måltid"],["koffein","Sen koffein"],["roeg","Røg"],["ved_ikke","Ved ikke"]];
+// gode nætter har deres egne forklaringer (de dårlige passer ikke)
+const DEV_CAUSES_GOOD=[["tidligt","Tidligt i seng"],["ro","Rolig dag"],["alene","Tid alene"],["ude","Tid ude/dagslys"],["let_motion","Let motion"],
+  ["hviledag","Hviledag"],["ingen_alkohol","Ingen alkohol"],["let_mad","Tidlig/let aftensmad"],["ingen_skaerm","Lidt skærm før sengetid"],["ingen_koffein","Ingen sen koffein"],["ved_ikke","Ved ikke"]];
 function deviationFor(d){
   const g=(S.garmin||[]).find(x=>x.log_date===d); if(!g||g.hrv==null) return null;
   const prev=(S.garmin||[]).filter(x=>x.log_date<d&&x.log_date>=addDays(d,-60));
@@ -1037,14 +1040,14 @@ function devGuess(d){   // forudfyld ud fra Garmin-svarene dagen før natten (og
 function renderDeviation(){
   const el=$("#devCard"); if(!el) return;
   const open=openDeviations(); if(!open.length){ el.style.display="none"; el.innerHTML=""; return; }
-  const v=open[0], m=v.metrics, lav=v.direction==="lav", guess=devGuess(v.log_date);
+  const v=open[0], m=v.metrics, lav=v.direction==="lav", guess=lav?devGuess(v.log_date):new Set(), CAUSES=lav?DEV_CAUSES:DEV_CAUSES_GOOD;
   const df=new Intl.DateTimeFormat("da-DK",{weekday:"long",day:"numeric",month:"long"}).format(parseD(v.log_date));
   const al=lifeOn(addDays(v.log_date,-1))["Alcohol"];
   el.className="card devcard "+v.direction; el.style.display="";
   el.innerHTML=`<div class="ch"><h3>${lav?"Noget stak ud":"En usædvanlig god nat"}</h3><span class="hint">natten til ${df}${open.length>1?" · "+(open.length-1)+" mere":""}</span></div>
     <div class="nums"><span>HRV ${m.hrv} <small>(normalt ${m.hrv_normal})</small></span>${m.hvilepuls!=null?`<span>Hvilepuls ${m.hvilepuls} <small>(normalt ${m.hvilepuls_normal})</small></span>`:""}${m.soevnscore!=null?`<span>Søvnscore ${m.soevnscore} <small>(normalt ${m.soevnscore_normal})</small></span>`:""}${m.soevn_t!=null?`<span>${String(m.soevn_t).replace(".",",")} t søvn</span>`:""}</div>
-    <div class="field" style="margin:0"><label>Hvad tror du selv? <span class="hint">${al&&al.status==="YES"?"Du loggede "+(al.amount!=null?+al.amount:"")+" genstand(e) dagen før · ":""}vælg gerne flere</span></label>
-      <div class="seg multi" id="devSeg" style="flex-wrap:wrap">${DEV_CAUSES.map(([k,l])=>`<button type="button" data-v="${k}" class="${guess.has(k)?"sel":""}">${l}</button>`).join("")}</div>
+    <div class="field" style="margin:0"><label>${lav?"Hvad tror du selv?":"Hvad tror du gjorde den god?"} <span class="hint">${lav&&al&&al.status==="YES"?"Du loggede "+(al.amount!=null?+al.amount:"")+" genstand(e) dagen før · ":""}vælg gerne flere</span></label>
+      <div class="seg multi" id="devSeg" style="flex-wrap:wrap">${CAUSES.map(([k,l])=>`<button type="button" data-v="${k}" class="${guess.has(k)?"sel":""}">${l}</button>`).join("")}</div>
       <input class="inp" id="devNote" placeholder="Evt. med dine egne ord" style="margin-top:8px">
       <button class="pbtn" id="devSave" style="width:100%;margin-top:10px">Gem</button><div class="note" id="noteDev"></div></div>`;
   el.querySelectorAll("#devSeg button").forEach(b=>b.onclick=()=>b.classList.toggle("sel"));
